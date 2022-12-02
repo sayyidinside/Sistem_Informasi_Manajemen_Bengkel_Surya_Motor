@@ -27,6 +27,8 @@ class Extend_user(models.Model):
         User,
         on_delete=models.CASCADE
     )
+    name = models.CharField(max_length=30, default='')
+    contact_number = models.CharField(max_length=13, default='')
     role_id = models.ForeignKey(
         Role,
         on_delete=models.SET_NULL,
@@ -43,9 +45,8 @@ class Log(models.Model):
         primary_key=True,
         unique=True,
     )
-    log_at = models.DateTimeField()
+    log_at = models.DateTimeField(auto_now_add=True)
     table_name = models.CharField(max_length=20)
-    created_at = models.DateTimeField(auto_now_add=True)
 
     class Operations(models.TextChoices):
         CREATE = 'C', _('Create')
@@ -59,13 +60,13 @@ class Log(models.Model):
     )
     user_id = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         db_column='user_id'
     )
 
     def __str__(self) -> str:
-        return f'at {self.created_at} {self.user_id} {self.user_id} a record from {self.table_name}'
+        return f'at {self.log_at} {self.user_id} {self.user_id} a record from {self.table_name}'
 
     class Meta:
         db_table = 'log'
@@ -73,7 +74,6 @@ class Log(models.Model):
 
 # abstract base table for transactions
 class Base_transaction(models.Model):
-    total = models.DecimalField(max_digits=15, decimal_places=0)
     is_paid_off = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -91,18 +91,17 @@ class Sales(Base_transaction):
         primary_key=True,
         unique=True
     )
-    customer_name = models.CharField(max_length=25)
-    sub_total = models.DecimalField(max_digits=15, decimal_places=0)
-    discount = models.DecimalField(max_digits=15, decimal_places=0)
+    customer_name = models.CharField(max_length=25, blank=True)
+    customer_contact = models.CharField(max_length=13, blank=True)
     user_id = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         db_column='user_id'
     )
 
     def __str__(self) -> str:
-        return f'{self.sales_id} at {self.created_at} = Rp {self.total} | Lunas={self.is_paid_off}'
+        return f'{self.sales_id} at {self.created_at} | Lunas={self.is_paid_off}'
 
     class Meta:
         db_table = 'sales'
@@ -117,8 +116,7 @@ class Sales_detail(models.Model):
         unique=True
     )
     quantity = models.PositiveSmallIntegerField()
-    individual_price = models.DecimalField(max_digits=15, decimal_places=0)
-    total_price = models.DecimalField(max_digits=15, decimal_places=0)
+    is_grosir = models.BooleanField(default=False)
     sales_id = models.ForeignKey(
         Sales,
         on_delete=models.CASCADE,
@@ -151,9 +149,11 @@ class restock(Base_transaction):
         primary_key=True,
         unique=True,
     )
+    no_faktur = models.CharField(max_length=30, default='')
+    due_date = models.DateField(null=True)
     user_id = models.ForeignKey(
         User,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         db_column='user_id'
     )
@@ -165,7 +165,7 @@ class restock(Base_transaction):
     )
 
     def __str__(self) -> str:
-        return f'{self.restock_id} at {self.created_at} = Rp{self.total} | Lunas={self.is_paid_off}'
+        return f'{self.restock_id} at {self.created_at} | Lunas={self.is_paid_off}'
 
     class Meta:
         db_table = 'restock'
@@ -181,7 +181,6 @@ class Restock_detail(models.Model):
     )
     quantity = models.PositiveSmallIntegerField()
     individual_price = models.DecimalField(max_digits=15, decimal_places=0)
-    total_price = models.DecimalField(max_digits=15, decimal_places=0)
     restock_id = models.ForeignKey(
         Sales,
         on_delete=models.CASCADE,
@@ -217,6 +216,8 @@ class Supplier(models.Model):
     name = models.CharField(max_length=20)
     address = models.CharField(max_length=30)
     contact_number = models.CharField(max_length=13)
+    salesman_name = models.CharField(max_length=30, blank=True)
+    salesman_contact = models.CharField(max_length=13, blank=True)
 
     def __str__(self) -> str:
         return f'{self.name} | {self.contact_number}'
@@ -268,9 +269,12 @@ class Sparepart(models.Model):
         unique=True
     )
     name = models.CharField(max_length=20, db_index=True)
+    partnumber = models.CharField(max_length=20, default='')
     quantity = models.PositiveSmallIntegerField()
-    type = models.CharField(max_length=10)
+    motor_type = models.CharField(max_length=20, default='')
+    sparepart_type = models.CharField(max_length=10)
     price = models.DecimalField(max_digits=15, decimal_places=0)
+    grosir_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     brand_id = models.ForeignKey(
@@ -287,7 +291,7 @@ class Sparepart(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'{self.name} | Rp {self.price} | stock={self.quantity   }'
+        return f'{self.name} | Rp {self.price} | stock={self.quantity}'
 
     class Meta:
         db_table = 'sparepart'
