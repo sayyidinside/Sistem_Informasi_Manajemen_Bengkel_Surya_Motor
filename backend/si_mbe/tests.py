@@ -53,3 +53,26 @@ class LoginTestCase(APITestCase):
         self.incomplete_data = {'password': 'asdasd'}
         response = self.client.post(self.login_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class LogoutTestCase(APITestCase):
+    def setUp(self) -> None:
+        self.logout_url = reverse('rest_logout')
+
+        self.user = User.objects.create_user(username='ultraman', password='ultrabrothers')
+        self.client.force_authenticate(user=self.user)  # type: ignore
+
+    def test_logout_successfully(self) -> None:
+        """
+        Ensure user who already login can logout successfully
+        """
+        response = self.client.post(self.logout_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_logout_with_non_login_user(self) -> None:
+        """
+        Ensure user who not login cannot access logout
+        """
+        self.client.force_authenticate(user=None, token=None)  # type: ignore
+        response = self.client.post(self.logout_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
