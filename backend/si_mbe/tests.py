@@ -23,7 +23,9 @@ class LoginTestCase(APITestCase):
         Ensure user with correct data can login
         """
         response = self.client.post(self.login_url, self.data)
-        self.assertEquals(response.status_code, status.HTTP_200_OK)
+        user = response.wsgi_request.user
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(user.username, 'kamenrider')  # type: ignore
 
     def test_login_with_empty_data(self) -> None:
         """
@@ -42,7 +44,7 @@ class LoginTestCase(APITestCase):
             'password': 'asasd'
         }
         response = self.client.post(self.login_url, self.wrong_data)
-        self.assertEquals(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_login_with_incomplete_data(self) -> None:
         """
