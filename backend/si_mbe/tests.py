@@ -6,9 +6,9 @@ from rest_framework.test import APITestCase
 
 # Create your tests here.
 class LoginTestCase(APITestCase):
-    def setUp(self) -> None:
-        self.login_url = reverse('rest_login')
+    login_url = reverse('rest_login')
 
+    def setUp(self) -> None:
         self.data = {
             'username': 'kamenrider',
             'password': 'asasd'
@@ -56,9 +56,9 @@ class LoginTestCase(APITestCase):
 
 
 class LogoutTestCase(APITestCase):
-    def setUp(self) -> None:
-        self.logout_url = reverse('rest_logout')
+    logout_url = reverse('rest_logout')
 
+    def setUp(self) -> None:
         self.user = User.objects.create_user(username='ultraman', password='ultrabrothers')
         self.client.force_authenticate(user=self.user)  # type: ignore
 
