@@ -76,3 +76,18 @@ class LogoutTestCase(APITestCase):
         self.client.force_authenticate(user=None, token=None)  # type: ignore
         response = self.client.post(self.logout_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+
+class HomePageTestCase(APITestCase):
+    home_url = reverse('homepage')
+
+    def setUp(self) -> None:
+        pass
+
+    def test_homepage_successfully_access(self) -> None:
+        response = self.client.get(self.home_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_homepage_error(self) -> None:
+        response = self.client.post(self.home_url)
+        self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
