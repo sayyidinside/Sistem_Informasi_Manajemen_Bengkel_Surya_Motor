@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from si_mbe.models import Sparepart
+from si_mbe.models import Sparepart, Role, Extend_user
 
 
 # Create your tests here.
@@ -27,7 +27,7 @@ class LoginTestCase(APITestCase):
         response = self.client.post(self.login_url, self.data)
         user = response.wsgi_request.user
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(user.username, 'kamenrider')  # type: ignore
+        self.assertEqual(user.username, 'kamenrider')
 
     def test_login_with_empty_data(self) -> None:
         """
@@ -62,7 +62,7 @@ class LogoutTestCase(APITestCase):
 
     def setUp(self) -> None:
         self.user = User.objects.create_user(username='ultraman', password='ultrabrothers')
-        self.client.force_authenticate(user=self.user)  # type: ignore
+        self.client.force_authenticate(user=self.user)
 
     def test_logout_successfully(self) -> None:
         """
@@ -75,7 +75,7 @@ class LogoutTestCase(APITestCase):
         """
         Ensure user who not login cannot access logout
         """
-        self.client.force_authenticate(user=None, token=None)  # type: ignore
+        self.client.force_authenticate(user=None, token=None)
         response = self.client.post(self.logout_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
@@ -86,9 +86,9 @@ class HomePageTestCase(APITestCase):
     def setUp(self) -> None:
         pass
 
-    def test_homepage_successfully_access(self) -> None:
+    def test_homepage_successfully_accessed(self) -> None:
         """
-        Ensure user who homepage can be access
+        Ensure homepage can be access
         """
         response = self.client.get(self.home_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -124,9 +124,9 @@ class SparepartSearchTestCase(APITestCase):
         """
         response = self.client.get(reverse('search_sparepart') + f'?q={self.name}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count_item'], 1)  # type: ignore
-        self.assertEqual(response.data['results'][0]['partnumber'], self.partnumber)  # type: ignore
-        self.assertEqual(response.data['message'], 'Pencarian sparepart berhasil')  # type: ignore
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'][0]['partnumber'], self.partnumber)
+        self.assertEqual(response.data['message'], 'Pencarian sparepart berhasil')
 
     def test_searching_sparepart_without_result(self) -> None:
         """
@@ -134,5 +134,44 @@ class SparepartSearchTestCase(APITestCase):
         """
         response = self.client.get(reverse('search_sparepart') + '?q=random shit')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count_item'], 0)  # type: ignore
-        self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')  # type: ignore
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')
+
+
+class AdminDashboardTestCase(APITestCase):
+    admin_dashboard_url = reverse('admin_dashboard')
+
+    def setUp(self) -> None:
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+    def test_admin_dashboard_successfully_accessed(self) -> None:
+        """
+        Ensure user can access admin dashboard
+        """
+        response = self.client.get(self.admin_dashboard_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_nonlogin_user_cannot_access_admin_dashboard(self) -> None:
+        """
+        Ensure user who not login cannot access admin dashboard
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.admin_dashboard_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_user_without_admin_role_cannot_access_admin_dashboard(self) -> None:
+        """
+        Ensure user who already login but isn't an admin cannot access admin dashboard
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.get(self.admin_dashboard_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

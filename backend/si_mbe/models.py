@@ -36,6 +36,9 @@ class Extend_user(models.Model):
         db_column='role_id'
     )
 
+    def __str__(self) -> str:
+        return f'{self.user.username} as {self.role_id.name}'
+
 
 # log table to store user activity against certain table
 # the table tracked are sales, sales_detail, restock, restock_detail, sparepart

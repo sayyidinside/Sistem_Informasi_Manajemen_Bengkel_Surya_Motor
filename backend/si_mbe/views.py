@@ -24,8 +24,20 @@ class SearchSparepart(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.pagination_class.message = 'Sparepart yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK  # type: ignore
+            self.pagination_class.status = status.HTTP_200_OK
         else:
             self.pagination_class.message = 'Pencarian sparepart berhasil'
-            self.pagination_class.status = status.HTTP_200_OK  # type: ignore
+            self.pagination_class.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
+
+
+class AdminDashboard(generics.GenericAPIView):
+
+    def get(self, request, *args, **kwargs):
+        if not self.request.user.is_authenticated:
+            return Response({'message': 'Silahkan login terlebih dahulu untuk mengakses fitur ini'},
+                            status=status.HTTP_403_FORBIDDEN)
+        elif not self.request.user.extend_user.role_id.name == 'Admin':
+            return Response({'message': 'Akses ditolak'}, status=status.HTTP_401_UNAUTHORIZED)
+        else:
+            return Response({'message': 'Berhasil mengkases dashboard'}, status=status.HTTP_200_OK)
