@@ -3,6 +3,8 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from si_mbe.models import Sparepart
+
 
 # Create your tests here.
 class LoginTestCase(APITestCase):
@@ -85,9 +87,52 @@ class HomePageTestCase(APITestCase):
         pass
 
     def test_homepage_successfully_access(self) -> None:
+        """
+        Ensure user who homepage can be access
+        """
         response = self.client.get(self.home_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_homepage_error(self) -> None:
+        """
+        Ensure user who trying access homepage with wrong method got an error
+        """
         response = self.client.post(self.home_url)
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+class SparepartSearchTestCase(APITestCase):
+
+    def setUp(self) -> None:
+        self.name = 'aki 1000CC'
+        self.partnumber = 'AB17623-ha2092d'
+
+        Sparepart.objects.create(
+            name=self.name,
+            partnumber=self.partnumber,
+            quantity=50,
+            motor_type='Yamaha Nmax',
+            sparepart_type='24Q-22',
+            price=5400000,
+            grosir_price=5300000,
+            brand_id=None
+        )
+
+    def test_searching_sparepart_successfully_with_result(self) -> None:
+        """
+        Ensure user who searching sparepart with correct keyword get correct result
+        """
+        response = self.client.get(reverse('search_sparepart') + f'?q={self.name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)  # type: ignore
+        self.assertEqual(response.data['results'][0]['partnumber'], self.partnumber)  # type: ignore
+        self.assertEqual(response.data['message'], 'Pencarian sparepart berhasil')  # type: ignore
+
+    def test_searching_sparepart_without_result(self) -> None:
+        """
+        Ensure user who searching sparepart that doesn't exist get empty result
+        """
+        response = self.client.get(reverse('search_sparepart') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)  # type: ignore
+        self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')  # type: ignore
