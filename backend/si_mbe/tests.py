@@ -138,8 +138,8 @@ class SparepartSearchTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')
 
 
-class AdminDashboardTestCase(APITestCase):
-    admin_dashboard_url = reverse('admin_dashboard')
+class DashboardTestCase(APITestCase):
+    dashboard_url = reverse('dashboard')
 
     def setUp(self) -> None:
         self.role = Role.objects.create(name='Admin')
@@ -155,7 +155,7 @@ class AdminDashboardTestCase(APITestCase):
         """
         Ensure user can access admin dashboard
         """
-        response = self.client.get(self.admin_dashboard_url)
+        response = self.client.get(self.dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_nonlogin_user_cannot_access_admin_dashboard(self) -> None:
@@ -163,7 +163,7 @@ class AdminDashboardTestCase(APITestCase):
         Ensure user who not login cannot access admin dashboard
         """
         self.client.force_authenticate(user=None, token=None)
-        response = self.client.get(self.admin_dashboard_url)
+        response = self.client.get(self.dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
@@ -172,6 +172,6 @@ class AdminDashboardTestCase(APITestCase):
         Ensure user who already login but isn't an admin cannot access admin dashboard
         """
         self.client.force_authenticate(user=self.nonadmin_user)
-        response = self.client.get(self.admin_dashboard_url)
+        response = self.client.get(self.dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Akses ditolak')

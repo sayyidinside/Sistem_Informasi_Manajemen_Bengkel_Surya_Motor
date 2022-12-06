@@ -2,7 +2,7 @@
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
 from si_mbe.models import Sparepart
-from si_mbe.paginations import SearchPagination
+from si_mbe.paginations import CustomPagination
 from si_mbe.serializers import SearchSparepartSerializers
 
 
@@ -14,7 +14,7 @@ class Home(generics.GenericAPIView):
 class SearchSparepart(generics.ListAPIView):
     queryset = Sparepart.objects.all().order_by('name')
     serializer_class = SearchSparepartSerializers
-    pagination_class = SearchPagination
+    pagination_class = CustomPagination
 
     lookup_field = 'sparepart_id'
 
@@ -31,7 +31,7 @@ class SearchSparepart(generics.ListAPIView):
         return super().get_paginated_response(data)
 
 
-class AdminDashboard(generics.GenericAPIView):
+class Dashboard(generics.GenericAPIView):
 
     def get(self, request, *args, **kwargs):
         if not self.request.user.is_authenticated:
