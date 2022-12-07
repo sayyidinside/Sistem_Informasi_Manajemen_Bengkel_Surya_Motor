@@ -77,7 +77,7 @@ class LogoutTestCase(APITestCase):
         """
         self.client.force_authenticate(user=None, token=None)
         response = self.client.post(self.logout_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
 
 class HomePageTestCase(APITestCase):
@@ -160,18 +160,151 @@ class DashboardTestCase(APITestCase):
 
     def test_nonlogin_user_cannot_access_admin_dashboard(self) -> None:
         """
-        Ensure user who not login cannot access admin dashboard
+        Ensure non-login user cannot access admin dashboard
         """
         self.client.force_authenticate(user=None, token=None)
         response = self.client.get(self.dashboard_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
     def test_user_without_admin_role_cannot_access_admin_dashboard(self) -> None:
         """
-        Ensure user who already login but isn't an admin cannot access admin dashboard
+        Ensure non-admin user cannot access admin dashboard
         """
         self.client.force_authenticate(user=self.nonadmin_user)
         response = self.client.get(self.dashboard_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class SparepartDataListTestCase(APITestCase):
+    sparepart_data_list_url = reverse('sparepart_data_list')
+
+    def setUp(self) -> None:
+
+        # Setting up sparepart data
+        self.name = 'Spakbord C70'
+        self.partnumber = 'AB17623-ha2092d'
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'{self.name}{i}',
+                partnumber=f'{self.partnumber}{i}',
+                quantity=50,
+                motor_type='Yamaha Nmax',
+                sparepart_type='24Q-22',
+                price=5400000,
+                grosir_price=5300000,
+                brand_id=None
+            )
+
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+    def test_admin_access_sparepart_data_list_successfully(self) -> None:
+        """
+        Ensure admin can get sparepart data list successfully
+        """
+        response = self.client.get(self.sparepart_data_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 3)
+        self.assertEqual(response.data['results'][0]['name'], f'{self.name}0')
+        self.assertEqual(response.data['results'][0]['partnumber'], f'{self.partnumber}0')
+
+    def test_nonlogin_user_cannot_access_sparepart_data_list(self) -> None:
+        """
+        Ensure non-login user cannot access sparepart data list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.sparepart_data_list_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_cannot_access_sparepart_data_list(self) -> None:
+        """
+        Ensure non-admin user cannot access sparepart data list
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.get(self.sparepart_data_list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class SparepartDataAddTestCase(APITestCase):
+    sparepart_data_add_url = reverse('sparepart_data_add')
+
+    def setUp(self) -> None:
+        self.data_sparepart = {
+            'name': 'Milano Buster T-194',
+            'partnumber': '127hash-19as88l0',
+            'quantity': 50,
+            'motor_type': 'Yamaha Nmax',
+            'sparepart_type': '24Q-22',
+            'price': 5400000,
+            'grosir_price': 5300000,
+        }
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+    def test_admin_add_new_sparepart_data_successfully(self) -> None:
+        """
+        Ensure admin can add new sparepart data successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sparepart_data_add_url, self.data_sparepart)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['name'], self.data_sparepart['name'])
+        self.assertEqual(response.data['partnumber'], self.data_sparepart['partnumber'])
+        self.assertEqual(int(response.data['price']), self.data_sparepart['price'])
+        self.assertEqual(response.data['message'], 'Data sparepart berhasil ditambah')
+
+    def test_nonlogin_user_cannot_add_new_sparepart_data(self) -> None:
+        """
+        Ensure non-login user cannot add new sparepart data
+        """
+        # response = self.client.post(reverse('rest_logout'))
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.sparepart_data_add_url, self.data_sparepart)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_cannot_add_new_sparepart_data(self) -> None:
+        """
+        Ensure non-admin user cannot add new sparepart data
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.post(self.sparepart_data_add_url, self.data_sparepart)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_cannot_add_sparepart_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot add data sparepart with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sparepart_data_add_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
+
+    def test_admin_cannot_add_sparepart_with_partially_empty_data(self) -> None:
+        """
+        Ensure admin cannot add data sparepart with partially empty data / input
+        """
+        data = {'name': 'Milano Buster T-194', 'partnumber': '127hash-19as88l0', 'quantity': 50}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sparepart_data_add_url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')

@@ -1,11 +1,11 @@
-from rest_framework import pagination
+from rest_framework import pagination, status
 from rest_framework.response import Response
 
 
 class CustomPagination(pagination.PageNumberPagination):
     page_size = 25
     message = ''
-    status = None
+    status = status.HTTP_200_OK
 
     def get_paginated_response(self, data):
         return Response({

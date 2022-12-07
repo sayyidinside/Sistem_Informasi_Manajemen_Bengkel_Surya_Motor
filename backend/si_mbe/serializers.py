@@ -17,7 +17,30 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
             'quantity',
             'motor_type',
             'sparepart_type',
+            'brand_id',
             'price',
             'grosir_price',
-            'brand_id'
+        ]
+
+
+class SparepartSerializers(serializers.ModelSerializer):
+    """
+    serializers for searching sparepart
+    """
+    brand_id = serializers.ReadOnlyField(source='brand_id.name')
+
+    class Meta:
+        model = Sparepart
+        fields = [
+            'sparepart_id',
+            'name',
+            'partnumber',
+            'quantity',
+            'motor_type',
+            'sparepart_type',
+            'brand_id',
+            'price',
+            'grosir_price',
+            'created_at',
+            'updated_at',
         ]
