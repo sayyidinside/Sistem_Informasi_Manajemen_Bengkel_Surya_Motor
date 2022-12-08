@@ -308,3 +308,107 @@ class SparepartDataAddTestCase(APITestCase):
         response = self.client.post(self.sparepart_data_add_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
+
+
+class SparepartDataUpdateTestCase(APITestCase):
+
+    def setUp(self) -> None:
+        # Setting up sparepart data
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Razor Crest PF-3{i}',
+                partnumber=f'7asAA-9293B{i}',
+                quantity=23,
+                motor_type='Navigations',
+                sparepart_type='24Q-22',
+                price=5800000,
+                grosir_price=5400000,
+                brand_id=None
+            )
+
+        # Getting newly added sparepart it's sparepart_id then set it to kwargs in reverse url
+        self.sparepart_id = Sparepart.objects.get(name='Razor Crest PF-30').sparepart_id
+        self.sparepart_data_update_url = reverse('sparepart_data_update', kwargs={'sparepart_id': self.sparepart_id})
+
+        # Setting up new data to update sparepart data
+        self.data = {
+            'name': 'Razor Crest PF-30',
+            'partnumber': '7asAA-9293B',
+            'quantity': 20,
+            'motor_type': 'Navigations',
+            'sparepart_type': '24Q-22',
+            'price': 5800000,
+            'grosir_price': 5400000,
+        }
+
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+    def test_admin_update_sparepart_data_successfully(self) -> None:
+        """
+        Ensure admin can update sparepart data successfully
+        """
+        response = self.client.put(self.sparepart_data_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data sparepart berhasil dirubah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['partnumber'], self.data['partnumber'])
+        self.assertEqual(int(response.data['quantity']), self.data['quantity'])
+        self.assertEqual(response.data['motor_type'], self.data['motor_type'])
+        self.assertEqual(response.data['sparepart_type'], self.data['sparepart_type'])
+        self.assertEqual(int(response.data['price']), self.data['price'])
+        self.assertEqual(int(response.data['grosir_price']), self.data['grosir_price'])
+
+    def test_nonlogin_user_cannot_update_sparepart_data(self) -> None:
+        """
+        Ensure non-login user cannot update sparepart data
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.sparepart_data_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_cannot_update_sparepart_data(self) -> None:
+        """
+        Ensure non-admin user cannot update sparepart data
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.put(self.sparepart_data_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_update_nonexist_sparepart_data(self) -> None:
+        """
+        Ensure admin cannot / Failed update non-exist sparepart data
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('sparepart_data_update', kwargs={'sparepart_id': 4563}),
+                                   self.data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak ditemukan')
+
+    def test_admin_cannot_update_sparepart_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data sparepart with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.sparepart_data_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
+
+    def test_admin_cannot_update_sparepart_with_partially_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data sparepart with partially empty data / input
+        """
+        data = {'name': 'Razor Crest PF-0', 'partnumber': '127hash-19as88l0', 'quantity': 10}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.sparepart_data_update_url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
