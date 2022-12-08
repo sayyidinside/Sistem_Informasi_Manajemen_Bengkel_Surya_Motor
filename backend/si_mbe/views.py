@@ -99,3 +99,22 @@ class SparepartDataUpdate(generics.UpdateAPIView):
             instance._prefetched_objects_cache = {}
 
         return Response(data)
+
+
+class SparepartDataDelete(generics.DestroyAPIView):
+    queryset = Sparepart.objects.all()
+    serializer_class = SparepartSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+    lookup_field = 'sparepart_id'
+    lookup_url_kwarg = 'sparepart_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = SparepartNotFound()
+        return super().handle_exception(exc)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        message = {'message': 'Data sparepart berhasil dihapus'}
+        return Response(message, status=status.HTTP_204_NO_CONTENT)

@@ -412,3 +412,68 @@ class SparepartDataUpdateTestCase(APITestCase):
         response = self.client.put(self.sparepart_data_update_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
+
+
+class SparepartDataDeleteTestCase(APITestCase):
+    def setUp(self) -> None:
+        # Setting up sparepart data
+        for i in range(5):
+            Sparepart.objects.create(
+                name=f'Fondor Haulcraft W{i}',
+                partnumber=f'8ahb0{i}-D489',
+                quantity=5,
+                motor_type='Trader Ship',
+                sparepart_type='24Q-22',
+                price=800000,
+                grosir_price=750000,
+                brand_id=None
+            )
+
+        # Getting newly added sparepart it's sparepart_id then set it to kwargs in reverse url
+        self.sparepart_id = Sparepart.objects.get(name='Fondor Haulcraft W1').sparepart_id
+        self.sparepart_data_delete_url = reverse('sparepart_data_delete', kwargs={'sparepart_id': self.sparepart_id})
+
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+    def test_admin_delete_sparepart_data_successfully(self) -> None:
+        """
+        Ensure admin can delete sparepart data successfully
+        """
+        response = self.client.delete(self.sparepart_data_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data sparepart berhasil dihapus')
+
+    def test_nonlogin_user_cannot_delete_sparepart_data(self) -> None:
+        """
+        Ensure non-login user cannot delete sparepart data
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.sparepart_data_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_cannot_delete_sparepart_data(self) -> None:
+        """
+        Ensure non-admin user cannot delete sparepart data
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.delete(self.sparepart_data_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_cannot_delete_nonexist_sparepart_data(self) -> None:
+        """
+        Ensure admin cannot / failed to delete non-exist sparepart data
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(reverse('sparepart_data_delete', kwargs={'sparepart_id': 4563}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak ditemukan')

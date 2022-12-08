@@ -9,5 +9,7 @@ urlpatterns = [
     path('dashboard/sparepart/', views.SparepartDataList.as_view(), name='sparepart_data_list'),
     path('dashboard/sparepart/add/', views.SparepartDataAdd.as_view(), name='sparepart_data_add'),
     path('dahsboard/sparepart/edit/<int:sparepart_id>', views.SparepartDataUpdate.as_view(),
-         name='sparepart_data_update')
+         name='sparepart_data_update'),
+    path('dahsboard/sparepart/delete/<int:sparepart_id>', views.SparepartDataDelete.as_view(),
+         name='sparepart_data_delete')
 ]
