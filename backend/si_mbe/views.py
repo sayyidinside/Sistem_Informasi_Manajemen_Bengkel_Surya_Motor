@@ -1,11 +1,12 @@
 from django.http import Http404
-from rest_framework import filters, generics, status, authentication
+from rest_framework import authentication, filters, generics, status
 from rest_framework.response import Response
-from si_mbe.models import Sparepart
-from si_mbe.paginations import CustomPagination
-from si_mbe.serializers import SearchSparepartSerializers, SparepartSerializers
-from si_mbe.permissions import IsLogin, IsAdminRole
 from si_mbe.exceptions import SparepartNotFound
+from si_mbe.models import Sales, Sparepart
+from si_mbe.paginations import CustomPagination
+from si_mbe.permissions import IsAdminRole, IsLogin
+from si_mbe.serializers import (SalesSerializers, SearchSparepartSerializers,
+                                SparepartSerializers)
 
 
 class Home(generics.GenericAPIView):
@@ -118,3 +119,10 @@ class SparepartDataDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data sparepart berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class SalesList(generics.ListAPIView):
+    queryset = Sales.objects.all().order_by('sales_id')
+    serializer_class = SalesSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]

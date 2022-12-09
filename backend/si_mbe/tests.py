@@ -2,8 +2,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-
-from si_mbe.models import Sparepart, Role, Extend_user
+from si_mbe.models import Extend_user, Role, Sales, Sales_detail, Sparepart
 
 
 # Create your tests here.
@@ -477,3 +476,130 @@ class SparepartDataDeleteTestCase(APITestCase):
         response = self.client.delete(reverse('sparepart_data_delete', kwargs={'sparepart_id': 4563}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data sparepart tidak ditemukan')
+
+
+class SalesListTestCase(APITestCase):
+    sales_url = reverse('sales_list')
+
+    def setUp(self) -> None:
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+        # Setting up sparepart data and getting their id
+        for i in range(5):
+            Sparepart.objects.create(
+                name=f'Gaia Memory D-9-2{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Fuuto Wind',
+                sparepart_type='USB',
+                price=5400000,
+                grosir_price=5300000,
+                brand_id=None
+            )
+
+        self.spareparts = Sparepart.objects.all()
+
+        # Setting up sales data and getting their id
+        for i in range(2):
+            Sales.objects.create(
+                customer_name='Brandon Sanderson',
+                customer_contact='085456105311',
+            )
+
+        self.sales = Sales.objects.all()
+
+        # Setting up sales detail data and getting their id
+        Sales_detail.objects.create(
+            quantity=2,
+            is_grosir=False,
+            sales_id=self.sales[0],
+            sparepart_id=self.spareparts[3]
+        )
+        Sales_detail.objects.create(
+            quantity=5,
+            is_grosir=False,
+            sales_id=self.sales[1],
+            sparepart_id=self.spareparts[0]
+        )
+        Sales_detail.objects.create(
+            quantity=3,
+            is_grosir=False,
+            sales_id=self.sales[1],
+            sparepart_id=self.spareparts[1]
+        )
+
+        self.sales_details_id = [
+            Sales_detail.objects.get(sparepart_id=self.spareparts[3].sparepart_id).sales_detail_id,
+            Sales_detail.objects.get(sparepart_id=self.spareparts[0].sparepart_id).sales_detail_id,
+            Sales_detail.objects.get(sparepart_id=self.spareparts[1].sparepart_id).sales_detail_id,
+        ]
+
+    def test_admin_successfully_access_sales_list(self) -> None:
+        """
+        Ensure admin can get sales list
+        """
+        response = self.client.get(self.sales_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'], [
+            {
+                'sales_id': self.sales[0].sales_id,
+                'customer_name': 'Brandon Sanderson',
+                'customer_contact': '085456105311',
+                'is_paid_off': False,
+                'content': [
+                    {
+                        'sales_detail_id': self.sales_details_id[0],
+                        'sparepart': self.spareparts[3].name,
+                        'quantity': 2,
+                        'is_grosir': False,
+                    }
+                ]
+            },
+            {
+                'sales_id': self.sales[1].sales_id,
+                'customer_name': 'Brandon Sanderson',
+                'customer_contact': '085456105311',
+                'is_paid_off': False,
+                'content': [
+                    {
+                        'sales_detail_id': self.sales_details_id[1],
+                        'sparepart': self.spareparts[0].name,
+                        'quantity': 5,
+                        'is_grosir': False,
+                    },
+                    {
+                        'sales_detail_id': self.sales_details_id[2],
+                        'sparepart': self.spareparts[1].name,
+                        'quantity': 3,
+                        'is_grosir': False,
+                    }
+                ]
+            }
+        ])
+
+    def test_nonlogin_user_failed_to_access_sales_list(self) -> None:
+        """
+        Ensure non-login user cannot access sales list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.sales_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_sales_list(self) -> None:
+        """
+        Ensure non-admin user cannot access sales list
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.get(self.sales_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
