@@ -603,3 +603,102 @@ class SalesListTestCase(APITestCase):
         response = self.client.get(self.sales_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class SalesAddTestCase(APITestCase):
+    sales_add_url = reverse('sales_add')
+
+    def setUp(self) -> None:
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Core Fluid P-{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Queen Jet',
+                sparepart_type='Oil',
+                price=5400000,
+                grosir_price=5300000,
+                brand_id=None
+            )
+
+        self.spareparts = Sparepart.objects.all()
+
+        # Creating data that gonna be use as input
+        self.data = {
+            'customer_name': 'Matt Mercer',
+            'customer_contact': '085634405602',
+            'is_paid_off': False,
+            'content': [
+                {
+                    'sparepart_id': self.spareparts[1].sparepart_id,
+                    'quantity': 1,
+                    'is_grosir': False,
+                },
+                {
+                    'sparepart_id': self.spareparts[0].sparepart_id,
+                    'quantity': 30,
+                    'is_grosir': True,
+                }
+            ]
+        }
+
+    def test_admin_successfully_add_sales(self) -> None:
+        """
+        Ensure admin can add new sales data with it's content
+        """
+        response = self.client.post(self.sales_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data penjualan berhasil ditambah')
+        self.assertEqual(response.data['customer_name'], 'Matt Mercer')
+        self.assertEqual(len(response.data['content']), 2)
+        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[1].sparepart_id)
+        self.assertEqual(response.data['content'][0]['quantity'], 1)
+        self.assertEqual(response.data['content'][0]['is_grosir'], False)
+
+    def test_nonlogin_user_failed_to_add_sales(self) -> None:
+        """
+        Ensure non-login cannot add new sales data with it's content
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.sales_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_failed_to_add_sales(self) -> None:
+        """
+        Ensure non-admin cannot add new sales data with it's content
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.post(self.sales_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_add_sales_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot add sales with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sales_add_url)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
+
+    def test_admin_cannot_add_sales_with_partially_empty_data(self) -> None:
+        """
+        Ensure admin cannot add data sales with partially empty data / input
+        """
+        data = {'customer_name': 'Matt Mercer', 'customer_contact': '085634405602', 'is_paid_off': False}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sales_add_url, data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')

@@ -13,4 +13,5 @@ urlpatterns = [
      path('dahsboard/sparepart/delete/<int:sparepart_id>', views.SparepartDataDelete.as_view(),
           name='sparepart_data_delete'),
      path('dashboard/sales/', views.SalesList.as_view(), name='sales_list'),
+     path('dashboard/sales/add/', views.SalesAdd.as_view(), name='sales_add'),
 ]

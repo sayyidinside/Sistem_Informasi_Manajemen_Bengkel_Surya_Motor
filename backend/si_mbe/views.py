@@ -5,7 +5,7 @@ from si_mbe.exceptions import SparepartNotFound
 from si_mbe.models import Sales, Sparepart
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import IsAdminRole, IsLogin
-from si_mbe.serializers import (SalesSerializers, SearchSparepartSerializers,
+from si_mbe.serializers import (SalesSerializers, SalesPostSerializers, SearchSparepartSerializers,
                                 SparepartSerializers)
 
 
@@ -126,3 +126,28 @@ class SalesList(generics.ListAPIView):
     serializer_class = SalesSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+    authentication_classes = [authentication.TokenAuthentication]
+
+
+class SalesAdd(generics.CreateAPIView):
+    queryset = Sales.objects.all()
+    serializer_class = SalesPostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+    authentication_classes = [authentication.TokenAuthentication]
+
+    def create(self, request, *args, **kwargs):
+        # print(request.data)
+        if len(request.data) < 4:
+            return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        for content in request.data['content']:
+            if len(content) < 3:
+                return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = serializer.data
+        data['message'] = 'Data penjualan berhasil ditambah'
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
