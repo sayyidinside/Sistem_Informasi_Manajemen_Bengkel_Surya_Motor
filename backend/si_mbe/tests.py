@@ -740,8 +740,6 @@ class SalesUpdateTestCase(APITestCase):
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
         self.sales_update_url = reverse('sales_update', kwargs={'sales_id': self.sales.sales_id})
 
-        self.sales = Sales.objects.get(customer_name='Clem Andor')
-
         # Setting up sales detail data and getting their id
         self.sales_detail_1 = Sales_detail.objects.create(
             quantity=1,
@@ -840,3 +838,92 @@ class SalesUpdateTestCase(APITestCase):
         response = self.client.put(self.sales_update_url, self.partail_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
+
+
+class SalesDeleteTestCase(APITestCase):
+    def setUp(self) -> None:
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'spelljammer {i}L-1',
+                partnumber=f'J8OI0-h8{i}',
+                quantity=int(f'7{i}'),
+                motor_type='Space Ship',
+                sparepart_type='Core',
+                price=105000,
+                grosir_price=100000,
+                brand_id=None
+            )
+
+        self.spareparts = Sparepart.objects.all()
+
+        # Setting up sales data and getting their id
+        self.sales = Sales.objects.create(
+            customer_name='Zurat Gracdion',
+            customer_contact='085425045263',
+        )
+
+        # Getting newly added sales it's sales_id then set it to kwargs in reverse url
+        self.sales_delete_url = reverse('sales_delete', kwargs={'sales_id': self.sales.sales_id})
+
+        # Setting up sales detail data
+        Sales_detail.objects.create(
+            quantity=1,
+            is_grosir=False,
+            sales_id=self.sales,
+            sparepart_id=self.spareparts[2]
+        )
+        Sales_detail.objects.create(
+            quantity=51,
+            is_grosir=True,
+            sales_id=self.sales,
+            sparepart_id=self.spareparts[0]
+        )
+        return super().setUp()
+
+    def test_admin_successfully_delete_sales(self) -> None:
+        """
+        Ensure admin can delete sales successfully
+        """
+        response = self.client.delete(self.sales_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data penjualan berhasil dihapus')
+        self.assertEqual(len(Sales.objects.all()), 0)
+        self.assertEqual(len(Sales_detail.objects.all()), 0)
+
+    def test_nonlogin_user_cannot_delete_sales(self) -> None:
+        """
+        Ensure non-login user cannot delete sales
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.sales_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_cannot_delete_sales(self) -> None:
+        """
+        Ensure non-admin user cannot delete sales
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.delete(self.sales_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_cannot_delete_nonexist_sales(self) -> None:
+        """
+        Ensure admin cannot / failed to delete non-exist sales
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(reverse('sales_delete', kwargs={'sales_id': 5635}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data penjualan tidak ditemukan')
