@@ -7,3 +7,7 @@ class NotLogin(NotAuthenticated):
 
 class SparepartNotFound(NotFound):
     default_detail = {'message': 'Data sparepart tidak ditemukan'}
+
+
+class SalesNotFound(NotFound):
+    default_detail = {'message': 'Data penjualan tidak ditemukan'}

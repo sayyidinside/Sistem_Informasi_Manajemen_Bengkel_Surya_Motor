@@ -133,7 +133,9 @@ class Sales_detail(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'{self.sales_id} - {self.sparepart_id}'
+        return f'{self.sales_id.sales_id}-{self.sales_detail_id}| '\
+               f'{self.sparepart_id.name} sold {self.quantity}s qty | '\
+               f'grosir={self.is_grosir}'
 
     class Meta:
         db_table = 'sales_detail'
@@ -147,7 +149,7 @@ class Sales_detail(models.Model):
 
 # restock table to store surface level information of restock
 # consist of restock_id as pk, user_id, supplier_id
-class restock(Base_transaction):
+class Restock(Base_transaction):
     restock_id = models.BigAutoField(
         primary_key=True,
         unique=True,
@@ -185,7 +187,7 @@ class Restock_detail(models.Model):
     quantity = models.PositiveSmallIntegerField()
     individual_price = models.DecimalField(max_digits=15, decimal_places=0)
     restock_id = models.ForeignKey(
-        Sales,
+        Restock,
         on_delete=models.CASCADE,
         db_column='restock_id'
     )
@@ -197,7 +199,8 @@ class Restock_detail(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'{self.restock_id} - {self.sparepart_id}'
+        return f'{self.restock_id.restock_id}-{self.restock_detail_id}| '\
+               f'{self.sparepart_id.name} restock {self.quantity}s qty'
 
     class Meta:
         db_table = 'restock_detail'

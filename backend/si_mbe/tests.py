@@ -691,7 +691,7 @@ class SalesAddTestCase(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.sales_add_url)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
+        self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
     def test_admin_cannot_add_sales_with_partially_empty_data(self) -> None:
         """
@@ -701,4 +701,142 @@ class SalesAddTestCase(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.sales_add_url, data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
+        self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
+
+
+class SalesUpdateTestCase(APITestCase):
+    def setUp(self) -> None:
+        # Setting up admin user and non-admin user
+        self.role = Role.objects.create(name='Admin')
+        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
+        self.client.force_authenticate(user=self.user)
+
+        self.nonadmin_role = Role.objects.create(name='Karyawan')
+        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'B-F-Gun {i}',
+                partnumber=f'JKL03uf-U-{i}',
+                quantity=int(f'5{i}'),
+                motor_type='Dreadnought',
+                sparepart_type='Weapon',
+                price=105000,
+                grosir_price=100000,
+                brand_id=None
+            )
+
+        self.spareparts = Sparepart.objects.all()
+
+        # Setting up sales data and getting their id
+        self.sales = Sales.objects.create(
+            customer_name='Clem Andor',
+            customer_contact='085425502660',
+        )
+
+        # Getting newly added sales it's sales_id then set it to kwargs in reverse url
+        self.sales_update_url = reverse('sales_update', kwargs={'sales_id': self.sales.sales_id})
+
+        self.sales = Sales.objects.get(customer_name='Clem Andor')
+
+        # Setting up sales detail data and getting their id
+        self.sales_detail_1 = Sales_detail.objects.create(
+            quantity=1,
+            is_grosir=False,
+            sales_id=self.sales,
+            sparepart_id=self.spareparts[2]
+        )
+        self.sales_detail_2 = Sales_detail.objects.create(
+            quantity=31,
+            is_grosir=True,
+            sales_id=self.sales,
+            sparepart_id=self.spareparts[0]
+        )
+
+        # Creating data that gonna be use as input
+        self.data = {
+            'customer_name': 'Cassian Andor',
+            'customer_contact': '087425502660',
+            'is_paid_off': True,
+            'content': [
+                {
+                    'sales_detail_id': self.sales_detail_1.sales_detail_id,
+                    'sparepart_id': self.spareparts[2].sparepart_id,
+                    'quantity': 2,
+                    'is_grosir': False,
+                },
+                {
+                    'sales_detail_id': self.sales_detail_2.sales_detail_id,
+                    'sparepart_id': self.spareparts[0].sparepart_id,
+                    'quantity': 30,
+                    'is_grosir': True,
+                }
+            ]
+        }
+        return super().setUp()
+
+    def test_admin_successfuly_update_sales(self) -> None:
+        """
+        Ensure admin can update sales data successfully
+        """
+        response = self.client.put(self.sales_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data penjualan berhasil dirubah')
+        self.assertEqual(response.data['customer_name'], 'Cassian Andor')
+        self.assertEqual(len(response.data['content']), 2)
+        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[2].sparepart_id)
+        self.assertEqual(response.data['content'][0]['quantity'], 2)
+        self.assertEqual(response.data['content'][0]['is_grosir'], False)
+        self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[0].sparepart_id)
+        self.assertEqual(response.data['content'][1]['quantity'], 30)
+        self.assertEqual(response.data['content'][1]['is_grosir'], True)
+
+    def test_nonlogin_failed_to_update_sales(self) -> None:
+        """
+        Ensure non-login user cannot update sales
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.sales_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_cannot_update_sales(self) -> None:
+        """
+        Ensure non-admin user cannot update sales
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.put(self.sales_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_update_nonexist_sales(self) -> None:
+        """
+        Ensure admin cannot / Failed update non-exist sales
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('sales_update', kwargs={'sales_id': 4152}),
+                                   self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data penjualan tidak ditemukan')
+
+    def test_admin_cannot_update_sales_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update sales with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.sales_update_url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
+
+    def test_admin_cannot_update_sales_with_partially_empty_data(self) -> None:
+        """
+        Ensure admin cannot update sales with partially empty data / input
+        """
+        self.partail_data = {'customer_name': 'Cassian Andor', 'customer_contact': '087425502660'}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.sales_update_url, self.partail_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
