@@ -1,5 +1,6 @@
 from rest_framework import serializers
-from si_mbe.models import Sales, Sales_detail, Sparepart, Restock, Restock_detail
+from si_mbe.models import (Restock, Restock_detail, Sales, Sales_detail,
+                           Sparepart, Supplier)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -24,9 +25,6 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
 
 
 class SparepartSerializers(serializers.ModelSerializer):
-    """
-    serializers for searching sparepart
-    """
     brand_id = serializers.ReadOnlyField(source='brand_id.name')
 
     class Meta:
@@ -204,3 +202,9 @@ class RestockPostSerializers(serializers.ModelSerializer):
             for detail in details_dict.values():
                 detail.delete()
         return instance
+
+
+class SupplierSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Supplier
+        fields = ['supplier_id', 'name', 'address', 'contact_number', 'salesman_name', 'salesman_contact']

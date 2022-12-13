@@ -1387,3 +1387,66 @@ class RestockDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('restock_delete', kwargs={'restock_id': 41852}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data pengadaan tidak ditemukan')
+
+
+class SupplierListTestCase(SetTestCase):
+    supplier_url = reverse('supplier_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up supplier
+        cls.supplier_1 = Supplier.objects.create(
+            name='Alpha Flight',
+            address='Canada',
+            contact_number='088464105635',
+            salesman_name='Logan',
+            salesman_contact='080186153054'
+        )
+        cls.supplier_2 = Supplier.objects.create(
+            name='New Warriors',
+            address='America',
+            contact_number='084108910563',
+            salesman_name='Nova Richard Rider',
+            salesman_contact='081526348561'
+        )
+        cls.supplier_3 = Supplier.objects.create(
+            name='Quite Council',
+            address='Krakoa',
+            contact_number='089661056345',
+            salesman_name='Charles Xavier',
+            salesman_contact='084856105314'
+        )
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_supplier_list(self) -> None:
+        """
+        Ensure admin can get supplier list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.supplier_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 3)
+        self.assertEqual(response.data['results'][1]['name'], 'New Warriors')
+        self.assertEqual(response.data['results'][1]['address'], 'America')
+        self.assertEqual(response.data['results'][1]['contact_number'], '084108910563')
+        self.assertEqual(response.data['results'][1]['salesman_name'], 'Nova Richard Rider')
+        self.assertEqual(response.data['results'][1]['salesman_contact'], '081526348561')
+
+    def test_nonlogin_user_failed_to_access_supplier_list(self) -> None:
+        """
+        Ensure non-login user cannot access supplier list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.supplier_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_supplier_list(self) -> None:
+        """
+        Ensure non-admin user cannot access supplier list
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.get(self.supplier_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

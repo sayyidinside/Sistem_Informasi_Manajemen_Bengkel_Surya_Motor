@@ -20,4 +20,5 @@ urlpatterns = [
      path('dashboard/restock/add/', views.RestockAdd.as_view(), name='restock_add'),
      path('dashboard/restock/edit/<int:restock_id>', views.RestockUpdate.as_view(), name='restock_update'),
      path('dashboard/restock/delete/<int:restock_id>', views.RestockDelete.as_view(), name='restock_delete'),
+     path('dashboard/supplier/', views.SupplierList.as_view(), name='supplier_list'),
 ]

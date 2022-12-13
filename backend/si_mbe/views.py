@@ -2,13 +2,13 @@ from django.http import Http404
 from rest_framework import authentication, filters, generics, status
 from rest_framework.response import Response
 from si_mbe.exceptions import RestockNotFound, SalesNotFound, SparepartNotFound
-from si_mbe.models import Restock, Sales, Sparepart
+from si_mbe.models import Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import IsAdminRole, IsLogin
 from si_mbe.serializers import (RestockPostSerializers, RestockSerializers,
                                 SalesPostSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
-                                SparepartSerializers)
+                                SparepartSerializers, SupplierSerializers)
 
 
 class Home(generics.GenericAPIView):
@@ -295,3 +295,10 @@ class RestockDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data pengadaan berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class SupplierList(generics.ListAPIView):
+    queryset = Supplier.objects.all().order_by('supplier_id')
+    serializer_class = SupplierSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]
