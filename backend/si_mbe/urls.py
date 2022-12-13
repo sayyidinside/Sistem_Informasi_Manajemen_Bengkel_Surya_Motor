@@ -22,4 +22,5 @@ urlpatterns = [
      path('dashboard/restock/delete/<int:restock_id>', views.RestockDelete.as_view(), name='restock_delete'),
      path('dashboard/supplier/', views.SupplierList.as_view(), name='supplier_list'),
      path('dashboard/supplier/add/', views.SupplierAdd.as_view(), name='supplier_add'),
+     path('dashboard/supplier/edit/<int:supplier_id>', views.SupplierUpdate.as_view(), name='supplier_update'),
 ]

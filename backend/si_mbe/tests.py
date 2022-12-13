@@ -341,17 +341,6 @@ class SparepartDataUpdateTestCase(SetTestCase):
         self.sparepart_id = Sparepart.objects.get(name='Razor Crest PF-30').sparepart_id
         self.sparepart_data_update_url = reverse('sparepart_data_update', kwargs={'sparepart_id': self.sparepart_id})
 
-        # Setting up new data to update sparepart data
-        self.data = {
-            'name': 'Razor Crest PF-30',
-            'partnumber': '7asAA-9293B',
-            'quantity': 20,
-            'motor_type': 'Navigations',
-            'sparepart_type': '24Q-22',
-            'price': 5800000,
-            'grosir_price': 5400000,
-        }
-
         return super().setUp()
 
     def test_admin_successfully_update_sparepart_data(self) -> None:
@@ -411,9 +400,9 @@ class SparepartDataUpdateTestCase(SetTestCase):
         """
         Ensure admin cannot update data sparepart with partially empty data / input
         """
-        data = {'name': 'Razor Crest PF-0', 'partnumber': '127hash-19as88l0', 'quantity': 10}
+        self.partial_data = {'name': 'Razor Crest PF-0', 'partnumber': '127hash-19as88l0', 'quantity': 10}
         self.client.force_authenticate(user=self.user)
-        response = self.client.put(self.sparepart_data_update_url, data)
+        response = self.client.put(self.sparepart_data_update_url, self.partial_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
 
@@ -1516,5 +1505,102 @@ class SupplierAddTestCase(SetTestCase):
         self.partial_data = {'name': 'Chroma Conclave', 'address': 'Exandria'}
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.supplier_add_url, self.partial_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data supplier tidak sesuai / tidak lengkap')
+
+
+class SupplierUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Creating data that gonna be use as input
+        cls.data = {
+            'name': 'Yukumo Village',
+            'address': 'Misty Peaks',
+            'contact_number': '081526210523',
+            'salesman_name': 'Yukumo Village Chief',
+            'salesman_contact': '082418596323'
+        }
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        # Setting up supplier
+        self.supplier_1 = Supplier.objects.create(
+            name='Pokke Village',
+            address='Furahiya Mountains',
+            contact_number='089661056345',
+            salesman_name='Pokke Village Chief',
+            salesman_contact='084856105314'
+        )
+        self.supplier_2 = Supplier.objects.create(
+            name='Yukumo',
+            address='Misty Peaks',
+            contact_number='084108910563',
+            salesman_name='Chief',
+            salesman_contact='081526348561'
+        )
+
+        self.supplier_update_url = reverse('supplier_update', kwargs={'supplier_id': self.supplier_2.supplier_id})
+
+        return super().setUp()
+
+    def test_admin_successfully_update_supplier(self) -> None:
+        """
+        Ensure admin can update supplier successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.supplier_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data supplier berhasil dirubah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['address'], self.data['address'])
+        self.assertEqual(response.data['contact_number'], self.data['contact_number'])
+        self.assertEqual(response.data['salesman_name'], self.data['salesman_name'])
+        self.assertEqual(response.data['salesman_contact'], self.data['salesman_contact'])
+
+    def test_nonlogin_user_failed_to_update_supplier(self) -> None:
+        """
+        Ensure non-login user cannot update supplier
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.supplier_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_supplier(self) -> None:
+        """
+        Ensure non-admin user cannot update supplier
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.put(self.supplier_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_update_nonexist_supplier(self) -> None:
+        """
+        Ensure admin cannot update non-exist supplier
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('supplier_update', kwargs={'supplier_id': 52653}),
+                                   self.data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data supplier tidak ditemukan')
+
+    def test_admin_failed_to_update_supplier_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data supplier with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.supplier_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data supplier tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_update_supplier_with_partially_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data supplier with partially empty data / input
+        """
+        self.partial_data = {'name': 'Yukumo Village', 'address': 'Misty Peaks'}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.supplier_update_url, self.partial_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data supplier tidak sesuai / tidak lengkap')

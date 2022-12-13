@@ -1,7 +1,8 @@
 from django.http import Http404
 from rest_framework import authentication, filters, generics, status
 from rest_framework.response import Response
-from si_mbe.exceptions import RestockNotFound, SalesNotFound, SparepartNotFound
+from si_mbe.exceptions import (RestockNotFound, SalesNotFound,
+                               SparepartNotFound, SupplierNotFound)
 from si_mbe.models import Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import IsAdminRole, IsLogin
@@ -76,6 +77,7 @@ class SparepartDataUpdate(generics.UpdateAPIView):
     serializer_class = SparepartSerializers
     permission_classes = [IsLogin, IsAdminRole]
     authentication_classes = [authentication.TokenAuthentication]
+
     lookup_field = 'sparepart_id'
     lookup_url_kwarg = 'sparepart_id'
 
@@ -320,3 +322,36 @@ class SupplierAdd(generics.CreateAPIView):
         data = serializer.data
         data['message'] = 'Data supplier berhasil ditambah'
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class SupplierUpdate(generics.UpdateAPIView):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    lookup_field = 'supplier_id'
+    lookup_url_kwarg = 'supplier_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = SupplierNotFound()
+        return super().handle_exception(exc)
+
+    def update(self, request, *args, **kwargs):
+        if len(request.data) < 5:
+            return Response({'message': 'Data supplier tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        data = serializer.data
+        data['message'] = 'Data supplier berhasil dirubah'
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(data)
