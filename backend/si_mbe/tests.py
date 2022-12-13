@@ -4,7 +4,8 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import Extend_user, Role, Sales, Sales_detail, Sparepart, Restock, Restock_detail, Supplier
+from si_mbe.models import (Extend_user, Restock, Restock_detail, Role, Sales,
+                           Sales_detail, Sparepart, Supplier)
 
 
 # Create your tests here.
@@ -946,7 +947,7 @@ class RestockListTestCase(SetTestCase):
 
         cls.restocks = Restock.objects.all()
 
-        # Setting up sales detail data and getting their id
+        # Setting up restock detail data and getting their id
         cls.restock_detail_1 = Restock_detail.objects.create(
             quantity=2,
             individual_price=4550000,
@@ -1138,5 +1139,155 @@ class RestockAddTestCase(SetTestCase):
                              'is_paid_off': True}
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.restock_add_url, self.partial_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data pengadaan tidak sesuai / tidak lengkap')
+
+
+class RestockUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up supplier
+        cls.supplier = Supplier.objects.create(
+            name='Invulnerable Vagrant',
+            address='Zadash market disctrict',
+            contact_number='084526301053',
+            salesman_name='Pumat Sol',
+            salesman_contact='084105634154'
+        )
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Potion of Haste +{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Adventurer',
+                sparepart_type='Potion',
+                price=5400000,
+                grosir_price=5300000,
+                brand_id=None
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        # Setting up restock detail data
+        self.restock = Restock.objects.create(
+                no_faktur='78SDFBH/2022-YE/FA89',
+                due_date=datetime.date(2023, 4, 13),
+                supplier_id=self.supplier,
+                is_paid_off=False
+            )
+
+        # Getting newly added restock it's restock_id then set it to kwargs in reverse url
+        self.restock_update_url = reverse('restock_update', kwargs={'restock_id': self.restock.restock_id})
+
+        # Setting up restock detail data and getting their id
+        self.restock_detail_1 = Restock_detail.objects.create(
+            quantity=200,
+            individual_price=4550000,
+            restock_id=self.restock,
+            sparepart_id=self.spareparts[0]
+        )
+        self.restock_detail_2 = Restock_detail.objects.create(
+            quantity=50,
+            individual_price=450000,
+            restock_id=self.restock,
+            sparepart_id=self.spareparts[1]
+        )
+
+        # Creating data that gonna be use as input
+        self.data = {
+            'no_faktur': '78SDFBH/2022-YE/FA89',
+            'due_date': datetime.date(2023, 4, 13),
+            'supplier_id': self.supplier.supplier_id,
+            'is_paid_off': True,
+            'content': [
+                {
+                    'restock_detail_id': self.restock_detail_1.restock_detail_id,
+                    'sparepart_id': self.spareparts[0].sparepart_id,
+                    'individual_price':4550000,
+                    'quantity': 200,
+                },
+                {
+                    'restock_detail_id': self.restock_detail_2.restock_detail_id,
+                    'sparepart_id': self.spareparts[1].sparepart_id,
+                    'individual_price':450000,
+                    'quantity': 50,
+                }
+            ]
+        }
+
+        return super().setUp()
+
+    def test_admin_successfully_update_restock(self) -> None:
+        """
+        Ensure admin can update restock data successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.restock_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data pengadaan berhasil dirubah')
+        self.assertEqual(response.data['no_faktur'], '78SDFBH/2022-YE/FA89')
+        self.assertEqual(response.data['due_date'], '13-04-2023')
+        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(len(response.data['content']), 2)
+        self.assertEqual(response.data['content'][0]['restock_detail_id'], self.restock_detail_1.restock_detail_id)
+        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
+        self.assertEqual(response.data['content'][0]['individual_price'], '4550000')
+        self.assertEqual(response.data['content'][0]['quantity'], 200)
+        self.assertEqual(response.data['content'][1]['restock_detail_id'], self.restock_detail_2.restock_detail_id)
+        self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
+        self.assertEqual(response.data['content'][1]['individual_price'], '450000')
+        self.assertEqual(response.data['content'][1]['quantity'], 50)
+
+    def test_nonlogin_failed_to_update_restock(self) -> None:
+        """
+        Ensure non-login user cannot update restock
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.restock_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_restock(self) -> None:
+        """
+        Ensure non-admin user cannot update restock
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.put(self.restock_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_update_nonexist_restock(self) -> None:
+        """
+        Ensure admin cannot update non-exist restock
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('restock_update', kwargs={'restock_id': 74189}),
+                                   self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data pengadaan tidak ditemukan')
+
+    def test_admin_failed_to_update_restock_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update restock with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.restock_update_url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data pengadaan tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_update_restock_with_partially_empty_data(self) -> None:
+        """
+        Ensure admin cannot update restock with partially empty data / input
+        """
+        self.partail_data = {'no_faktur': '78SDFBH/2022-YE/FA89',
+                             'due_date': datetime.date(2023, 4, 13),
+                             'supplier_id': self.supplier.supplier_id}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.restock_update_url, self.partail_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data pengadaan tidak sesuai / tidak lengkap')

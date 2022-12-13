@@ -11,3 +11,7 @@ class SparepartNotFound(NotFound):
 
 class SalesNotFound(NotFound):
     default_detail = {'message': 'Data penjualan tidak ditemukan'}
+
+
+class RestockNotFound(NotFound):
+    default_detail = {'message': 'Data pengadaan tidak ditemukan'}

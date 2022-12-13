@@ -92,6 +92,8 @@ class SalesPostSerializers(serializers.ModelSerializer):
     def update(self, instance, validated_data):
         # get the nested objects list
         validated_details = validated_data.pop('sales_detail_set')
+
+        # Assigning input (validated_data) to object (instance)
         instance.customer_name = validated_data.get('customer_name', instance.customer_name)
         instance.customer_contact = validated_data.get('customer_contact', instance.customer_contact)
         instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
@@ -167,3 +169,38 @@ class RestockPostSerializers(serializers.ModelSerializer):
                 pass
             Restock_detail.objects.create(restock_id=restock, **details)
         return restock
+
+    def update(self, instance, validated_data):
+        # get the nested objects list
+        validated_details = validated_data.pop('restock_detail_set')
+
+        # Assigning input (validated_data) to object (instance)
+        instance.no_faktur = validated_data.get('customer_name', instance.no_faktur)
+        instance.due_date = validated_data.get('customer_contact', instance.due_date)
+        instance.supplier_id = validated_data.get('customer_contact', instance.supplier_id)
+        instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
+
+        # get all nested objects related with this instance and make a dict(id, object)
+        details_dict = dict((i.restock_detail_id, i) for i in instance.restock_detail_set.all())
+
+        for validated_detail in validated_details:
+            if 'restock_detail_id' in validated_detail:
+                # if exists restock_detail_id remove from the dict and update
+                detail = details_dict.pop(validated_detail['restock_detail_id'])
+
+                # remove restock_detail_id from validated data as we don't require it.
+                validated_detail.pop('restock_detail_id')
+
+                # loop through the rest of keys in validated data to assign it to its respective field
+                for key in validated_detail.keys():
+                    setattr(detail, key, validated_detail[key])
+
+                detail.save()
+            else:
+                Restock_detail.objects.create(restock_id=instance, **validated_detail)
+
+        # delete remaining elements because they're not present in update call
+        if len(details_dict) > 0:
+            for detail in details_dict.values():
+                detail.delete()
+        return instance

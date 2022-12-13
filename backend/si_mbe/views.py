@@ -1,7 +1,7 @@
 from django.http import Http404
 from rest_framework import authentication, filters, generics, status
 from rest_framework.response import Response
-from si_mbe.exceptions import SalesNotFound, SparepartNotFound
+from si_mbe.exceptions import RestockNotFound, SalesNotFound, SparepartNotFound
 from si_mbe.models import Restock, Sales, Sparepart
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import IsAdminRole, IsLogin
@@ -157,9 +157,10 @@ class SalesAdd(generics.CreateAPIView):
 class SalesUpdate(generics.UpdateAPIView):
     queryset = Sales.objects.all()
     serializer_class = SalesPostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
     lookup_field = 'sales_id'
     lookup_url_kwarg = 'sales_id'
-    permission_classes = [IsLogin, IsAdminRole]
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
@@ -236,3 +237,40 @@ class RestockAdd(generics.CreateAPIView):
         data = serializer.data
         data['message'] = 'Data pengadaan berhasil ditambah'
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class RestockUpdate(generics.UpdateAPIView):
+    queryset = Restock.objects.all()
+    serializer_class = RestockPostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    lookup_field = 'restock_id'
+    lookup_url_kwarg = 'restock_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = RestockNotFound()
+        return super().handle_exception(exc)
+
+    def update(self, request, *args, **kwargs):
+        if len(request.data) < 5:
+            return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        for content in request.data['content']:
+            if len(content) < 4:
+                return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        data = serializer.data
+        data['message'] = 'Data pengadaan berhasil dirubah'
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(data)
