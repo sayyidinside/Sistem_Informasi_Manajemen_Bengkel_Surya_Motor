@@ -6,6 +6,21 @@ from si_mbe.models import Extend_user, Role, Sales, Sales_detail, Sparepart
 
 
 # Create your tests here.
+class SetTestCase(APITestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and non-admin user
+        cls.role = Role.objects.create(name='Admin')
+        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        cls.extend_user = Extend_user.objects.create(user=cls.user, role_id=cls.role)
+
+        cls.nonadmin_role = Role.objects.create(name='Karyawan')
+        cls.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
+        cls.extend_user = Extend_user.objects.create(user=cls.nonadmin_user, role_id=cls.nonadmin_role)
+
+        return super().setUpTestData()
+
+
 class LoginTestCase(APITestCase):
     login_url = reverse('rest_login')
 
@@ -19,7 +34,7 @@ class LoginTestCase(APITestCase):
             password=self.data['password']
         )
 
-    def test_login_successfully(self) -> None:
+    def test_successfully_login(self) -> None:
         """
         Ensure user with correct data can login
         """
@@ -28,7 +43,7 @@ class LoginTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(user.username, 'kamenrider')
 
-    def test_login_with_empty_data(self) -> None:
+    def test_failed_to_login_with_empty_data(self) -> None:
         """
         Ensure user that input empty data get error to fill the data
         """
@@ -36,7 +51,7 @@ class LoginTestCase(APITestCase):
         response = self.client.post(self.login_url, self.empty_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_login_with_wrong_data(self) -> None:
+    def test_failed_to_login_with_wrong_data(self) -> None:
         """
         Ensure user that input wrong data get error
         """
@@ -47,7 +62,7 @@ class LoginTestCase(APITestCase):
         response = self.client.post(self.login_url, self.wrong_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
-    def test_login_with_incomplete_data(self) -> None:
+    def test_failed_to_login_with_incomplete_data(self) -> None:
         """
         Ensure user that input incomplete data get error
         """
@@ -63,14 +78,14 @@ class LogoutTestCase(APITestCase):
         self.user = User.objects.create_user(username='ultraman', password='ultrabrothers')
         self.client.force_authenticate(user=self.user)
 
-    def test_logout_successfully(self) -> None:
+    def test_login_user_successfully_logout(self) -> None:
         """
         Ensure user who already login can logout successfully
         """
         response = self.client.post(self.logout_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_logout_with_non_login_user(self) -> None:
+    def test_nonlogin_user_failed_to_logout(self) -> None:
         """
         Ensure user who not login cannot access logout
         """
@@ -85,14 +100,14 @@ class HomePageTestCase(APITestCase):
     def setUp(self) -> None:
         pass
 
-    def test_homepage_successfully_accessed(self) -> None:
+    def test_successfully_accessed_homepage(self) -> None:
         """
         Ensure homepage can be access
         """
         response = self.client.get(self.home_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_homepage_error(self) -> None:
+    def test_failed_to_access_homepage_with_wrong_method(self) -> None:
         """
         Ensure user who trying access homepage with wrong method got an error
         """
@@ -101,14 +116,14 @@ class HomePageTestCase(APITestCase):
 
 
 class SparepartSearchTestCase(APITestCase):
-
-    def setUp(self) -> None:
-        self.name = 'aki 1000CC'
-        self.partnumber = 'AB17623-ha2092d'
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.name = 'aki 1000CC'
+        cls.partnumber = 'AB17623-ha2092d'
 
         Sparepart.objects.create(
-            name=self.name,
-            partnumber=self.partnumber,
+            name=cls.name,
+            partnumber=cls.partnumber,
             quantity=50,
             motor_type='Yamaha Nmax',
             sparepart_type='24Q-22',
@@ -117,7 +132,9 @@ class SparepartSearchTestCase(APITestCase):
             brand_id=None
         )
 
-    def test_searching_sparepart_successfully_with_result(self) -> None:
+        return super().setUpTestData()
+
+    def test_successfully_searching_sparepart_with_result(self) -> None:
         """
         Ensure user who searching sparepart with correct keyword get correct result
         """
@@ -127,7 +144,7 @@ class SparepartSearchTestCase(APITestCase):
         self.assertEqual(response.data['results'][0]['partnumber'], self.partnumber)
         self.assertEqual(response.data['message'], 'Pencarian sparepart berhasil')
 
-    def test_searching_sparepart_without_result(self) -> None:
+    def test_successfully_searching_sparepart_without_result(self) -> None:
         """
         Ensure user who searching sparepart that doesn't exist get empty result
         """
@@ -137,27 +154,18 @@ class SparepartSearchTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')
 
 
-class DashboardTestCase(APITestCase):
+class DashboardTestCase(SetTestCase):
     dashboard_url = reverse('dashboard')
 
-    def setUp(self) -> None:
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
-
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
-    def test_admin_dashboard_successfully_accessed(self) -> None:
+    def test_admin_successfully_accessed_admin_dashboard(self) -> None:
         """
         Ensure user can access admin dashboard
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.get(self.dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
-    def test_nonlogin_user_cannot_access_admin_dashboard(self) -> None:
+    def test_nonlogin_user_failed_to_access_admin_dashboard(self) -> None:
         """
         Ensure non-login user cannot access admin dashboard
         """
@@ -166,7 +174,7 @@ class DashboardTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_user_without_admin_role_cannot_access_admin_dashboard(self) -> None:
+    def test_nonadmin_user_failed_to_access_admin_dashboard(self) -> None:
         """
         Ensure non-admin user cannot access admin dashboard
         """
@@ -176,18 +184,18 @@ class DashboardTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
 
-class SparepartDataListTestCase(APITestCase):
+class SparepartDataListTestCase(SetTestCase):
     sparepart_data_list_url = reverse('sparepart_data_list')
 
-    def setUp(self) -> None:
-
+    @classmethod
+    def setUpTestData(cls) -> None:
         # Setting up sparepart data
-        self.name = 'Spakbord C70'
-        self.partnumber = 'AB17623-ha2092d'
+        cls.name = 'Spakbord C70'
+        cls.partnumber = 'AB17623-ha2092d'
         for i in range(3):
             Sparepart.objects.create(
-                name=f'{self.name}{i}',
-                partnumber=f'{self.partnumber}{i}',
+                name=f'{cls.name}{i}',
+                partnumber=f'{cls.partnumber}{i}',
                 quantity=50,
                 motor_type='Yamaha Nmax',
                 sparepart_type='24Q-22',
@@ -196,27 +204,20 @@ class SparepartDataListTestCase(APITestCase):
                 brand_id=None
             )
 
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
+        return super().setUpTestData()
 
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
-    def test_admin_access_sparepart_data_list_successfully(self) -> None:
+    def test_admin_successfully_access_sparepart_data_list(self) -> None:
         """
         Ensure admin can get sparepart data list successfully
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.get(self.sparepart_data_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 3)
         self.assertEqual(response.data['results'][0]['name'], f'{self.name}0')
         self.assertEqual(response.data['results'][0]['partnumber'], f'{self.partnumber}0')
 
-    def test_nonlogin_user_cannot_access_sparepart_data_list(self) -> None:
+    def test_nonlogin_user_failed_to_access_sparepart_data_list(self) -> None:
         """
         Ensure non-login user cannot access sparepart data list
         """
@@ -225,7 +226,7 @@ class SparepartDataListTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_nonadmin_user_cannot_access_sparepart_data_list(self) -> None:
+    def test_nonadmin_user_failed_to_access_sparepart_data_list(self) -> None:
         """
         Ensure non-admin user cannot access sparepart data list
         """
@@ -235,11 +236,13 @@ class SparepartDataListTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
 
-class SparepartDataAddTestCase(APITestCase):
+class SparepartDataAddTestCase(SetTestCase):
     sparepart_data_add_url = reverse('sparepart_data_add')
 
-    def setUp(self) -> None:
-        self.data_sparepart = {
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Creating data that gonna be use as input
+        cls.data_sparepart = {
             'name': 'Milano Buster T-194',
             'partnumber': '127hash-19as88l0',
             'quantity': 50,
@@ -248,17 +251,10 @@ class SparepartDataAddTestCase(APITestCase):
             'price': 5400000,
             'grosir_price': 5300000,
         }
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
 
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
+        return super().setUpTestData()
 
-    def test_admin_add_new_sparepart_data_successfully(self) -> None:
+    def test_admin_successfully_add_new_sparepart_data(self) -> None:
         """
         Ensure admin can add new sparepart data successfully
         """
@@ -270,17 +266,16 @@ class SparepartDataAddTestCase(APITestCase):
         self.assertEqual(int(response.data['price']), self.data_sparepart['price'])
         self.assertEqual(response.data['message'], 'Data sparepart berhasil ditambah')
 
-    def test_nonlogin_user_cannot_add_new_sparepart_data(self) -> None:
+    def test_nonlogin_user_failed_to_add_new_sparepart_data(self) -> None:
         """
         Ensure non-login user cannot add new sparepart data
         """
-        # response = self.client.post(reverse('rest_logout'))
         self.client.force_authenticate(user=None, token=None)
         response = self.client.post(self.sparepart_data_add_url, self.data_sparepart)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_nonadmin_user_cannot_add_new_sparepart_data(self) -> None:
+    def test_nonadmin_user_failed_to_add_new_sparepart_data(self) -> None:
         """
         Ensure non-admin user cannot add new sparepart data
         """
@@ -289,7 +284,7 @@ class SparepartDataAddTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
-    def test_admin_cannot_add_sparepart_with_empty_data(self) -> None:
+    def test_admin_failed_to_add_sparepart_with_empty_data(self) -> None:
         """
         Ensure admin cannot add data sparepart with empty data / input
         """
@@ -298,18 +293,32 @@ class SparepartDataAddTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
 
-    def test_admin_cannot_add_sparepart_with_partially_empty_data(self) -> None:
+    def test_admin_failed_to_add_sparepart_with_partially_empty_data(self) -> None:
         """
         Ensure admin cannot add data sparepart with partially empty data / input
         """
-        data = {'name': 'Milano Buster T-194', 'partnumber': '127hash-19as88l0', 'quantity': 50}
+        self.partial_data = {'name': 'Milano Buster T-194', 'partnumber': '127hash-19as88l0', 'quantity': 50}
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.sparepart_data_add_url, data)
+        response = self.client.post(self.sparepart_data_add_url, self.partial_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
 
 
-class SparepartDataUpdateTestCase(APITestCase):
+class SparepartDataUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up new data to update sparepart data
+        cls.data = {
+            'name': 'Razor Crest PF-30',
+            'partnumber': '7asAA-9293B',
+            'quantity': 20,
+            'motor_type': 'Navigations',
+            'sparepart_type': '24Q-22',
+            'price': 5800000,
+            'grosir_price': 5400000,
+        }
+
+        return super().setUpTestData()
 
     def setUp(self) -> None:
         # Setting up sparepart data
@@ -340,20 +349,13 @@ class SparepartDataUpdateTestCase(APITestCase):
             'grosir_price': 5400000,
         }
 
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
+        return super().setUp()
 
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
-    def test_admin_update_sparepart_data_successfully(self) -> None:
+    def test_admin_successfully_update_sparepart_data(self) -> None:
         """
         Ensure admin can update sparepart data successfully
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.put(self.sparepart_data_update_url, self.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Data sparepart berhasil dirubah')
@@ -365,7 +367,7 @@ class SparepartDataUpdateTestCase(APITestCase):
         self.assertEqual(int(response.data['price']), self.data['price'])
         self.assertEqual(int(response.data['grosir_price']), self.data['grosir_price'])
 
-    def test_nonlogin_user_cannot_update_sparepart_data(self) -> None:
+    def test_nonlogin_user_failed_to_update_sparepart_data(self) -> None:
         """
         Ensure non-login user cannot update sparepart data
         """
@@ -374,7 +376,7 @@ class SparepartDataUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_nonadmin_user_cannot_update_sparepart_data(self) -> None:
+    def test_nonadmin_user_failed_to_update_sparepart_data(self) -> None:
         """
         Ensure non-admin user cannot update sparepart data
         """
@@ -383,7 +385,7 @@ class SparepartDataUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
-    def test_admin_update_nonexist_sparepart_data(self) -> None:
+    def test_admin_failed_to_update_nonexist_sparepart_data(self) -> None:
         """
         Ensure admin cannot / Failed update non-exist sparepart data
         """
@@ -393,7 +395,7 @@ class SparepartDataUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data sparepart tidak ditemukan')
 
-    def test_admin_cannot_update_sparepart_with_empty_data(self) -> None:
+    def test_admin_failed_to_update_sparepart_with_empty_data(self) -> None:
         """
         Ensure admin cannot update data sparepart with empty data / input
         """
@@ -402,7 +404,7 @@ class SparepartDataUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
 
-    def test_admin_cannot_update_sparepart_with_partially_empty_data(self) -> None:
+    def test_admin_failed_to_update_sparepart_with_partially_empty_data(self) -> None:
         """
         Ensure admin cannot update data sparepart with partially empty data / input
         """
@@ -413,10 +415,10 @@ class SparepartDataUpdateTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Data sparepart tidak sesuai / tidak lengkap')
 
 
-class SparepartDataDeleteTestCase(APITestCase):
+class SparepartDataDeleteTestCase(SetTestCase):
     def setUp(self) -> None:
         # Setting up sparepart data
-        for i in range(5):
+        for i in range(3):
             Sparepart.objects.create(
                 name=f'Fondor Haulcraft W{i}',
                 partnumber=f'8ahb0{i}-D489',
@@ -432,25 +434,18 @@ class SparepartDataDeleteTestCase(APITestCase):
         self.sparepart_id = Sparepart.objects.get(name='Fondor Haulcraft W1').sparepart_id
         self.sparepart_data_delete_url = reverse('sparepart_data_delete', kwargs={'sparepart_id': self.sparepart_id})
 
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
+        return super().setUp()
 
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
-    def test_admin_delete_sparepart_data_successfully(self) -> None:
+    def test_admin_successfully_delete_sparepart_data(self) -> None:
         """
         Ensure admin can delete sparepart data successfully
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.delete(self.sparepart_data_delete_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data['message'], 'Data sparepart berhasil dihapus')
 
-    def test_nonlogin_user_cannot_delete_sparepart_data(self) -> None:
+    def test_nonlogin_user_failed_to_delete_sparepart_data(self) -> None:
         """
         Ensure non-login user cannot delete sparepart data
         """
@@ -459,7 +454,7 @@ class SparepartDataDeleteTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_nonadmin_user_cannot_delete_sparepart_data(self) -> None:
+    def test_nonadmin_user_failed_to_delete_sparepart_data(self) -> None:
         """
         Ensure non-admin user cannot delete sparepart data
         """
@@ -468,7 +463,7 @@ class SparepartDataDeleteTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
-    def test_admin_cannot_delete_nonexist_sparepart_data(self) -> None:
+    def test_admin_failed_to_delete_nonexist_sparepart_data(self) -> None:
         """
         Ensure admin cannot / failed to delete non-exist sparepart data
         """
@@ -478,20 +473,11 @@ class SparepartDataDeleteTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Data sparepart tidak ditemukan')
 
 
-class SalesListTestCase(APITestCase):
+class SalesListTestCase(SetTestCase):
     sales_url = reverse('sales_list')
 
-    def setUp(self) -> None:
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
-
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
+    @classmethod
+    def setUpTestData(cls) -> None:
         # Setting up sparepart data and getting their id
         for i in range(5):
             Sparepart.objects.create(
@@ -505,7 +491,7 @@ class SalesListTestCase(APITestCase):
                 brand_id=None
             )
 
-        self.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all()
 
         # Setting up sales data and getting their id
         for i in range(2):
@@ -514,38 +500,41 @@ class SalesListTestCase(APITestCase):
                 customer_contact='085456105311',
             )
 
-        self.sales = Sales.objects.all()
+        cls.sales = Sales.objects.all()
 
         # Setting up sales detail data and getting their id
         Sales_detail.objects.create(
             quantity=2,
             is_grosir=False,
-            sales_id=self.sales[0],
-            sparepart_id=self.spareparts[3]
+            sales_id=cls.sales[0],
+            sparepart_id=cls.spareparts[3]
         )
         Sales_detail.objects.create(
             quantity=5,
             is_grosir=False,
-            sales_id=self.sales[1],
-            sparepart_id=self.spareparts[0]
+            sales_id=cls.sales[1],
+            sparepart_id=cls.spareparts[0]
         )
         Sales_detail.objects.create(
             quantity=3,
             is_grosir=False,
-            sales_id=self.sales[1],
-            sparepart_id=self.spareparts[1]
+            sales_id=cls.sales[1],
+            sparepart_id=cls.spareparts[1]
         )
 
-        self.sales_details_id = [
-            Sales_detail.objects.get(sparepart_id=self.spareparts[3].sparepart_id).sales_detail_id,
-            Sales_detail.objects.get(sparepart_id=self.spareparts[0].sparepart_id).sales_detail_id,
-            Sales_detail.objects.get(sparepart_id=self.spareparts[1].sparepart_id).sales_detail_id,
+        cls.sales_details_id = [
+            Sales_detail.objects.get(sparepart_id=cls.spareparts[3].sparepart_id).sales_detail_id,
+            Sales_detail.objects.get(sparepart_id=cls.spareparts[0].sparepart_id).sales_detail_id,
+            Sales_detail.objects.get(sparepart_id=cls.spareparts[1].sparepart_id).sales_detail_id,
         ]
+
+        return super().setUpTestData()
 
     def test_admin_successfully_access_sales_list(self) -> None:
         """
         Ensure admin can get sales list
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.get(self.sales_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 2)
@@ -605,20 +594,11 @@ class SalesListTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
 
-class SalesAddTestCase(APITestCase):
+class SalesAddTestCase(SetTestCase):
     sales_add_url = reverse('sales_add')
 
-    def setUp(self) -> None:
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
-
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
+    @classmethod
+    def setUpTestData(cls) -> None:
         # Setting up sparepart data and getting their id
         for i in range(3):
             Sparepart.objects.create(
@@ -632,31 +612,34 @@ class SalesAddTestCase(APITestCase):
                 brand_id=None
             )
 
-        self.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all()
 
         # Creating data that gonna be use as input
-        self.data = {
+        cls.data = {
             'customer_name': 'Matt Mercer',
             'customer_contact': '085634405602',
             'is_paid_off': False,
             'content': [
                 {
-                    'sparepart_id': self.spareparts[1].sparepart_id,
+                    'sparepart_id': cls.spareparts[1].sparepart_id,
                     'quantity': 1,
                     'is_grosir': False,
                 },
                 {
-                    'sparepart_id': self.spareparts[0].sparepart_id,
+                    'sparepart_id': cls.spareparts[0].sparepart_id,
                     'quantity': 30,
                     'is_grosir': True,
                 }
             ]
         }
 
+        return super().setUpTestData()
+
     def test_admin_successfully_add_sales(self) -> None:
         """
         Ensure admin can add new sales data with it's content
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.post(self.sales_add_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['message'], 'Data penjualan berhasil ditambah')
@@ -693,7 +676,7 @@ class SalesAddTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
-    def test_admin_cannot_add_sales_with_partially_empty_data(self) -> None:
+    def test_admin_failed_to_add_sales_with_partially_empty_data(self) -> None:
         """
         Ensure admin cannot add data sales with partially empty data / input
         """
@@ -704,18 +687,9 @@ class SalesAddTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
 
-class SalesUpdateTestCase(APITestCase):
-    def setUp(self) -> None:
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
-
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
+class SalesUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
         # Setting up sparepart data and getting their id
         for i in range(3):
             Sparepart.objects.create(
@@ -729,8 +703,11 @@ class SalesUpdateTestCase(APITestCase):
                 brand_id=None
             )
 
-        self.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all()
 
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
         # Setting up sales data and getting their id
         self.sales = Sales.objects.create(
             customer_name='Clem Andor',
@@ -774,12 +751,14 @@ class SalesUpdateTestCase(APITestCase):
                 }
             ]
         }
+
         return super().setUp()
 
     def test_admin_successfuly_update_sales(self) -> None:
         """
         Ensure admin can update sales data successfully
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.put(self.sales_update_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Data penjualan berhasil dirubah')
@@ -801,7 +780,7 @@ class SalesUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_nonadmin_user_cannot_update_sales(self) -> None:
+    def test_nonadmin_user_failed_to_update_sales(self) -> None:
         """
         Ensure non-admin user cannot update sales
         """
@@ -820,7 +799,7 @@ class SalesUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data penjualan tidak ditemukan')
 
-    def test_admin_cannot_update_sales_with_empty_data(self) -> None:
+    def test_admin_failed_to_update_sales_with_empty_data(self) -> None:
         """
         Ensure admin cannot update sales with empty data / input
         """
@@ -829,7 +808,7 @@ class SalesUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
-    def test_admin_cannot_update_sales_with_partially_empty_data(self) -> None:
+    def test_admin_failed_to_update_sales_with_partially_empty_data(self) -> None:
         """
         Ensure admin cannot update sales with partially empty data / input
         """
@@ -840,18 +819,9 @@ class SalesUpdateTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
 
-class SalesDeleteTestCase(APITestCase):
-    def setUp(self) -> None:
-        # Setting up admin user and non-admin user
-        self.role = Role.objects.create(name='Admin')
-        self.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        self.extend_user = Extend_user.objects.create(user=self.user, role_id=self.role)
-        self.client.force_authenticate(user=self.user)
-
-        self.nonadmin_role = Role.objects.create(name='Karyawan')
-        self.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        self.extend_user = Extend_user.objects.create(user=self.nonadmin_user, role_id=self.nonadmin_role)
-
+class SalesDeleteTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
         # Setting up sparepart data and getting their id
         for i in range(3):
             Sparepart.objects.create(
@@ -865,8 +835,11 @@ class SalesDeleteTestCase(APITestCase):
                 brand_id=None
             )
 
-        self.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all()
 
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
         # Setting up sales data and getting their id
         self.sales = Sales.objects.create(
             customer_name='Zurat Gracdion',
@@ -889,19 +862,21 @@ class SalesDeleteTestCase(APITestCase):
             sales_id=self.sales,
             sparepart_id=self.spareparts[0]
         )
+
         return super().setUp()
 
     def test_admin_successfully_delete_sales(self) -> None:
         """
         Ensure admin can delete sales successfully
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.delete(self.sales_delete_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data['message'], 'Data penjualan berhasil dihapus')
         self.assertEqual(len(Sales.objects.all()), 0)
         self.assertEqual(len(Sales_detail.objects.all()), 0)
 
-    def test_nonlogin_user_cannot_delete_sales(self) -> None:
+    def test_nonlogin_user_failed_to_delete_sales(self) -> None:
         """
         Ensure non-login user cannot delete sales
         """
@@ -910,7 +885,7 @@ class SalesDeleteTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_nonadmin_user_cannot_delete_sales(self) -> None:
+    def test_nonadmin_user_failed_to_delete_sales(self) -> None:
         """
         Ensure non-admin user cannot delete sales
         """
@@ -919,7 +894,7 @@ class SalesDeleteTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
-    def test_admin_cannot_delete_nonexist_sales(self) -> None:
+    def test_admin_failed_to_delete_nonexist_sales(self) -> None:
         """
         Ensure admin cannot / failed to delete non-exist sales
         """
