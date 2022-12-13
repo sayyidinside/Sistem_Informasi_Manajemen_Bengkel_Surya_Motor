@@ -1,8 +1,10 @@
+import datetime
+
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import Extend_user, Role, Sales, Sales_detail, Sparepart
+from si_mbe.models import Extend_user, Role, Sales, Sales_detail, Sparepart, Restock, Restock_detail, Supplier
 
 
 # Create your tests here.
@@ -902,3 +904,124 @@ class SalesDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('sales_delete', kwargs={'sales_id': 5635}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data penjualan tidak ditemukan')
+
+
+class RestockListTestCase(SetTestCase):
+    restock_url = reverse('restock_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.supplier = Supplier.objects.create(
+            name='Arasaka',
+            address='Night City',
+            contact_number='084894564563',
+            salesman_name='Saburo Arasaka',
+            salesman_contact='084523015663'
+        )
+
+        # Setting up sparepart data and getting their id
+        for i in range(5):
+            Sparepart.objects.create(
+                name=f'Sandevistan PV-{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Cyberpunk',
+                sparepart_type='Cyberware',
+                price=4700000,
+                grosir_price=4620000,
+                brand_id=None
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        # Setting up restock data and getting their object
+        for i in range(2):
+            Restock.objects.create(
+                no_faktur=f'URH45/28394/2022-N{i}D',
+                due_date=datetime.date(2023, 4, 13),
+                supplier_id=cls.supplier
+            )
+
+        cls.restocks = Restock.objects.all()
+
+        # Setting up sales detail data and getting their id
+        cls.restock_detail_1 = Restock_detail.objects.create(
+            quantity=2,
+            individual_price=4550000,
+            restock_id=cls.restocks[0],
+            sparepart_id=cls.spareparts[3]
+        )
+        cls.restock_detail_2 = Restock_detail.objects.create(
+            quantity=5,
+            individual_price=4550000,
+            restock_id=cls.restocks[1],
+            sparepart_id=cls.spareparts[0]
+        )
+        cls.restock_detail_3 = Restock_detail.objects.create(
+            quantity=3,
+            individual_price=4550000,
+            restock_id=cls.restocks[1],
+            sparepart_id=cls.spareparts[1]
+        )
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_restock_list(self) -> None:
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.restock_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'], [
+            {
+                'restock_id': self.restocks[0].restock_id,
+                'no_faktur': 'URH45/28394/2022-N0D',
+                'due_date': '13-04-2023',
+                'supplier': self.supplier.name,
+                'content': [
+                    {
+                        'restock_detail_id': self.restock_detail_1.restock_detail_id,
+                        'sparepart': self.spareparts[3].name,
+                        'individual_price':'4550000',
+                        'quantity': 2,
+                    }
+                ]
+            },
+            {
+                'restock_id': self.restocks[1].restock_id,
+                'no_faktur': 'URH45/28394/2022-N1D',
+                'due_date': '13-04-2023',
+                'supplier': self.supplier.name,
+                'content': [
+                    {
+                        'restock_detail_id': self.restock_detail_2.restock_detail_id,
+                        'sparepart': self.spareparts[0].name,
+                        'individual_price':'4550000',
+                        'quantity': 5,
+                    },
+                    {
+                        'restock_detail_id': self.restock_detail_3.restock_detail_id,
+                        'sparepart': self.spareparts[1].name,
+                        'individual_price':'4550000',
+                        'quantity': 3,
+                    }
+                ]
+            }
+        ])
+
+    def test_nonlogin_failed_to_access_restock_list(self) -> None:
+        """
+        Ensure non-login user cannot access restock list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.restock_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_restock_list(self) -> None:
+        """
+        Ensure non-admin user cannot access restock list
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.get(self.restock_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
