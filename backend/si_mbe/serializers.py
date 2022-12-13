@@ -137,4 +137,33 @@ class RestockSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Restock
-        fields = ['restock_id', 'no_faktur', 'due_date', 'supplier', 'content']
+        fields = ['restock_id', 'no_faktur', 'due_date', 'supplier', 'is_paid_off', 'content']
+
+
+class RestockDetailPostSerializers(serializers.ModelSerializer):
+    restock_detail_id = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = Restock_detail
+        fields = ['restock_detail_id', 'sparepart_id', 'individual_price', 'quantity']
+
+
+class RestockPostSerializers(serializers.ModelSerializer):
+    due_date = serializers.DateField(format="%d-%m-%Y")
+    content = RestockDetailPostSerializers(many=True, source='restock_detail_set')
+
+    class Meta:
+        model = Restock
+        fields = ['restock_id', 'no_faktur', 'due_date', 'supplier_id', 'is_paid_off', 'content']
+
+    def create(self, validated_data):
+        # get the nested objects list
+        details = validated_data.pop('restock_detail_set')
+        restock = Restock.objects.create(**validated_data)
+        for details in details:
+            try:
+                details.pop('restock_detail_id')
+            except Exception:
+                pass
+            Restock_detail.objects.create(restock_id=restock, **details)
+        return restock

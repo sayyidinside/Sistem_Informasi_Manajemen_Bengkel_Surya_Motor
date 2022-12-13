@@ -682,9 +682,9 @@ class SalesAddTestCase(SetTestCase):
         """
         Ensure admin cannot add data sales with partially empty data / input
         """
-        data = {'customer_name': 'Matt Mercer', 'customer_contact': '085634405602', 'is_paid_off': False}
+        self.partial_data = {'customer_name': 'Matt Mercer', 'customer_contact': '085634405602', 'is_paid_off': False}
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.sales_add_url, data)
+        response = self.client.post(self.sales_add_url, self.partial_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
@@ -911,6 +911,7 @@ class RestockListTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='Arasaka',
             address='Night City',
@@ -939,7 +940,8 @@ class RestockListTestCase(SetTestCase):
             Restock.objects.create(
                 no_faktur=f'URH45/28394/2022-N{i}D',
                 due_date=datetime.date(2023, 4, 13),
-                supplier_id=cls.supplier
+                supplier_id=cls.supplier,
+                is_paid_off=False
             )
 
         cls.restocks = Restock.objects.all()
@@ -977,6 +979,7 @@ class RestockListTestCase(SetTestCase):
                 'no_faktur': 'URH45/28394/2022-N0D',
                 'due_date': '13-04-2023',
                 'supplier': self.supplier.name,
+                'is_paid_off': False,
                 'content': [
                     {
                         'restock_detail_id': self.restock_detail_1.restock_detail_id,
@@ -991,6 +994,7 @@ class RestockListTestCase(SetTestCase):
                 'no_faktur': 'URH45/28394/2022-N1D',
                 'due_date': '13-04-2023',
                 'supplier': self.supplier.name,
+                'is_paid_off': False,
                 'content': [
                     {
                         'restock_detail_id': self.restock_detail_2.restock_detail_id,
@@ -1025,3 +1029,114 @@ class RestockListTestCase(SetTestCase):
         response = self.client.get(self.restock_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class RestockAddTestCase(SetTestCase):
+    restock_add_url = reverse('restock_add')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up supplier
+        cls.supplier = Supplier.objects.create(
+            name='Parker Industries',
+            address='New York st.long walk',
+            contact_number='084526301053',
+            salesman_name='Peter Parker',
+            salesman_contact='084105634154'
+        )
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Webware V.{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Wrist Device',
+                sparepart_type='Braclet',
+                price=5400000,
+                grosir_price=5300000,
+                brand_id=None
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        # Creating data that gonna be use as input
+        cls.data = {
+            'no_faktur': 'URH45/28394/2022-N1D',
+            'due_date': datetime.date(2023, 4, 13),
+            'supplier_id': cls.supplier.supplier_id,
+            'is_paid_off': False,
+            'content': [
+                {
+                    'sparepart_id': cls.spareparts[0].sparepart_id,
+                    'individual_price':4700000,
+                    'quantity': 150,
+                },
+                {
+                    'sparepart_id': cls.spareparts[1].sparepart_id,
+                    'individual_price':3500000,
+                    'quantity': 60,
+                }
+            ]
+        }
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_add_restock(self) -> None:
+        """
+        Ensure admin can add new restock data with it's content
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.restock_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data pengadaan berhasil ditambah')
+        self.assertEqual(response.data['no_faktur'], 'URH45/28394/2022-N1D')
+        self.assertEqual(response.data['due_date'], '13-04-2023')
+        self.assertEqual(response.data['supplier_id'], self.supplier.supplier_id)
+        self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(len(response.data['content']), 2)
+        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
+        self.assertEqual(response.data['content'][0]['individual_price'], '4700000')
+        self.assertEqual(response.data['content'][0]['quantity'], 150)
+        self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
+        self.assertEqual(response.data['content'][1]['individual_price'], '3500000')
+        self.assertEqual(response.data['content'][1]['quantity'], 60)
+
+    def test_nonlogin_user_failed_to_add_restock(self) -> None:
+        """
+        Ensure non-admin cannot add new restock data with it's content
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.restock_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_failed_to_add_restock(self) -> None:
+        """
+        Ensure non-admin cannot add new restock data with it's content
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.post(self.restock_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_add_restock_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot add new restock data with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.restock_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data pengadaan tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_add_restock_with_partially_empty_data(self) -> None:
+        """
+        Ensure admin cannot add new restock data with partially empty data / input
+        """
+        self.partial_data = {'no_faktur': 'URH45/28394/2022-N1D',
+                             'due_date': datetime.date(2023, 4, 13),
+                             'is_paid_off': True}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.restock_add_url, self.partial_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data pengadaan tidak sesuai / tidak lengkap')

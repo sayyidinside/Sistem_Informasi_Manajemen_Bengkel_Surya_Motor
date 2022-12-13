@@ -1,12 +1,14 @@
 from django.http import Http404
 from rest_framework import authentication, filters, generics, status
 from rest_framework.response import Response
-from si_mbe.exceptions import SparepartNotFound, SalesNotFound
-from si_mbe.models import Sales, Sparepart, Restock
+from si_mbe.exceptions import SalesNotFound, SparepartNotFound
+from si_mbe.models import Restock, Sales, Sparepart
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import IsAdminRole, IsLogin
-from si_mbe.serializers import (SalesSerializers, SalesPostSerializers, SearchSparepartSerializers,
-                                SparepartSerializers, RestockSerializers)
+from si_mbe.serializers import (RestockPostSerializers, RestockSerializers,
+                                SalesPostSerializers, SalesSerializers,
+                                SearchSparepartSerializers,
+                                SparepartSerializers)
 
 
 class Home(generics.GenericAPIView):
@@ -212,3 +214,25 @@ class RestockList(generics.ListAPIView):
     serializer_class = RestockSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+
+class RestockAdd(generics.CreateAPIView):
+    queryset = Restock.objects.all()
+    serializer_class = RestockPostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        if len(request.data) < 5:
+            return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        for content in request.data['content']:
+            if len(content) < 3:
+                return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = serializer.data
+        data['message'] = 'Data pengadaan berhasil ditambah'
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)

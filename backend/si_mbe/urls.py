@@ -17,4 +17,5 @@ urlpatterns = [
      path('dashboard/sales/edit/<int:sales_id>', views.SalesUpdate.as_view(), name='sales_update'),
      path('dashboard/sales/delete/<int:sales_id>', views.SalesDelete.as_view(), name='sales_delete'),
      path('dashboard/restock/', views.RestockList.as_view(), name='restock_list'),
+     path('dashboard/restock/add/', views.RestockAdd.as_view(), name='restock_add'),
 ]
