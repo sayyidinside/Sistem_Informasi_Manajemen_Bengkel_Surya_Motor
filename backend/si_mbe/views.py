@@ -302,3 +302,21 @@ class SupplierList(generics.ListAPIView):
     serializer_class = SupplierSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+
+class SupplierAdd(generics.CreateAPIView):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        if len(request.data) < 5:
+            return Response({'message': 'Data supplier tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = serializer.data
+        data['message'] = 'Data supplier berhasil ditambah'
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
