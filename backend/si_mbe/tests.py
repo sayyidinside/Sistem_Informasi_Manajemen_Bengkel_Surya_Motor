@@ -1291,3 +1291,99 @@ class RestockUpdateTestCase(SetTestCase):
         response = self.client.put(self.restock_update_url, self.partail_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data pengadaan tidak sesuai / tidak lengkap')
+
+
+class RestockDeleteTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up supplier
+        cls.supplier = Supplier.objects.create(
+            name="Future Fondations",
+            address='New York Street',
+            contact_number='084526301053',
+            salesman_name='Reed Richards',
+            salesman_contact='084105634154'
+        )
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Ultimate Nulifier {i}',
+                partnumber=f'J8OI0-h8{i}',
+                quantity=int(f'7{i}'),
+                motor_type='Inventions',
+                sparepart_type='Device',
+                price=105000,
+                grosir_price=100000,
+                brand_id=None
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        # Setting up restock detail data
+        self.restock = Restock.objects.create(
+                no_faktur='78SDFBH/2022-YE/FA89',
+                due_date=datetime.date(2023, 4, 13),
+                supplier_id=self.supplier,
+                is_paid_off=False
+            )
+
+        # Getting newly added restock it's restock_id then set it to kwargs in reverse url
+        self.restock_delete_url = reverse('restock_delete', kwargs={'restock_id': self.restock.restock_id})
+
+        # Setting up restock detail data
+        Restock_detail.objects.create(
+            quantity=200,
+            individual_price=4550000,
+            restock_id=self.restock,
+            sparepart_id=self.spareparts[0]
+        )
+        Restock_detail.objects.create(
+            quantity=50,
+            individual_price=450000,
+            restock_id=self.restock,
+            sparepart_id=self.spareparts[1]
+        )
+
+        return super().setUp()
+
+    def test_admin_successfully_delete_restock(self) -> None:
+        """
+        Ensure admin can delete restock successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.restock_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data pengadaan berhasil dihapus')
+        self.assertEqual(len(Restock.objects.all()), 0)
+        self.assertEqual(len(Restock_detail.objects.all()), 0)
+
+    def test_nonlogin_user_failed_to_delete_restock(self) -> None:
+        """
+        Ensure non-login user cannot delete restock
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.restock_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_delete_restock(self) -> None:
+        """
+        Ensure non-admin user cannot delete restock
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.delete(self.restock_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_delete_nonexist_restock(self) -> None:
+        """
+        Ensure admin cannot delete non-exist restock
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(reverse('restock_delete', kwargs={'restock_id': 41852}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data pengadaan tidak ditemukan')
