@@ -436,6 +436,7 @@ class SparepartDataDeleteTestCase(SetTestCase):
         response = self.client.delete(self.sparepart_data_delete_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data['message'], 'Data sparepart berhasil dihapus')
+        self.assertEqual(len(Sparepart.objects.all()), 2)
 
     def test_nonlogin_user_failed_to_delete_sparepart_data(self) -> None:
         """
@@ -457,7 +458,7 @@ class SparepartDataDeleteTestCase(SetTestCase):
 
     def test_admin_failed_to_delete_nonexist_sparepart_data(self) -> None:
         """
-        Ensure admin cannot / failed to delete non-exist sparepart data
+        Ensure admin cannot to delete non-exist sparepart data
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.delete(reverse('sparepart_data_delete', kwargs={'sparepart_id': 4563}))
@@ -1604,3 +1605,65 @@ class SupplierUpdateTestCase(SetTestCase):
         response = self.client.put(self.supplier_update_url, self.partial_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data supplier tidak sesuai / tidak lengkap')
+
+
+class SupplierDeleteTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up supplier
+        cls.supplier_1 = Supplier.objects.create(
+            name='Overwatch',
+            address='Brooklyn',
+            contact_number='088464105635',
+            salesman_name='Winston',
+            salesman_contact='080186153054'
+        )
+        cls.supplier_2 = Supplier.objects.create(
+            name='Null Sector',
+            address='London',
+            contact_number='084108910563',
+            salesman_name='Ramattra',
+            salesman_contact='081526348561'
+        )
+
+        # Getting newly added supplier it's supplier_id then set it to kwargs in reverse url
+        cls.supplier_delete_url = reverse('supplier_delete', kwargs={'supplier_id': cls.supplier_1.supplier_id})
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_delete_supplier(self) -> None:
+        """
+        Ensure admin can delete supplier successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.supplier_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data supplier berhasil dihapus')
+        self.assertEqual(len(Supplier.objects.all()), 1)
+
+    def test_nonlogin_user_failed_to_delete_supplier(self) -> None:
+        """
+        Ensure non-login user cannot delete supplier
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.supplier_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_delete_supplier(self) -> None:
+        """
+        Ensure non-admin user cannot delete supplier
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.delete(self.supplier_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_delete_nonexist_supplier(self) -> None:
+        """
+        Ensure admin cannot to delete non-exist supplier
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(reverse('supplier_delete', kwargs={'supplier_id': 8591}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data supplier tidak ditemukan')

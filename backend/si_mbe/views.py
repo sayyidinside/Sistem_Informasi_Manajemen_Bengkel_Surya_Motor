@@ -355,3 +355,23 @@ class SupplierUpdate(generics.UpdateAPIView):
             instance._prefetched_objects_cache = {}
 
         return Response(data)
+
+
+class SupplierDelete(generics.DestroyAPIView):
+    queryset = Supplier.objects.all()
+    serializer_class = SupplierSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    lookup_field = 'supplier_id'
+    lookup_url_kwarg = 'supplier_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = SupplierNotFound()
+        return super().handle_exception(exc)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        message = {'message': 'Data supplier berhasil dihapus'}
+        return Response(message, status=status.HTTP_204_NO_CONTENT)

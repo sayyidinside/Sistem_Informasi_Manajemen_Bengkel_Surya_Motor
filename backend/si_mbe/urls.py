@@ -23,4 +23,5 @@ urlpatterns = [
      path('dashboard/supplier/', views.SupplierList.as_view(), name='supplier_list'),
      path('dashboard/supplier/add/', views.SupplierAdd.as_view(), name='supplier_add'),
      path('dashboard/supplier/edit/<int:supplier_id>', views.SupplierUpdate.as_view(), name='supplier_update'),
+     path('dashboard/supplier/delete/<int:supplier_id>', views.SupplierDelete.as_view(), name='supplier_delete'),
 ]
