@@ -1755,9 +1755,130 @@ class SalesReportListTestCase(APITestCase):
 
     def test_nonowner_user_failed_to_access_sales_report_list(self) -> None:
         """
-        Ensure non-owner user cannot access_sales_report_list
+        Ensure non-owner user cannot access sales report list
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class SalesReportDetail(APITestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and owner user
+        cls.role = Role.objects.create(name='Admin')
+        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+
+        cls.owner_role = Role.objects.create(name='Pemilik')
+        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
+        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+
+        cls.brand = Brand.objects.create(name='Steins Gate')
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'el psy congroo S-{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Time Machine',
+                sparepart_type='Phrase',
+                price=5400000,
+                grosir_price=5300000,
+                brand_id=cls.brand
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        # Setting up sales data and getting their id
+        cls.sales = Sales.objects.create(
+                customer_name='Rintaro Okabe',
+                customer_contact='084468104651',
+                user_id=cls.user,
+            )
+
+        # Getting newly added supplier it's supplier_id then set it to kwargs in reverse url
+        cls.sales_report_detail_url = reverse('sales_report_detail', kwargs={'sales_id': cls.sales.sales_id})
+
+        # Setting up sales detail data and getting their id
+        cls.sales_details_1 = Sales_detail.objects.create(
+            quantity=15,
+            is_grosir=False,
+            sales_id=cls.sales,
+            sparepart_id=cls.spareparts[2]
+        )
+        cls.sales_details_2 = Sales_detail.objects.create(
+            quantity=10,
+            is_grosir=False,
+            sales_id=cls.sales,
+            sparepart_id=cls.spareparts[0]
+        )
+        cls.sales_details_3 = Sales_detail.objects.create(
+            quantity=20,
+            is_grosir=True,
+            sales_id=cls.sales,
+            sparepart_id=cls.spareparts[1]
+        )
+
+        # Setting up time data for test comparison
+        cls.created_at_1 = cls.sales.created_at + timedelta(hours=7)
+        cls.updated_at_1 = cls.sales.updated_at + timedelta(hours=7)
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_sales_report_detail(self) -> None:
+        """
+        Ensure owner can get sales report detail
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.sales_report_detail_url)
+        self.assertEqual(response.data, {
+                'sales_id': self.sales.sales_id,
+                'admin': 'Richard Rider',
+                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'customer_name': self.sales.customer_name,
+                'customer_contact': self.sales.customer_contact,
+                'is_paid_off': False,
+                'content': [
+                    {
+                        'sales_detail_id': self.sales_details_1.sales_detail_id,
+                        'sparepart': self.spareparts[2].name,
+                        'quantity': 15,
+                        'is_grosir': False
+                    },
+                    {
+                        'sales_detail_id': self.sales_details_2.sales_detail_id,
+                        'sparepart': self.spareparts[0].name,
+                        'quantity': 10,
+                        'is_grosir': False
+                    },
+                    {
+                        'sales_detail_id': self.sales_details_3.sales_detail_id,
+                        'sparepart': self.spareparts[1].name,
+                        'quantity': 20,
+                        'is_grosir': True
+                    }
+                ]
+            }
+        )
+
+    def test_nonlogin_user_failed_to_access_sales_report_detail(self) -> None:
+        """
+        Ensure non-login user cannot access sales report detail
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.sales_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_sales_report_detail(self) -> None:
+        """
+        Ensure non-owner user cannot access sales report detail
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.sales_report_detail_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')

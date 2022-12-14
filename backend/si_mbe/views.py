@@ -7,8 +7,10 @@ from si_mbe.models import Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import IsAdminRole, IsLogin, IsOwnerRole
 from si_mbe.serializers import (RestockPostSerializers, RestockSerializers,
-                                SalesPostSerializers, SalesReportSerializers,
-                                SalesSerializers, SearchSparepartSerializers,
+                                SalesPostSerializers,
+                                SalesReportDetailSerializers,
+                                SalesReportSerializers, SalesSerializers,
+                                SearchSparepartSerializers,
                                 SparepartSerializers, SupplierSerializers)
 
 
@@ -382,3 +384,12 @@ class SalesReportList(generics.ListAPIView):
     serializer_class = SalesReportSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
+
+
+class SalesReportDetail(generics.RetrieveAPIView):
+    queryset = Sales.objects.all()
+    serializer_class = SalesReportDetailSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    lookup_field = 'sales_id'
+    lookup_url_kwarg = 'sales_id'

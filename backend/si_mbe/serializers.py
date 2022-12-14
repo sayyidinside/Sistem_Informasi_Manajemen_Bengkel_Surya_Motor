@@ -226,3 +226,23 @@ class SalesReportSerializers(serializers.ModelSerializer):
             'customer_contact',
             'is_paid_off',
         ]
+
+
+class SalesReportDetailSerializers(serializers.ModelSerializer):
+    admin = serializers.ReadOnlyField(source='user_id.extend_user.name')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    content = SalesDetailSerializers(many=True, source='sales_detail_set')
+
+    class Meta:
+        model = Sales
+        fields = [
+            'sales_id',
+            'admin',
+            'created_at',
+            'updated_at',
+            'customer_name',
+            'customer_contact',
+            'is_paid_off',
+            'content',
+        ]
