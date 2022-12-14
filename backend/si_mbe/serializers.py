@@ -273,3 +273,32 @@ class RestockReportSerializers(serializers.ModelSerializer):
             'salesman',
             'salesman_contact',
         ]
+
+
+class RestockReportDetailSerializers(serializers.ModelSerializer):
+    admin = serializers.ReadOnlyField(source='user_id.extend_user.name')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    due_date = serializers.DateField(format="%d-%m-%Y")
+    supplier = serializers.ReadOnlyField(source='supplier_id.name')
+    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact_number')
+    salesman = serializers.ReadOnlyField(source='supplier_id.salesman_name')
+    salesman_contact = serializers.ReadOnlyField(source='supplier_id.salesman_contact')
+    content = RestockDetailSerializers(many=True, source='restock_detail_set')
+
+    class Meta:
+        model = Restock
+        fields = [
+            'restock_id',
+            'admin',
+            'created_at',
+            'updated_at',
+            'no_faktur',
+            'is_paid_off',
+            'due_date',
+            'supplier',
+            'supplier_contact',
+            'salesman',
+            'salesman_contact',
+            'content',
+        ]

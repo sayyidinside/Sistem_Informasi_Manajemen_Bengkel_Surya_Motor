@@ -27,4 +27,5 @@ urlpatterns = [
      path('report/sales/', views.SalesReportList.as_view(), name='sales_report_list'),
      path('report/sales/<int:sales_id>', views.SalesReportDetail.as_view(), name='sales_report_detail'),
      path('report/restock/', views.RestockReportList.as_view(), name='restock_report_list'),
+     path('report/restock/<int:restock_id>', views.RestockReportDetail.as_view(), name='restock_report_detail'),
 ]

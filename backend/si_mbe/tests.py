@@ -1679,7 +1679,7 @@ class SalesReportListTestCase(APITestCase):
 
         cls.brand = Brand.objects.create(name='Dragon Steel')
 
-        # Setting up sparepart data and getting their id
+        # Setting up sparepart data and getting their object
         for i in range(3):
             Sparepart.objects.create(
                 name=f'Cosmere B-{i}',
@@ -1694,7 +1694,7 @@ class SalesReportListTestCase(APITestCase):
 
         cls.spareparts = Sparepart.objects.all()
 
-        # Setting up sales data and getting their id
+        # Setting up sales data and getting their object
         cls.sales_1 = Sales.objects.create(
                 customer_name='Hoid',
                 customer_contact='085456105311',
@@ -1777,7 +1777,7 @@ class SalesReportDetail(APITestCase):
 
         cls.brand = Brand.objects.create(name='Steins Gate')
 
-        # Setting up sparepart data and getting their id
+        # Setting up sparepart data and getting their object
         for i in range(3):
             Sparepart.objects.create(
                 name=f'el psy congroo S-{i}',
@@ -1792,17 +1792,17 @@ class SalesReportDetail(APITestCase):
 
         cls.spareparts = Sparepart.objects.all()
 
-        # Setting up sales data and getting their id
+        # Setting up sales data and getting their object
         cls.sales = Sales.objects.create(
                 customer_name='Rintaro Okabe',
                 customer_contact='084468104651',
                 user_id=cls.user,
             )
 
-        # Getting newly added supplier it's supplier_id then set it to kwargs in reverse url
+        # Getting newly added sales it's sales_id then set it to kwargs in reverse url
         cls.sales_report_detail_url = reverse('sales_report_detail', kwargs={'sales_id': cls.sales.sales_id})
 
-        # Setting up sales detail data and getting their id
+        # Setting up sales detail data and getting their object
         cls.sales_details_1 = Sales_detail.objects.create(
             quantity=15,
             is_grosir=False,
@@ -1910,7 +1910,7 @@ class RestockReportTestCase(APITestCase):
             salesman_contact='084523015663'
         )
 
-        # Setting up sparepart data and getting their id
+        # Setting up sparepart data and getting their object
         for i in range(3):
             Sparepart.objects.create(
                 name=f'Herald {i}',
@@ -1997,5 +1997,143 @@ class RestockReportTestCase(APITestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.restock_report_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class RestockReportDetailTestCase(APITestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and owner user
+        cls.role = Role.objects.create(name='Admin')
+        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+
+        cls.owner_role = Role.objects.create(name='Pemilik')
+        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
+        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+
+        # Setting up brand
+        cls.brand = Brand.objects.create(name='Galactic Empire')
+
+        # Setting up supplier
+        cls.supplier = Supplier.objects.create(
+            name='narkina 5',
+            address='Planet Narkina, Outer Rim',
+            contact_number='084894564563',
+            salesman_name='Kino Loy',
+            salesman_contact='084523015663'
+        )
+
+        # Setting up sparepart data and getting their object
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Lens Spine D-{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Deathstar',
+                sparepart_type='Connector',
+                price=4700000,
+                grosir_price=4620000,
+                brand_id=cls.brand
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        # Setting up restock data and getting their object
+        cls.restock = Restock.objects.create(
+                no_faktur=f'URH45/28394/2022-N{i}D',
+                due_date=date(2023, 4, 13),
+                supplier_id=cls.supplier,
+                is_paid_off=False,
+                user_id=cls.user
+            )
+
+        # Getting newly added sales it's sales_id then set it to kwargs in reverse url
+        cls.restock_report_detail_url = reverse('restock_report_detail', kwargs={'restock_id': cls.restock.restock_id})
+
+        # Setting up time data for test comparison
+        cls.created_at = cls.restock.created_at + timedelta(hours=7)
+        cls.updated_at = cls.restock.updated_at + timedelta(hours=7)
+
+        # Setting up restock detail data and getting their id
+        cls.restock_detail_1 = Restock_detail.objects.create(
+            quantity=200,
+            individual_price=5000000,
+            restock_id=cls.restock,
+            sparepart_id=cls.spareparts[2]
+        )
+        cls.restock_detail_2 = Restock_detail.objects.create(
+            quantity=500,
+            individual_price=400000,
+            restock_id=cls.restock,
+            sparepart_id=cls.spareparts[0]
+        )
+        cls.restock_detail_3 = Restock_detail.objects.create(
+            quantity=300,
+            individual_price=650000,
+            restock_id=cls.restock,
+            sparepart_id=cls.spareparts[1]
+        )
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_restock_report_detail(self):
+        """
+        Ensure owner can get restock report list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.restock_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {
+                'restock_id': self.restock.restock_id,
+                'admin': 'Richard Rider',
+                'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
+                'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+                'no_faktur': self.restock.no_faktur,
+                'is_paid_off': False,
+                'due_date': self.restock.due_date.strftime('%d-%m-%Y'),
+                'supplier': self.supplier.name,
+                'supplier_contact': self.supplier.contact_number,
+                'salesman': self.supplier.salesman_name,
+                'salesman_contact': self.supplier.salesman_contact,
+                'content': [
+                    {
+                        'restock_detail_id': self.restock_detail_1.restock_detail_id,
+                        'sparepart': self.spareparts[2].name,
+                        'individual_price':'5000000',
+                        'quantity': 200,
+                    },
+                    {
+                        'restock_detail_id': self.restock_detail_2.restock_detail_id,
+                        'sparepart': self.spareparts[0].name,
+                        'individual_price':'400000',
+                        'quantity': 500,
+                    },
+                    {
+                        'restock_detail_id': self.restock_detail_3.restock_detail_id,
+                        'sparepart': self.spareparts[1].name,
+                        'individual_price':'650000',
+                        'quantity': 300,
+                    }
+                ]
+            }
+        )
+
+    def test_nonlogin_user_failed_to_access_restock_report_detail(self) -> None:
+        """
+        Ensure non-login user cannot access restock report detail
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.restock_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_restock_report_detail(self) -> None:
+        """
+        Ensure non-owner user cannot access restock report detail
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.restock_report_detail_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')

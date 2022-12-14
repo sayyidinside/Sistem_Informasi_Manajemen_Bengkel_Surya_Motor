@@ -7,6 +7,7 @@ from si_mbe.models import Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import IsAdminRole, IsLogin, IsOwnerRole
 from si_mbe.serializers import (RestockPostSerializers,
+                                RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
                                 SalesPostSerializers,
                                 SalesReportDetailSerializers,
@@ -401,3 +402,12 @@ class RestockReportList(generics.ListAPIView):
     serializer_class = RestockReportSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
+
+
+class RestockReportDetail(generics.RetrieveAPIView):
+    queryset = Restock.objects.all()
+    serializer_class = RestockReportDetailSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    lookup_field = 'restock_id'
+    lookup_url_kwarg = 'restock_id'
