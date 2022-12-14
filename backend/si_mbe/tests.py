@@ -906,7 +906,7 @@ class RestockListTestCase(SetTestCase):
         )
 
         # Setting up sparepart data and getting their id
-        for i in range(5):
+        for i in range(4):
             Sparepart.objects.create(
                 name=f'Sandevistan PV-{i}',
                 partnumber=f'0Y3AD-FY{i}',
@@ -1880,5 +1880,122 @@ class SalesReportDetail(APITestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.sales_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class RestockReportTestCase(APITestCase):
+    restock_report_url = reverse('restock_report_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and owner user
+        cls.role = Role.objects.create(name='Admin')
+        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+
+        cls.owner_role = Role.objects.create(name='Pemilik')
+        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
+        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+
+        # Setting up brand
+        cls.brand = Brand.objects.create(name='Cosmic Being')
+
+        # Setting up supplier
+        cls.supplier = Supplier.objects.create(
+            name='Galactus',
+            address='Planet Taa',
+            contact_number='084894564563',
+            salesman_name='Galan',
+            salesman_contact='084523015663'
+        )
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Herald {i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Cosmic Energy',
+                sparepart_type='Creature',
+                price=4700000,
+                grosir_price=4620000,
+                brand_id=cls.brand
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        # Setting up restock data and getting their object
+        for i in range(2):
+            Restock.objects.create(
+                no_faktur=f'URH45/28394/2022-N{i}D',
+                due_date=date(2023, 4, 13),
+                supplier_id=cls.supplier,
+                is_paid_off=False,
+                user_id=cls.user
+            )
+
+        cls.restocks = Restock.objects.all()
+
+        # Setting up time data for test comparison
+        cls.created_at_1 = cls.restocks[0].created_at + timedelta(hours=7)
+        cls.updated_at_1 = cls.restocks[0].updated_at + timedelta(hours=7)
+        cls.created_at_2 = cls.restocks[1].created_at + timedelta(hours=7)
+        cls.updated_at_2 = cls.restocks[1].updated_at + timedelta(hours=7)
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_restock_report_list(self):
+        """
+        Ensure owner can get restock report list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.restock_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'], [
+            {
+                'restock_id': self.restocks[0].restock_id,
+                'admin': 'Richard Rider',
+                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'no_faktur': self.restocks[0].no_faktur,
+                'is_paid_off': False,
+                'due_date': self.restocks[0].due_date.strftime('%d-%m-%Y'),
+                'supplier': self.supplier.name,
+                'supplier_contact': self.supplier.contact_number,
+                'salesman': self.supplier.salesman_name,
+                'salesman_contact': self.supplier.salesman_contact
+            },
+            {
+                'restock_id': self.restocks[1].restock_id,
+                'admin': 'Richard Rider',
+                'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
+                'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
+                'no_faktur': self.restocks[1].no_faktur,
+                'is_paid_off': False,
+                'due_date': self.restocks[1].due_date.strftime('%d-%m-%Y'),
+                'supplier': self.supplier.name,
+                'supplier_contact': self.supplier.contact_number,
+                'salesman': self.supplier.salesman_name,
+                'salesman_contact': self.supplier.salesman_contact
+            }
+        ])
+
+    def test_nonlogin_user_failed_to_access_restock_report_list(self) -> None:
+        """
+        Ensure non-login user cannot access restock report list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.restock_report_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_restock_report_list(self) -> None:
+        """
+        Ensure non-owner user cannot access restock report list
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.restock_report_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
