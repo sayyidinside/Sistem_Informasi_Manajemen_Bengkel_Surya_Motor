@@ -27,15 +27,18 @@ class SetTestCase(APITestCase):
 class LoginTestCase(APITestCase):
     login_url = reverse('rest_login')
 
-    def setUp(self) -> None:
-        self.data = {
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.data = {
             'username': 'kamenrider',
             'password': 'asasd'
         }
-        self.user = User.objects.create_user(
-            username=self.data['username'],
-            password=self.data['password']
+        cls.user = User.objects.create_user(
+            username=cls.data['username'],
+            password=cls.data['password']
         )
+
+        return super().setUpTestData()
 
     def test_successfully_login(self) -> None:
         """
@@ -50,8 +53,7 @@ class LoginTestCase(APITestCase):
         """
         Ensure user that input empty data get error to fill the data
         """
-        self.empty_data = {}
-        response = self.client.post(self.login_url, self.empty_data)
+        response = self.client.post(self.login_url, {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_failed_to_login_with_wrong_data(self) -> None:
@@ -77,14 +79,17 @@ class LoginTestCase(APITestCase):
 class LogoutTestCase(APITestCase):
     logout_url = reverse('rest_logout')
 
-    def setUp(self) -> None:
-        self.user = User.objects.create_user(username='ultraman', password='ultrabrothers')
-        self.client.force_authenticate(user=self.user)
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.user = User.objects.create_user(username='ultraman', password='ultrabrothers')
+
+        return super().setUpTestData()
 
     def test_login_user_successfully_logout(self) -> None:
         """
         Ensure user who already login can logout successfully
         """
+        self.client.force_authenticate(user=self.user)
         response = self.client.post(self.logout_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
