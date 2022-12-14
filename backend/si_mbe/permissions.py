@@ -18,3 +18,12 @@ class IsAdminRole(permissions.BasePermission):
         if request.user.extend_user.role_id.name == 'Admin':
             return True
         return False
+
+
+class IsOwnerRole(permissions.BasePermission):
+    message = {'message': 'Akses ditolak'}
+
+    def has_permission(self, request, view):
+        if request.user.extend_user.role_id.name == 'Pemilik':
+            return True
+        return False

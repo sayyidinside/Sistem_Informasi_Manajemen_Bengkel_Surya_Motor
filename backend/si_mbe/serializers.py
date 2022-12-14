@@ -208,3 +208,21 @@ class SupplierSerializers(serializers.ModelSerializer):
     class Meta:
         model = Supplier
         fields = ['supplier_id', 'name', 'address', 'contact_number', 'salesman_name', 'salesman_contact']
+
+
+class SalesReportSerializers(serializers.ModelSerializer):
+    admin = serializers.ReadOnlyField(source='user_id.extend_user.name')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+
+    class Meta:
+        model = Sales
+        fields = [
+            'sales_id',
+            'admin',
+            'created_at',
+            'updated_at',
+            'customer_name',
+            'customer_contact',
+            'is_paid_off',
+        ]

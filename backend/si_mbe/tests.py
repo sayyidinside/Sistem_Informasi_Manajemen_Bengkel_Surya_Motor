@@ -1,11 +1,11 @@
-import datetime
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import (Extend_user, Restock, Restock_detail, Role, Sales,
-                           Sales_detail, Sparepart, Supplier)
+from si_mbe.models import (Brand, Extend_user, Restock, Restock_detail, Role,
+                           Sales, Sales_detail, Sparepart, Supplier)
 
 
 # Create your tests here.
@@ -15,11 +15,11 @@ class SetTestCase(APITestCase):
         # Setting up admin user and non-admin user
         cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        cls.extend_user = Extend_user.objects.create(user=cls.user, role_id=cls.role)
+        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
 
         cls.nonadmin_role = Role.objects.create(name='Karyawan')
         cls.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        cls.extend_user = Extend_user.objects.create(user=cls.nonadmin_user, role_id=cls.nonadmin_role)
+        Extend_user.objects.create(user=cls.nonadmin_user, role_id=cls.nonadmin_role)
 
         return super().setUpTestData()
 
@@ -496,30 +496,24 @@ class SalesListTestCase(SetTestCase):
         cls.sales = Sales.objects.all()
 
         # Setting up sales detail data and getting their id
-        Sales_detail.objects.create(
+        cls.sales_details_1 = Sales_detail.objects.create(
             quantity=2,
             is_grosir=False,
             sales_id=cls.sales[0],
             sparepart_id=cls.spareparts[3]
         )
-        Sales_detail.objects.create(
+        cls.sales_details_2 = Sales_detail.objects.create(
             quantity=5,
             is_grosir=False,
             sales_id=cls.sales[1],
             sparepart_id=cls.spareparts[0]
         )
-        Sales_detail.objects.create(
+        cls.sales_details_3 = Sales_detail.objects.create(
             quantity=3,
             is_grosir=False,
             sales_id=cls.sales[1],
             sparepart_id=cls.spareparts[1]
         )
-
-        cls.sales_details_id = [
-            Sales_detail.objects.get(sparepart_id=cls.spareparts[3].sparepart_id).sales_detail_id,
-            Sales_detail.objects.get(sparepart_id=cls.spareparts[0].sparepart_id).sales_detail_id,
-            Sales_detail.objects.get(sparepart_id=cls.spareparts[1].sparepart_id).sales_detail_id,
-        ]
 
         return super().setUpTestData()
 
@@ -539,7 +533,7 @@ class SalesListTestCase(SetTestCase):
                 'is_paid_off': False,
                 'content': [
                     {
-                        'sales_detail_id': self.sales_details_id[0],
+                        'sales_detail_id': self.sales_details_1.sales_detail_id,
                         'sparepart': self.spareparts[3].name,
                         'quantity': 2,
                         'is_grosir': False,
@@ -553,13 +547,13 @@ class SalesListTestCase(SetTestCase):
                 'is_paid_off': False,
                 'content': [
                     {
-                        'sales_detail_id': self.sales_details_id[1],
+                        'sales_detail_id': self.sales_details_2.sales_detail_id,
                         'sparepart': self.spareparts[0].name,
                         'quantity': 5,
                         'is_grosir': False,
                     },
                     {
-                        'sales_detail_id': self.sales_details_id[2],
+                        'sales_detail_id': self.sales_details_3.sales_detail_id,
                         'sparepart': self.spareparts[1].name,
                         'quantity': 3,
                         'is_grosir': False,
@@ -930,7 +924,7 @@ class RestockListTestCase(SetTestCase):
         for i in range(2):
             Restock.objects.create(
                 no_faktur=f'URH45/28394/2022-N{i}D',
-                due_date=datetime.date(2023, 4, 13),
+                due_date=date(2023, 4, 13),
                 supplier_id=cls.supplier,
                 is_paid_off=False
             )
@@ -1054,7 +1048,7 @@ class RestockAddTestCase(SetTestCase):
         # Creating data that gonna be use as input
         cls.data = {
             'no_faktur': 'URH45/28394/2022-N1D',
-            'due_date': datetime.date(2023, 4, 13),
+            'due_date': date(2023, 4, 13),
             'supplier_id': cls.supplier.supplier_id,
             'is_paid_off': False,
             'content': [
@@ -1125,7 +1119,7 @@ class RestockAddTestCase(SetTestCase):
         Ensure admin cannot add new restock data with partially empty data / input
         """
         self.partial_data = {'no_faktur': 'URH45/28394/2022-N1D',
-                             'due_date': datetime.date(2023, 4, 13),
+                             'due_date': date(2023, 4, 13),
                              'is_paid_off': True}
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.restock_add_url, self.partial_data)
@@ -1166,7 +1160,7 @@ class RestockUpdateTestCase(SetTestCase):
         # Setting up restock detail data
         self.restock = Restock.objects.create(
                 no_faktur='78SDFBH/2022-YE/FA89',
-                due_date=datetime.date(2023, 4, 13),
+                due_date=date(2023, 4, 13),
                 supplier_id=self.supplier,
                 is_paid_off=False
             )
@@ -1191,7 +1185,7 @@ class RestockUpdateTestCase(SetTestCase):
         # Creating data that gonna be use as input
         self.data = {
             'no_faktur': '78SDFBH/2022-YE/FA89',
-            'due_date': datetime.date(2023, 4, 13),
+            'due_date': date(2023, 4, 13),
             'supplier_id': self.supplier.supplier_id,
             'is_paid_off': True,
             'content': [
@@ -1275,7 +1269,7 @@ class RestockUpdateTestCase(SetTestCase):
         Ensure admin cannot update restock with partially empty data / input
         """
         self.partail_data = {'no_faktur': '78SDFBH/2022-YE/FA89',
-                             'due_date': datetime.date(2023, 4, 13),
+                             'due_date': date(2023, 4, 13),
                              'supplier_id': self.supplier.supplier_id}
         self.client.force_authenticate(user=self.user)
         response = self.client.put(self.restock_update_url, self.partail_data, format='json')
@@ -1316,7 +1310,7 @@ class RestockDeleteTestCase(SetTestCase):
         # Setting up restock detail data
         self.restock = Restock.objects.create(
                 no_faktur='78SDFBH/2022-YE/FA89',
-                due_date=datetime.date(2023, 4, 13),
+                due_date=date(2023, 4, 13),
                 supplier_id=self.supplier,
                 is_paid_off=False
             )
@@ -1667,3 +1661,103 @@ class SupplierDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('supplier_delete', kwargs={'supplier_id': 8591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data supplier tidak ditemukan')
+
+
+class SalesReportListTestCase(APITestCase):
+    sales_report_url = reverse('sales_report_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and owner user
+        cls.role = Role.objects.create(name='Admin')
+        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+
+        cls.owner_role = Role.objects.create(name='Pemilik')
+        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
+        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+
+        cls.brand = Brand.objects.create(name='Dragon Steel')
+
+        # Setting up sparepart data and getting their id
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Cosmere B-{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Fantasy',
+                sparepart_type='Book',
+                price=5400000,
+                grosir_price=5300000,
+                brand_id=cls.brand
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        # Setting up sales data and getting their id
+        cls.sales_1 = Sales.objects.create(
+                customer_name='Hoid',
+                customer_contact='085456105311',
+                user_id=cls.user,
+            )
+        cls.sales_2 = Sales.objects.create(
+                customer_name='Vasheer',
+                customer_contact='085456105311',
+                is_paid_off=True,
+                user_id=cls.user,
+            )
+
+        # Setting up time data for test comparison
+        cls.created_at_1 = cls.sales_1.created_at + timedelta(hours=7)
+        cls.updated_at_1 = cls.sales_1.updated_at + timedelta(hours=7)
+        cls.created_at_2 = cls.sales_2.created_at + timedelta(hours=7)
+        cls.updated_at_2 = cls.sales_2.updated_at + timedelta(hours=7)
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_sales_report_list(self) -> None:
+        """
+        Ensure owner can get sales report list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'], [
+            {
+                'sales_id': self.sales_1.sales_id,
+                'admin': 'Richard Rider',
+                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'customer_name': self.sales_1.customer_name,
+                'customer_contact': self.sales_1.customer_contact,
+                'is_paid_off': False
+            },
+            {
+                'sales_id': self.sales_2.sales_id,
+                'admin': 'Richard Rider',
+                'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
+                'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
+                'customer_name': self.sales_2.customer_name,
+                'customer_contact': self.sales_2.customer_contact,
+                'is_paid_off': True
+            }
+        ])
+
+    def test_nonlogin_user_failed_to_access_sales_report_list(self) -> None:
+        """
+        Ensure non-login user cannot access sales report list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_sales_report_list(self) -> None:
+        """
+        Ensure non-owner user cannot access_sales_report_list
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

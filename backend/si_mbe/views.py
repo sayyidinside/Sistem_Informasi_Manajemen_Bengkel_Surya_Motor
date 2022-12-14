@@ -5,10 +5,10 @@ from si_mbe.exceptions import (RestockNotFound, SalesNotFound,
                                SparepartNotFound, SupplierNotFound)
 from si_mbe.models import Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
-from si_mbe.permissions import IsAdminRole, IsLogin
+from si_mbe.permissions import IsAdminRole, IsLogin, IsOwnerRole
 from si_mbe.serializers import (RestockPostSerializers, RestockSerializers,
-                                SalesPostSerializers, SalesSerializers,
-                                SearchSparepartSerializers,
+                                SalesPostSerializers, SalesReportSerializers,
+                                SalesSerializers, SearchSparepartSerializers,
                                 SparepartSerializers, SupplierSerializers)
 
 
@@ -375,3 +375,10 @@ class SupplierDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data supplier berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class SalesReportList(generics.ListAPIView):
+    queryset = Sales.objects.all().order_by('sales_id')
+    serializer_class = SalesReportSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsOwnerRole]
