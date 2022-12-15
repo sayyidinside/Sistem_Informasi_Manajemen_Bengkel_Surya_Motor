@@ -14,6 +14,7 @@ from si_mbe.serializers import (RestockPostSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
                                 SparepartSerializers, SupplierSerializers)
+from dj_rest_auth.views import PasswordChangeView
 
 
 class Home(generics.GenericAPIView):
@@ -411,3 +412,7 @@ class RestockReportDetail(generics.RetrieveAPIView):
 
     lookup_field = 'restock_id'
     lookup_url_kwarg = 'restock_id'
+
+
+class CustomPasswordChangeView(PasswordChangeView):
+    permission_classes = [IsLogin]

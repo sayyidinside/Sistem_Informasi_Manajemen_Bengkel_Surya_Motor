@@ -15,9 +15,11 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from si_mbe.views import CustomPasswordChangeView
 
 urlpatterns = [
     path('', include('si_mbe.urls')),
     path('admin/', admin.site.urls),
-    path('auth/', include('dj_rest_auth.urls'))
+    path('auth/', include('dj_rest_auth.urls')),
+    path('auth/password-change/', CustomPasswordChangeView.as_view(), name='password-change')
 ]

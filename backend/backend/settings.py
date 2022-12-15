@@ -158,3 +158,12 @@ REST_FRAMEWORK = {
     ]
     # TEST_RUNNER = "django_timed_tests.TimedTestRunner"
 }
+
+OLD_PASSWORD_FIELD_ENABLED = True
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST_USER = 'si.mbe.mulya.motor@gmail.com'
+EMAIL_HOST_PASSWORD = 'qyuonwojkfwqvask'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True

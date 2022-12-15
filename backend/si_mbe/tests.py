@@ -2142,3 +2142,56 @@ class RestockReportDetailTestCase(APITestCase):
         response = self.client.get(self.restock_report_detail_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class ChangePasswordTestCase(APITestCase):
+    change_pass_url = reverse('password-change')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.data = {
+            'new_password1': 'XandarGone2',
+            'new_password2': 'XandarGone2',
+            'old_password': 'NovaPrimeAnnahilations',
+        }
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(
+            username='richardrider',
+            password='NovaPrimeAnnahilations',
+            email='chad.bladess@gmail.com'
+        )
+
+        return super().setUp()
+
+    def test_user_successfully_change_password(self) -> None:
+        """
+        Ensure user can change password successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.change_pass_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_nonlogin_user_failed_to_change_password(self) -> None:
+        """
+        Ensure non-login user failed to change password
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.change_pass_url, self.data)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_user_failed_to_change_password_with_wrong_old_password(self) -> None:
+        """
+        Ensure user failed to change password using wrong old password
+        """
+        self.old_password = {
+            'new_password1': 'XandarGone2',
+            'new_password2': 'XandarGone2',
+            'old_password': 'GreenLanterns',
+        }
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.change_pass_url, self.old_password)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
