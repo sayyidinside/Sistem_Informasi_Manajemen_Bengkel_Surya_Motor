@@ -14,7 +14,7 @@ from si_mbe.serializers import (ProfileSerializers, RestockPostSerializers,
                                 SalesReportDetailSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
-                                SparepartSerializers, SupplierSerializers)
+                                SparepartSerializers, SupplierSerializers, ProfileUpdateSerializers)
 
 
 class Home(generics.GenericAPIView):
@@ -425,3 +425,31 @@ class ProfileDetail(generics.RetrieveAPIView):
 
     lookup_field = 'user_id'
     lookup_url_kwarg = 'user_id'
+
+
+class ProfileUpdate(generics.UpdateAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileUpdateSerializers
+    permission_classes = [IsLogin, IsRelatedUserOrAdmin]
+
+    lookup_field = 'user_id'
+    lookup_url_kwarg = 'user_id'
+
+    def update(self, request, *args, **kwargs):
+        if len(request.data) < 3:
+            return Response({'message': 'Data profile tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        data = serializer.data
+        data['message'] = 'Profile berhasil dirubah'
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(data)

@@ -119,6 +119,9 @@ class SalesPostSerializers(serializers.ModelSerializer):
         if len(details_dict) > 0:
             for detail in details_dict.values():
                 detail.delete()
+
+        instance.save()
+
         return instance
 
 
@@ -201,6 +204,9 @@ class RestockPostSerializers(serializers.ModelSerializer):
         if len(details_dict) > 0:
             for detail in details_dict.values():
                 detail.delete()
+
+        instance.save()
+
         return instance
 
 
@@ -311,3 +317,26 @@ class ProfileSerializers(serializers.ModelSerializer):
     class Meta:
         model = Profile
         fields = ['name', 'email', 'contact_number', 'role']
+
+
+class ProfileUpdateSerializers(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user_id.email')
+
+    class Meta:
+        model = Profile
+        fields = ['name', 'email', 'contact_number']
+
+    def update(self, instance, validated_data):
+        # get email and assigning to user instance
+        email = validated_data.pop('user_id')
+
+        user = instance.user_id
+        user.email = email.get('email', user.email)
+        user.save()
+
+        # Assigning to profile instance
+        instance.name = validated_data.get('name', instance.name)
+        instance.contact_number = validated_data.get('contact_number', instance.contact_number)
+        instance.save()
+
+        return instance

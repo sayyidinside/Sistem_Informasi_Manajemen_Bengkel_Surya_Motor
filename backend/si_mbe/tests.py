@@ -2373,3 +2373,138 @@ class ProfileDetailTestCase(APITestCase):
             'contact_number': self.nonadmin_user.profile.contact_number,
             'role': self.nonadmin_user.profile.role_id.name
         })
+
+
+class ProfileUpdateTestCase(APITestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and non-admin user
+        cls.role = Role.objects.create(name='Admin')
+        cls.nonadmin_role = Role.objects.create(name='Karyawan')
+
+        # Setting up input data
+        cls.data = {
+            'name': 'Sam Alexander',
+            'email': 'kidnova@gmail.com',
+            'contact_number': '085263486045',
+        }
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        # Setting up admin user and non-admin user details
+        self.user = User.objects.create_user(
+            username='richardrider',
+            password='NovaPrimeAnnahilations',
+            email='chad.bladess@gmail.com'
+        )
+        Profile.objects.create(
+            user_id=self.user,
+            role_id=self.role,
+            name='Richard Rider',
+            contact_number='081256456948'
+        )
+
+        self.nonadmin_user = User.objects.create_user(
+            username='Phalanx',
+            password='TryintoTakeOver',
+            email='spacevirusalien@gmail.com'
+        )
+        Profile.objects.create(
+            user_id=self.nonadmin_user,
+            role_id=self.nonadmin_role,
+            name='Ultron',
+            contact_number='011011000111'
+        )
+
+        return super().setUp()
+
+    def test_user_successfully_update_their_own_profile(self) -> None:
+        """
+        Ensure user can update their own profile successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(
+            reverse('profile_update', kwargs={'user_id': self.user.pk}),
+            self.data,
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Profile berhasil dirubah')
+        self.assertEqual(response.data, {
+            'name': self.data['name'],
+            'email': self.data['email'],
+            'contact_number': self.data['contact_number'],
+            'message': 'Profile berhasil dirubah'
+        })
+
+    def test_nonlogin_user_failed_to_update_profile(self) -> None:
+        """
+        Ensure non-login user cannot update profile
+        """
+        response = self.client.put(
+            reverse('profile_update', kwargs={'user_id': self.user.pk}),
+            self.data,
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_user_failed_to_update_another_user_profile(self) -> None:
+        """
+        Ensure user cannot update another user / people profile
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.put(
+            reverse('profile_update', kwargs={'user_id': self.user.pk}),
+            self.data,
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_user_failed_to_update_profile_with_empty_data(self) -> None:
+        """
+        Ensure user cannot update profile with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(
+            reverse('profile_update', kwargs={'user_id': self.user.pk}),
+            {},
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data profile tidak sesuai / tidak lengkap')
+
+    def test_user_failed_to_update_profile_with_partial_data(self) -> None:
+        """
+        Ensure user cannot update profile with partial data / input
+        """
+        self.partial_data = {'name': 'Self Warlock'}
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(
+            reverse('profile_update', kwargs={'user_id': self.user.pk}),
+            self.partial_data,
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data profile tidak sesuai / tidak lengkap')
+
+    def test_admin_successfully_update_other_user_profile(self) -> None:
+        """
+        Ensure admin can update other user profile successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(
+            reverse('profile_update', kwargs={'user_id': self.nonadmin_user.pk}),
+            self.data,
+            format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Profile berhasil dirubah')
+        self.assertEqual(response.data, {
+            'name': self.data['name'],
+            'email': self.data['email'],
+            'contact_number': self.data['contact_number'],
+            'message': 'Profile berhasil dirubah'
+        })
