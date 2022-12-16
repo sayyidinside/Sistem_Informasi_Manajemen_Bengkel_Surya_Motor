@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from si_mbe.models import (Restock, Restock_detail, Sales, Sales_detail,
-                           Sparepart, Supplier)
+                           Sparepart, Supplier, Profile)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -211,7 +211,7 @@ class SupplierSerializers(serializers.ModelSerializer):
 
 
 class SalesReportSerializers(serializers.ModelSerializer):
-    admin = serializers.ReadOnlyField(source='user_id.extend_user.name')
+    admin = serializers.ReadOnlyField(source='user_id.profile.name')
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
 
@@ -229,7 +229,7 @@ class SalesReportSerializers(serializers.ModelSerializer):
 
 
 class SalesReportDetailSerializers(serializers.ModelSerializer):
-    admin = serializers.ReadOnlyField(source='user_id.extend_user.name')
+    admin = serializers.ReadOnlyField(source='user_id.profile.name')
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     content = SalesDetailSerializers(many=True, source='sales_detail_set')
@@ -249,7 +249,7 @@ class SalesReportDetailSerializers(serializers.ModelSerializer):
 
 
 class RestockReportSerializers(serializers.ModelSerializer):
-    admin = serializers.ReadOnlyField(source='user_id.extend_user.name')
+    admin = serializers.ReadOnlyField(source='user_id.profile.name')
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     due_date = serializers.DateField(format="%d-%m-%Y")
@@ -276,7 +276,7 @@ class RestockReportSerializers(serializers.ModelSerializer):
 
 
 class RestockReportDetailSerializers(serializers.ModelSerializer):
-    admin = serializers.ReadOnlyField(source='user_id.extend_user.name')
+    admin = serializers.ReadOnlyField(source='user_id.profile.name')
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     due_date = serializers.DateField(format="%d-%m-%Y")
@@ -302,3 +302,12 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
             'salesman_contact',
             'content',
         ]
+
+
+class ProfileSerializers(serializers.ModelSerializer):
+    email = serializers.ReadOnlyField(source='user_id.email')
+    role = serializers.ReadOnlyField(source='role_id.name')
+
+    class Meta:
+        model = Profile
+        fields = ['name', 'email', 'contact_number', 'role']

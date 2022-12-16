@@ -21,11 +21,12 @@ class Role(models.Model):
         db_table = 'role'
 
 
-# extend_user tabel to give each user their perpective role
-class Extend_user(models.Model):
-    user = models.OneToOneField(
+# Profile tabel is extended of user tabel to give each user their perpective informations
+class Profile(models.Model):
+    user_id = models.OneToOneField(
         User,
-        on_delete=models.CASCADE
+        on_delete=models.CASCADE,
+        db_column='user_id'
     )
     name = models.CharField(max_length=30, default='')
     contact_number = models.CharField(max_length=13, default='')
@@ -38,6 +39,9 @@ class Extend_user(models.Model):
 
     def __str__(self) -> str:
         return f'{self.user.username} as {self.role_id.name}'
+
+    class Meta:
+        db_table = 'profile'
 
 
 # log table to store user activity against certain table

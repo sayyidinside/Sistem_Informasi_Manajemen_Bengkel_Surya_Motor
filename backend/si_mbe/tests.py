@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import (Brand, Extend_user, Restock, Restock_detail, Role,
+from si_mbe.models import (Brand, Profile, Restock, Restock_detail, Role,
                            Sales, Sales_detail, Sparepart, Supplier)
 
 
@@ -18,11 +18,11 @@ class SetTestCase(APITestCase):
         # Setting up admin user and non-admin user
         cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
 
         cls.nonadmin_role = Role.objects.create(name='Karyawan')
         cls.nonadmin_user = User.objects.create_user(username='Phalanx', password='TryintoTakeOver')
-        Extend_user.objects.create(user=cls.nonadmin_user, role_id=cls.nonadmin_role)
+        Profile.objects.create(user_id=cls.nonadmin_user, role_id=cls.nonadmin_role)
 
         return super().setUpTestData()
 
@@ -1679,11 +1679,11 @@ class SalesReportListTestCase(APITestCase):
         # Setting up admin user and owner user
         cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
 
         cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
 
         cls.brand = Brand.objects.create(name='Dragon Steel')
 
@@ -1777,11 +1777,11 @@ class SalesReportDetail(APITestCase):
         # Setting up admin user and owner user
         cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
 
         cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
 
         cls.brand = Brand.objects.create(name='Steins Gate')
 
@@ -1900,11 +1900,11 @@ class RestockReportTestCase(APITestCase):
         # Setting up admin user and owner user
         cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
 
         cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
 
         # Setting up brand
         cls.brand = Brand.objects.create(name='Cosmic Being')
@@ -2015,11 +2015,11 @@ class RestockReportDetailTestCase(APITestCase):
         # Setting up admin user and owner user
         cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Extend_user.objects.create(user=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
 
         cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Extend_user.objects.create(user=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
 
         # Setting up brand
         cls.brand = Brand.objects.create(name='Galactic Empire')
@@ -2295,3 +2295,81 @@ class ResetPasswordTestCase(APITestCase):
 
         response = self.client.post(self.reset_password_confirm, self.wrong_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ProfileDetailTestCase(APITestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and non-admin user
+        cls.role = Role.objects.create(name='Admin')
+        cls.user = User.objects.create_user(
+            username='richardrider',
+            password='NovaPrimeAnnahilations',
+            email='chad.bladess@gmail.com'
+        )
+        Profile.objects.create(
+            user_id=cls.user,
+            role_id=cls.role,
+            name='Richard Rider',
+            contact_number='081256456948'
+        )
+
+        cls.nonadmin_role = Role.objects.create(name='Karyawan')
+        cls.nonadmin_user = User.objects.create_user(
+            username='Phalanx',
+            password='TryintoTakeOver',
+            email='spacevirusalien@gmail.com'
+        )
+        Profile.objects.create(
+            user_id=cls.nonadmin_user,
+            role_id=cls.nonadmin_role,
+            name='Ultron',
+            contact_number='011011000111'
+        )
+
+        return super().setUpTestData()
+
+    def test_user_successfully_access_their_own_profile_detail(self) -> None:
+        """
+        Ensure user can access their own profile detail successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.user.pk}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {
+            'name': self.user.profile.name,
+            'email': self.user.email,
+            'contact_number': self.user.profile.contact_number,
+            'role': self.user.profile.role_id.name
+        })
+
+    def test_nonlogin_user_failed_to_access_profile_detail(self) -> None:
+        """
+        Ensure non-login user cannot access profile detail
+        """
+        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.user.pk}))
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_user_failed_to_access_another_user_profile_detail(self) -> None:
+        """
+        Ensure user cannot access another user / people profile detail
+        """
+        self.client.force_authenticate(user=self.nonadmin_user)
+        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.user.pk}))
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_successfully_access_another_user_profile_detail(self) -> None:
+        """
+        Ensure admin can access another user / people profile detail successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.nonadmin_user.pk}))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {
+            'name': self.nonadmin_user.profile.name,
+            'email': self.nonadmin_user.email,
+            'contact_number': self.nonadmin_user.profile.contact_number,
+            'role': self.nonadmin_user.profile.role_id.name
+        })

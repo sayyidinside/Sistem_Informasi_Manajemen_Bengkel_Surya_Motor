@@ -1,12 +1,13 @@
+from dj_rest_auth.views import PasswordChangeView
 from django.http import Http404
 from rest_framework import authentication, filters, generics, status
 from rest_framework.response import Response
 from si_mbe.exceptions import (RestockNotFound, SalesNotFound,
                                SparepartNotFound, SupplierNotFound)
-from si_mbe.models import Restock, Sales, Sparepart, Supplier
+from si_mbe.models import Profile, Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
-from si_mbe.permissions import IsAdminRole, IsLogin, IsOwnerRole
-from si_mbe.serializers import (RestockPostSerializers,
+from si_mbe.permissions import IsAdminRole, IsLogin, IsOwnerRole, IsRelatedUserOrAdmin
+from si_mbe.serializers import (ProfileSerializers, RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
                                 SalesPostSerializers,
@@ -14,7 +15,6 @@ from si_mbe.serializers import (RestockPostSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
                                 SparepartSerializers, SupplierSerializers)
-from dj_rest_auth.views import PasswordChangeView
 
 
 class Home(generics.GenericAPIView):
@@ -416,3 +416,12 @@ class RestockReportDetail(generics.RetrieveAPIView):
 
 class CustomPasswordChangeView(PasswordChangeView):
     permission_classes = [IsLogin]
+
+
+class ProfileDetail(generics.RetrieveAPIView):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializers
+    permission_classes = [IsLogin, IsRelatedUserOrAdmin]
+
+    lookup_field = 'user_id'
+    lookup_url_kwarg = 'user_id'
