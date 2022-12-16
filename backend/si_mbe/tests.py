@@ -1,5 +1,8 @@
 from datetime import date, timedelta
 
+from django.utils.encoding import force_str
+from django.conf import settings
+from django.core import mail
 from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
@@ -2145,7 +2148,7 @@ class RestockReportDetailTestCase(APITestCase):
 
 
 class ChangePasswordTestCase(APITestCase):
-    change_pass_url = reverse('password-change')
+    change_pass_url = reverse('password_change')
 
     @classmethod
     def setUpTestData(cls) -> None:
@@ -2176,7 +2179,7 @@ class ChangePasswordTestCase(APITestCase):
 
     def test_nonlogin_user_failed_to_change_password(self) -> None:
         """
-        Ensure non-login user failed to change password
+        Ensure non-login user cannot change password
         """
         self.client.force_authenticate(user=None, token=None)
         response = self.client.post(self.change_pass_url, self.data)
@@ -2185,7 +2188,7 @@ class ChangePasswordTestCase(APITestCase):
 
     def test_user_failed_to_change_password_with_wrong_old_password(self) -> None:
         """
-        Ensure user failed to change password using wrong old password
+        Ensure user cannot change password using wrong old password
         """
         self.old_password = {
             'new_password1': 'XandarGone2',
@@ -2194,4 +2197,101 @@ class ChangePasswordTestCase(APITestCase):
         }
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.change_pass_url, self.old_password)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_user_failed_to_change_password_with_weak_password(self) -> None:
+        """
+        Ensure user cannot change password using weak password
+        """
+        self.weak_password = {
+            'new_password1': '123asd',
+            'new_password2': '123asd',
+            'old_password': 'NovaPrimeAnnahilations',
+        }
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.change_pass_url, self.weak_password)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class ResetPasswordTestCase(APITestCase):
+    reset_password_url = reverse('password_reset')
+    reset_password_confirm = reverse('rest_password_reset_confirm')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        self.user = User.objects.create_user(
+            username='richardrider',
+            password='NovaPrimeAnnahilations',
+            email='chad.bladess@gmail.com'
+        )
+        self.user.is_active = True
+        self.user.save()
+
+        return super().setUp()
+
+    def _generate_uid_and_token(self, user):
+        result = {}
+        if 'allauth' in settings.INSTALLED_APPS:
+            from allauth.account.forms import default_token_generator
+            from allauth.account.utils import user_pk_to_url_str
+            result['uid'] = user_pk_to_url_str(user)
+        else:
+            from django.utils.encoding import force_bytes
+            from django.contrib.auth.tokens import default_token_generator
+            from django.utils.http import urlsafe_base64_encode
+            result['uid'] = urlsafe_base64_encode(force_bytes(user.pk))
+        result['token'] = default_token_generator.make_token(user)
+        return result
+
+    def test_user_successfully_get_email_in_reset_password(self) -> None:
+        """
+        Ensure user can get email to reset user's account password successfully
+        """
+        response = self.client.post(self.reset_password_url, {'email': self.user.email})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 1)
+
+    def test_user_failed_to_get_email_with_wrong_email_in_reset_password(self) -> None:
+        """
+        Ensure user cannot get email to reset account password using wrong email data
+        """
+        response = self.client.post(self.reset_password_url, {'email': 'wrong@gmail.com'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(mail.outbox), 0)
+
+    def test_user_successfully_reset_password_confirm(self) -> None:
+        """
+        Ensure user can reset user's account password successfully
+        """
+        self.url_kwargs = self._generate_uid_and_token(self.user)
+
+        # Setting up data input
+        self.data = {
+            'new_password1': 'NewWarriors31',
+            'new_password2': 'NewWarriors31',
+            'uid': force_str(self.url_kwargs['uid']),
+            'token': self.url_kwargs['token'],
+        }
+
+        response = self.client.post(self.reset_password_confirm, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_user_failed_to_reset_password_confirm_with_wrong_data(self) -> None:
+        """
+        Ensure user cannot reset user's account password with wrong data
+        """
+        self.url_kwargs = self._generate_uid_and_token(self.user)
+
+        # Setting up wrong data input
+        self.wrong_data = {
+            'new_password1': 'NewWarriors31',
+            'new_password2': 'NewWarriors31',
+            'uid': force_str(self.url_kwargs['uid']),
+            'token': 'wrong token',
+        }
+
+        response = self.client.post(self.reset_password_confirm, self.wrong_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)

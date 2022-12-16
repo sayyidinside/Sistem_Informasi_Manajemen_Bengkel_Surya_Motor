@@ -40,6 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'rest_framework',
     'rest_framework.authtoken',
+    'allauth',
+    'allauth.account',
     'dj_rest_auth',
     'django_timed_tests',
     'corsheaders',
@@ -155,11 +157,17 @@ REST_FRAMEWORK = {
     'SEARCH_PARAM': 'q',
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework.authentication.TokenAuthentication',
+        'django.contrib.auth.backends.ModelBackend',
+        'allauth.account.auth_backends.AuthenticationBackend',
     ]
     # TEST_RUNNER = "django_timed_tests.TimedTestRunner"
 }
 
+SITE_ID = 1
+
 OLD_PASSWORD_FIELD_ENABLED = True
+
+DEFAULT_FROM_EMAIL = 'si.mbe.mulya.motor@gmail.com'
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
