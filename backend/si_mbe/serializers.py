@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from si_mbe.models import (Restock, Restock_detail, Sales, Sales_detail,
-                           Sparepart, Supplier, Profile)
+from si_mbe.models import (Logs, Profile, Restock, Restock_detail, Sales,
+                           Sales_detail, Sparepart, Supplier)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -340,3 +340,13 @@ class ProfileUpdateSerializers(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class LogSerializers(serializers.ModelSerializer):
+    user = serializers.ReadOnlyField(source='user_id.profile.name')
+    log_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    operation = serializers.ReadOnlyField(source='get_operation_display')
+
+    class Meta:
+        model = Logs
+        fields = ['log_id', 'log_at', 'user', 'table_name', 'operation']

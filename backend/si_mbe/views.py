@@ -4,17 +4,21 @@ from rest_framework import authentication, filters, generics, status
 from rest_framework.response import Response
 from si_mbe.exceptions import (RestockNotFound, SalesNotFound,
                                SparepartNotFound, SupplierNotFound)
-from si_mbe.models import Profile, Restock, Sales, Sparepart, Supplier
+from si_mbe.models import Logs, Profile, Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
-from si_mbe.permissions import IsAdminRole, IsLogin, IsOwnerRole, IsRelatedUserOrAdmin
-from si_mbe.serializers import (ProfileSerializers, RestockPostSerializers,
+from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
+                                IsRelatedUserOrAdmin)
+from si_mbe.serializers import (LogSerializers, ProfileSerializers,
+                                ProfileUpdateSerializers,
+                                RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
                                 SalesPostSerializers,
                                 SalesReportDetailSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
-                                SparepartSerializers, SupplierSerializers, ProfileUpdateSerializers)
+                                SparepartSerializers, SupplierSerializers)
+from si_mbe.utility import perform_log
 
 
 class Home(generics.GenericAPIView):
@@ -68,12 +72,16 @@ class SparepartDataAdd(generics.CreateAPIView):
         if len(request.data) < 6:
             return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         data = serializer.data
         data['message'] = 'Data sparepart berhasil ditambah'
+
+        perform_log(request=request, operation='C', table_name='Sparepart')
+
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
@@ -95,6 +103,7 @@ class SparepartDataUpdate(generics.UpdateAPIView):
         if len(request.data) < 6:
             return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
+
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -107,6 +116,8 @@ class SparepartDataUpdate(generics.UpdateAPIView):
             # If 'prefetch_related' has been applied to a queryset, we need to
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
+
+        perform_log(request=request, operation='E', table_name='Sparepart')
 
         return Response(data)
 
@@ -127,6 +138,9 @@ class SparepartDataDelete(generics.DestroyAPIView):
         instance = self.get_object()
         self.perform_destroy(instance)
         message = {'message': 'Data sparepart berhasil dihapus'}
+
+        perform_log(request=request, operation='R', table_name='Sparepart')
+
         return Response(message, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -152,12 +166,16 @@ class SalesAdd(generics.CreateAPIView):
             if len(content) < 3:
                 return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         data = serializer.data
         data['message'] = 'Data penjualan berhasil ditambah'
+
+        perform_log(request=request, operation='C', table_name='Sales')
+
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
@@ -182,6 +200,7 @@ class SalesUpdate(generics.UpdateAPIView):
             if len(content) < 4:
                 return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -194,6 +213,8 @@ class SalesUpdate(generics.UpdateAPIView):
             # If 'prefetch_related' has been applied to a queryset, we need to
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
+
+        perform_log(request=request, operation='E', table_name='Sales')
 
         return Response(data)
 
@@ -215,6 +236,9 @@ class SalesDelete(generics.DestroyAPIView):
         instance = self.get_object()
         self.perform_destroy(instance)
         message = {'message': 'Data penjualan berhasil dihapus'}
+
+        perform_log(request=request, operation='R', table_name='Sales')
+
         return Response(message, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -238,12 +262,16 @@ class RestockAdd(generics.CreateAPIView):
             if len(content) < 3:
                 return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         headers = self.get_success_headers(serializer.data)
         data = serializer.data
         data['message'] = 'Data pengadaan berhasil ditambah'
+
+        perform_log(request=request, operation='C', table_name='Restock')
+
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
@@ -268,6 +296,7 @@ class RestockUpdate(generics.UpdateAPIView):
             if len(content) < 4:
                 return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
         partial = kwargs.pop('partial', False)
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data, partial=partial)
@@ -280,6 +309,8 @@ class RestockUpdate(generics.UpdateAPIView):
             # If 'prefetch_related' has been applied to a queryset, we need to
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
+
+        perform_log(request=request, operation='E', table_name='Restock')
 
         return Response(data)
 
@@ -301,6 +332,9 @@ class RestockDelete(generics.DestroyAPIView):
         instance = self.get_object()
         self.perform_destroy(instance)
         message = {'message': 'Data pengadaan berhasil dihapus'}
+
+        perform_log(request=request, operation='R', table_name='Restock')
+
         return Response(message, status=status.HTTP_204_NO_CONTENT)
 
 
@@ -453,3 +487,10 @@ class ProfileUpdate(generics.UpdateAPIView):
             instance._prefetched_objects_cache = {}
 
         return Response(data)
+
+
+class LogList(generics.ListAPIView):
+    queryset = Logs.objects.all().order_by('log_id')
+    serializer_class = LogSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsOwnerRole]

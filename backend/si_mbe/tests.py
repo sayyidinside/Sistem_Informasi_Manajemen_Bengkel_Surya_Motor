@@ -1,13 +1,13 @@
 from datetime import date, timedelta
 
-from django.utils.encoding import force_str
 from django.conf import settings
-from django.core import mail
 from django.contrib.auth.models import User
+from django.core import mail
 from django.urls import reverse
+from django.utils.encoding import force_str
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import (Brand, Profile, Restock, Restock_detail, Role,
+from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail, Role,
                            Sales, Sales_detail, Sparepart, Supplier)
 
 
@@ -2239,8 +2239,8 @@ class ResetPasswordTestCase(APITestCase):
             from allauth.account.utils import user_pk_to_url_str
             result['uid'] = user_pk_to_url_str(user)
         else:
-            from django.utils.encoding import force_bytes
             from django.contrib.auth.tokens import default_token_generator
+            from django.utils.encoding import force_bytes
             from django.utils.http import urlsafe_base64_encode
             result['uid'] = urlsafe_base64_encode(force_bytes(user.pk))
         result['token'] = default_token_generator.make_token(user)
@@ -2508,3 +2508,76 @@ class ProfileUpdateTestCase(APITestCase):
             'contact_number': self.data['contact_number'],
             'message': 'Profile berhasil dirubah'
         })
+
+
+class LogTestCase(APITestCase):
+    log_url = reverse('log')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up admin user and owner user
+        cls.role = Role.objects.create(name='Admin')
+        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
+        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+
+        cls.owner_role = Role.objects.create(name='Pemilik')
+        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
+        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+
+        cls.log_1 = Logs.objects.create(
+            table_name='Sales',
+            operation='R',
+            user_id=cls.user
+        )
+        cls.log_2 = Logs.objects.create(
+            table_name='Sparepart',
+            operation='E',
+            user_id=cls.user
+        )
+
+        cls.time_1 = cls.log_1.log_at + timedelta(hours=7)
+        cls.time_2 = cls.log_2.log_at + timedelta(hours=7)
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_log(self) -> None:
+        """
+        Ensure owner can access log successfully
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.log_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'], [
+            {
+                'log_id': self.log_1.log_id,
+                'log_at': self.time_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'user': self.log_1.user_id.profile.name,
+                'table_name': self.log_1.table_name,
+                'operation': self.log_1.get_operation_display()
+            },
+            {
+                'log_id': self.log_2.log_id,
+                'log_at': self.time_2.strftime('%d-%m-%Y %H:%M:%S'),
+                'user': self.log_2.user_id.profile.name,
+                'table_name': self.log_2.table_name,
+                'operation': self.log_2.get_operation_display()
+            }
+        ])
+
+    def test_nonlogin_user_failed_to_access_log(self) -> None:
+        """
+        Ensure non-login user cannot access_log
+        """
+        response = self.client.get(self.log_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_log(self) -> None:
+        """
+        Ensure non-owner user cannot access log
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.log_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

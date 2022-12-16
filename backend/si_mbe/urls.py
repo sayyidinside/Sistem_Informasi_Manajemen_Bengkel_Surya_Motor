@@ -30,4 +30,5 @@ urlpatterns = [
      path('report/restock/<int:restock_id>', views.RestockReportDetail.as_view(), name='restock_report_detail'),
      path('profile/<int:user_id>', views.ProfileDetail.as_view(), name='profile_detail'),
      path('profile/edit/<int:user_id>', views.ProfileUpdate.as_view(), name='profile_update'),
+     path('log/', views.LogList.as_view(), name='log'),
 ]

@@ -47,7 +47,7 @@ class Profile(models.Model):
 # log table to store user activity against certain table
 # the table tracked are sales, sales_detail, restock, restock_detail, sparepart
 # log table consist of log_id as pk, log_at, log_at (time), table_name, user_id
-class Log(models.Model):
+class Logs(models.Model):
     log_id = models.AutoField(
         primary_key=True,
         unique=True,
@@ -73,7 +73,9 @@ class Log(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'at {self.log_at} {self.user_id} {self.user_id} a record from {self.table_name}'
+        return f"at {self.log_at.strftime('%d-%m-%Y %H:%M:%S')} {self.user_id.profile.name} "\
+               f"{self.get_operation_display()} a record from {self.table_name}"\
+
 
     class Meta:
         db_table = 'log'
