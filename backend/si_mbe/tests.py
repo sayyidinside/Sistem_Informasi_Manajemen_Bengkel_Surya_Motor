@@ -8,7 +8,7 @@ from django.utils.encoding import force_str
 from rest_framework import status
 from rest_framework.test import APITestCase
 from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail, Role,
-                           Sales, Sales_detail, Sparepart, Supplier)
+                           Sales, Sales_detail, Sparepart, Supplier, Storage)
 
 
 # Create your tests here.
@@ -129,19 +129,27 @@ class HomePageTestCase(APITestCase):
 class SparepartSearchTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
-        cls.name = 'aki 1000CC'
-        cls.partnumber = 'AB17623-ha2092d'
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Kymco')
 
-        Sparepart.objects.create(
-            name=cls.name,
-            partnumber=cls.partnumber,
-            quantity=50,
-            motor_type='Yamaha Nmax',
-            sparepart_type='24Q-22',
-            price=5400000,
-            grosir_price=5300000,
-            brand_id=None
+        # Setting up storage data
+        cls.storage = Storage.objects.create(
+            code='6ABC',
+            location='Rak Biru B6'
         )
+
+        # Setting up sparepart data
+        cls.sparepart = Sparepart.objects.create(
+                            name='aki 1000CC',
+                            partnumber='AB17623-ha2092d',
+                            quantity=50,
+                            motor_type='Yamaha Nmax',
+                            sparepart_type='24Q-22',
+                            price=5400000,
+                            grosir_price=5300000,
+                            brand_id=cls.brand,
+                            storage_id=cls.storage
+                        )
 
         return super().setUpTestData()
 
@@ -149,11 +157,24 @@ class SparepartSearchTestCase(APITestCase):
         """
         Ensure user who searching sparepart with correct keyword get correct result
         """
-        response = self.client.get(reverse('search_sparepart') + f'?q={self.name}')
+        response = self.client.get(reverse('search_sparepart') + f'?q={self.sparepart.name}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 1)
-        self.assertEqual(response.data['results'][0]['partnumber'], self.partnumber)
         self.assertEqual(response.data['message'], 'Pencarian sparepart berhasil')
+        self.assertEqual(response.data['results'], [
+            {
+                'sparepart_id': self.sparepart.sparepart_id,
+                'name': self.sparepart.name,
+                'partnumber': self.sparepart.partnumber,
+                'quantity': self.sparepart.quantity,
+                'motor_type': self.sparepart.motor_type,
+                'sparepart_type': self.sparepart.sparepart_type,
+                'brand': self.sparepart.brand_id.name,
+                'price': str(self.sparepart.price),
+                'grosir_price': str(self.sparepart.grosir_price),
+                'location': self.storage.location
+            }
+        ])
 
     def test_successfully_searching_sparepart_without_result(self) -> None:
         """
@@ -200,6 +221,15 @@ class SparepartDataListTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Kenshin')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(
+            code='6ABC',
+            location='Rak Biru B6'
+        )
+
         # Setting up sparepart data
         cls.name = 'Spakbord C70'
         cls.partnumber = 'AB17623-ha2092d'
@@ -212,8 +242,11 @@ class SparepartDataListTestCase(SetTestCase):
                 sparepart_type='24Q-22',
                 price=5400000,
                 grosir_price=5300000,
-                brand_id=None
+                brand_id=cls.brand,
+                storage_id=cls.storage
             )
+
+        cls.sparepart = Sparepart.objects.all()
 
         return super().setUpTestData()
 
@@ -225,8 +258,45 @@ class SparepartDataListTestCase(SetTestCase):
         response = self.client.get(self.sparepart_data_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 3)
-        self.assertEqual(response.data['results'][0]['name'], f'{self.name}0')
-        self.assertEqual(response.data['results'][0]['partnumber'], f'{self.partnumber}0')
+        self.assertEqual(response.data['results'], [
+            {
+                'sparepart_id': self.sparepart[0].sparepart_id,
+                'name': self.sparepart[0].name,
+                'partnumber': self.sparepart[0].partnumber,
+                'quantity': self.sparepart[0].quantity,
+                'motor_type': self.sparepart[0].motor_type,
+                'sparepart_type': self.sparepart[0].sparepart_type,
+                'brand': self.sparepart[0].brand_id.name,
+                'price': str(self.sparepart[0].price),
+                'grosir_price': str(self.sparepart[0].grosir_price),
+                'location': self.storage.location
+            },
+            {
+                'sparepart_id': self.sparepart[1].sparepart_id,
+                'name': self.sparepart[1].name,
+                'partnumber': self.sparepart[1].partnumber,
+                'quantity': self.sparepart[1].quantity,
+                'motor_type': self.sparepart[1].motor_type,
+                'sparepart_type': self.sparepart[1].sparepart_type,
+                'brand': self.sparepart[1].brand_id.name,
+                'price': str(self.sparepart[1].price),
+                'grosir_price': str(self.sparepart[1].grosir_price),
+                'location': self.storage.location
+            },
+            {
+                'sparepart_id': self.sparepart[2].sparepart_id,
+                'name': self.sparepart[2].name,
+                'partnumber': self.sparepart[2].partnumber,
+                'quantity': self.sparepart[2].quantity,
+                'motor_type': self.sparepart[2].motor_type,
+                'sparepart_type': self.sparepart[2].sparepart_type,
+                'brand': self.sparepart[2].brand_id.name,
+                'price': str(self.sparepart[2].price),
+                'grosir_price': str(self.sparepart[2].grosir_price),
+                'location': self.storage.location
+            }
+
+        ])
 
     def test_nonlogin_user_failed_to_access_sparepart_data_list(self) -> None:
         """
@@ -252,6 +322,15 @@ class SparepartDataAddTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Shimada')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(
+            code='6ABC',
+            location='Rak Biru B6'
+        )
+
         # Creating data that gonna be use as input
         cls.data_sparepart = {
             'name': 'Milano Buster T-194',
@@ -261,6 +340,8 @@ class SparepartDataAddTestCase(SetTestCase):
             'sparepart_type': '24Q-22',
             'price': 5400000,
             'grosir_price': 5300000,
+            'brand_id': cls.brand.brand_id,
+            'storage_id': cls.storage.storage_id
         }
 
         return super().setUpTestData()
@@ -272,10 +353,16 @@ class SparepartDataAddTestCase(SetTestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.sparepart_data_add_url, self.data_sparepart)
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data sparepart berhasil ditambah')
         self.assertEqual(response.data['name'], self.data_sparepart['name'])
         self.assertEqual(response.data['partnumber'], self.data_sparepart['partnumber'])
+        self.assertEqual(response.data['quantity'], self.data_sparepart['quantity'])
+        self.assertEqual(response.data['motor_type'], self.data_sparepart['motor_type'])
+        self.assertEqual(response.data['sparepart_type'], self.data_sparepart['sparepart_type'])
+        self.assertEqual(response.data['brand_id'], self.data_sparepart['brand_id'])
         self.assertEqual(int(response.data['price']), self.data_sparepart['price'])
-        self.assertEqual(response.data['message'], 'Data sparepart berhasil ditambah')
+        self.assertEqual(int(response.data['grosir_price']), self.data_sparepart['grosir_price'])
+        self.assertEqual(response.data['storage_id'], self.data_sparepart['storage_id'])
 
     def test_nonlogin_user_failed_to_add_new_sparepart_data(self) -> None:
         """
@@ -318,6 +405,15 @@ class SparepartDataAddTestCase(SetTestCase):
 class SparepartDataUpdateTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Warbreaker')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(
+            code='6ABC',
+            location='Rak Biru B6'
+        )
+
         # Setting up new data to update sparepart data
         cls.data = {
             'name': 'Razor Crest PF-30',
@@ -327,6 +423,8 @@ class SparepartDataUpdateTestCase(SetTestCase):
             'sparepart_type': '24Q-22',
             'price': 5800000,
             'grosir_price': 5400000,
+            'brand_id': cls.brand.brand_id,
+            'storage_id': cls.storage.storage_id
         }
 
         return super().setUpTestData()
@@ -342,7 +440,7 @@ class SparepartDataUpdateTestCase(SetTestCase):
                 sparepart_type='24Q-22',
                 price=5800000,
                 grosir_price=5400000,
-                brand_id=None
+                brand_id=self.brand
             )
 
         # Getting newly added sparepart it's sparepart_id then set it to kwargs in reverse url
@@ -361,11 +459,13 @@ class SparepartDataUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data sparepart berhasil dirubah')
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['partnumber'], self.data['partnumber'])
-        self.assertEqual(int(response.data['quantity']), self.data['quantity'])
+        self.assertEqual(response.data['quantity'], self.data['quantity'])
         self.assertEqual(response.data['motor_type'], self.data['motor_type'])
         self.assertEqual(response.data['sparepart_type'], self.data['sparepart_type'])
+        self.assertEqual(response.data['brand_id'], self.data['brand_id'])
         self.assertEqual(int(response.data['price']), self.data['price'])
         self.assertEqual(int(response.data['grosir_price']), self.data['grosir_price'])
+        self.assertEqual(response.data['storage_id'], self.data['storage_id'])
 
     def test_nonlogin_user_failed_to_update_sparepart_data(self) -> None:
         """
@@ -416,6 +516,13 @@ class SparepartDataUpdateTestCase(SetTestCase):
 
 
 class SparepartDataDeleteTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Mistborn')
+
+        return super().setUpTestData()
+
     def setUp(self) -> None:
         # Setting up sparepart data
         for i in range(3):
@@ -427,7 +534,7 @@ class SparepartDataDeleteTestCase(SetTestCase):
                 sparepart_type='24Q-22',
                 price=800000,
                 grosir_price=750000,
-                brand_id=None
+                brand_id=self.brand
             )
 
         # Getting newly added sparepart it's sparepart_id then set it to kwargs in reverse url

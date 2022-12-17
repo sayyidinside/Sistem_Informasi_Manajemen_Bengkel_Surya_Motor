@@ -7,7 +7,8 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
     """
     serializers for searching sparepart
     """
-    brand_id = serializers.ReadOnlyField(source='brand_id.name')
+    brand = serializers.ReadOnlyField(source='brand_id.name')
+    location = serializers.ReadOnlyField(source='storage_id.location')
 
     class Meta:
         model = Sparepart
@@ -18,15 +19,14 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
             'quantity',
             'motor_type',
             'sparepart_type',
-            'brand_id',
+            'brand',
             'price',
             'grosir_price',
+            'location',
         ]
 
 
 class SparepartSerializers(serializers.ModelSerializer):
-    brand_id = serializers.ReadOnlyField(source='brand_id.name')
-
     class Meta:
         model = Sparepart
         fields = [
@@ -39,8 +39,7 @@ class SparepartSerializers(serializers.ModelSerializer):
             'brand_id',
             'price',
             'grosir_price',
-            'created_at',
-            'updated_at',
+            'storage_id'
         ]
 
 

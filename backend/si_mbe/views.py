@@ -69,7 +69,7 @@ class SparepartDataAdd(generics.CreateAPIView):
     authentication_classes = [authentication.TokenAuthentication]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 6:
+        if len(request.data) < 8:
             return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -100,7 +100,7 @@ class SparepartDataUpdate(generics.UpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 6:
+        if len(request.data) < 8:
             return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
 
