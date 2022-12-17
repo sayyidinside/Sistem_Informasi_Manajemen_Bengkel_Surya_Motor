@@ -1,6 +1,6 @@
 from dj_rest_auth.views import PasswordChangeView
 from django.http import Http404
-from rest_framework import authentication, filters, generics, status
+from rest_framework import filters, generics, status
 from rest_framework.response import Response
 from si_mbe.exceptions import (RestockNotFound, SalesNotFound,
                                SparepartNotFound, SupplierNotFound)
@@ -48,7 +48,6 @@ class SearchSparepart(generics.ListAPIView):
 
 class Dashboard(generics.GenericAPIView):
     permission_classes = [IsLogin, IsAdminRole]
-    authentication_classes = [authentication.TokenAuthentication]
 
     def get(self, request, *args, **kwargs):
         return Response({'message': 'Berhasil mengkases dashboard'}, status=status.HTTP_200_OK)
@@ -59,14 +58,12 @@ class SparepartDataList(generics.ListAPIView):
     serializer_class = SearchSparepartSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
-    authentication_classes = [authentication.TokenAuthentication]
 
 
 class SparepartDataAdd(generics.CreateAPIView):
     queryset = Sparepart.objects.all()
     serializer_class = SparepartSerializers
     permission_classes = [IsLogin, IsAdminRole]
-    authentication_classes = [authentication.TokenAuthentication]
 
     def create(self, request, *args, **kwargs):
         if len(request.data) < 8:
@@ -89,7 +86,6 @@ class SparepartDataUpdate(generics.UpdateAPIView):
     queryset = Sparepart.objects.all()
     serializer_class = SparepartSerializers
     permission_classes = [IsLogin, IsAdminRole]
-    authentication_classes = [authentication.TokenAuthentication]
 
     lookup_field = 'sparepart_id'
     lookup_url_kwarg = 'sparepart_id'
@@ -149,14 +145,12 @@ class SalesList(generics.ListAPIView):
     serializer_class = SalesSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
-    authentication_classes = [authentication.TokenAuthentication]
 
 
 class SalesAdd(generics.CreateAPIView):
     queryset = Sales.objects.all()
     serializer_class = SalesPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
-    authentication_classes = [authentication.TokenAuthentication]
 
     def create(self, request, *args, **kwargs):
         if len(request.data) < 4:
