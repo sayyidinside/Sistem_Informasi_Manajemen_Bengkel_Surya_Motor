@@ -38,7 +38,7 @@ class Profile(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'{self.user_id.username} as {self.role_id.name}'
+        return f'{self.name} as {self.role_id.name}'
 
     class Meta:
         db_table = 'profile'

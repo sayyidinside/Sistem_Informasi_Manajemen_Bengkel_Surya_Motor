@@ -82,7 +82,7 @@ class SparepartDataAdd(generics.CreateAPIView):
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class SparepartDataUpdate(generics.UpdateAPIView):
+class SparepartDataUpdate(generics.RetrieveUpdateAPIView):
     queryset = Sparepart.objects.all()
     serializer_class = SparepartSerializers
     permission_classes = [IsLogin, IsAdminRole]
@@ -173,7 +173,7 @@ class SalesAdd(generics.CreateAPIView):
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class SalesUpdate(generics.UpdateAPIView):
+class SalesUpdate(generics.RetrieveUpdateAPIView):
     queryset = Sales.objects.all()
     serializer_class = SalesPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
@@ -269,7 +269,7 @@ class RestockAdd(generics.CreateAPIView):
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class RestockUpdate(generics.UpdateAPIView):
+class RestockUpdate(generics.RetrieveUpdateAPIView):
     queryset = Restock.objects.all()
     serializer_class = RestockPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
@@ -357,7 +357,7 @@ class SupplierAdd(generics.CreateAPIView):
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class SupplierUpdate(generics.UpdateAPIView):
+class SupplierUpdate(generics.RetrieveUpdateAPIView):
     queryset = Supplier.objects.all()
     serializer_class = SupplierSerializers
     permission_classes = [IsLogin, IsAdminRole]
@@ -455,7 +455,7 @@ class ProfileDetail(generics.RetrieveAPIView):
     lookup_url_kwarg = 'user_id'
 
 
-class ProfileUpdate(generics.UpdateAPIView):
+class ProfileUpdate(generics.RetrieveUpdateAPIView):
     queryset = Profile.objects.all()
     serializer_class = ProfileUpdateSerializers
     permission_classes = [IsLogin, IsRelatedUserOrAdmin]
