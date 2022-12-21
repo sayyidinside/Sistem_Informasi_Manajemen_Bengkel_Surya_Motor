@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils.encoding import force_str
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import (Brand, Profile, Role, Sparepart, Storage)
+from si_mbe.models import Brand, Profile, Role, Sparepart, Storage
 
 
 class SetTestCase(APITestCase):

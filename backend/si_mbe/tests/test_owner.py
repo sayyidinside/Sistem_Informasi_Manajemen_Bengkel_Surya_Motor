@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail, Role,
                            Sales, Sales_detail, Sparepart, Supplier)
+from si_mbe.tests.test_admin import SetTestCase
 
 
 class SalesReportListTestCase(APITestCase):
@@ -553,5 +554,45 @@ class LogTestCase(APITestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.log_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class OwnerDashboardTestCase(SetTestCase):
+    owner_dashboard_url = reverse('owner_dashboard')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        Sales.objects.create(
+            customer_name='Caduceus Clay',
+            customer_contact='085456105311',
+        )
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_owner_dashboard(self) -> None:
+        """
+        Ensure owner can access owner dashboard
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.owner_dashboard_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['sales_today'], 1)
+
+    def test_nonlogin_user_failed_to_access_owner_dashboard(self) -> None:
+        """
+        Ensure non-login user cannot access owner dashboard
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.owner_dashboard_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_owner_dashboard(self) -> None:
+        """
+        Ensure non-owner user cannot access owner dashboard
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.owner_dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')

@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 from si_mbe.models import (Brand, Profile, Restock, Restock_detail, Role,
-                           Sales, Sales_detail, Sparepart, Supplier, Storage)
+                           Sales, Sales_detail, Sparepart, Storage, Supplier)
 
 
 # Create your tests here.
@@ -17,22 +17,22 @@ class SetTestCase(APITestCase):
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
         Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Karyawan')
+        cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='worldmind', password='XandarianWorldmind')
         Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
 
         return super().setUpTestData()
 
 
-class DashboardTestCase(SetTestCase):
-    dashboard_url = reverse('dashboard')
+class AdminDashboardTestCase(SetTestCase):
+    admin_dashboard_url = reverse('admin_dashboard')
 
     def test_admin_successfully_accessed_admin_dashboard(self) -> None:
         """
-        Ensure user can access admin dashboard
+        Ensure admin can access admin dashboard
         """
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.dashboard_url)
+        response = self.client.get(self.admin_dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_nonlogin_user_failed_to_access_admin_dashboard(self) -> None:
@@ -40,7 +40,7 @@ class DashboardTestCase(SetTestCase):
         Ensure non-login user cannot access admin dashboard
         """
         self.client.force_authenticate(user=None, token=None)
-        response = self.client.get(self.dashboard_url)
+        response = self.client.get(self.admin_dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
@@ -49,7 +49,7 @@ class DashboardTestCase(SetTestCase):
         Ensure non-admin user cannot access admin dashboard
         """
         self.client.force_authenticate(user=self.owner)
-        response = self.client.get(self.dashboard_url)
+        response = self.client.get(self.admin_dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 

@@ -1,3 +1,6 @@
+from calendar import monthrange
+from datetime import date
+
 from dj_rest_auth.views import PasswordChangeView
 from django.http import Http404
 from rest_framework import filters, generics, status
@@ -46,11 +49,11 @@ class SearchSparepart(generics.ListAPIView):
         return super().get_paginated_response(data)
 
 
-class Dashboard(generics.GenericAPIView):
+class AdminDashboard(generics.GenericAPIView):
     permission_classes = [IsLogin, IsAdminRole]
 
     def get(self, request, *args, **kwargs):
-        return Response({'message': 'Berhasil mengkases dashboard'}, status=status.HTTP_200_OK)
+        return Response({'message': 'Berhasil mengkases admin dashboard'}, status=status.HTTP_200_OK)
 
 
 class SparepartDataList(generics.ListAPIView):
@@ -488,3 +491,30 @@ class LogList(generics.ListAPIView):
     serializer_class = LogSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
+
+
+class OwnerDashboard(generics.GenericAPIView):
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    def get(self, request, *args, **kwargs):
+        # Getting number of day form current month
+        self.number_of_day = monthrange(date.today().year, date.today().month)[1]
+
+        # Create dict to store number of sales per day in current month
+        self.sales_in_month = {}
+        for i, object in enumerate(range(self.number_of_day), 1):
+            self.sales_in_month[i] = len(Sales.objects.filter(created_at__date=date(
+                                        year=date.today().year,
+                                        month=date.today().month,
+                                        day=i
+                                    )))
+
+        # Getting number of sales from today
+        self.count_sales = len(Sales.objects.filter(created_at__date=date.today()))
+        return Response(
+            {
+                'message': 'Berhasil Mengkases Pemilik Dashboard',
+                'sales_today': self.count_sales,
+                'sales_in_mont': self.sales_in_month
+            },
+            status=status.HTTP_200_OK)
