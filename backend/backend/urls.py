@@ -15,6 +15,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from si_mbe.views import CustomPasswordChangeView
 from dj_rest_auth.views import PasswordResetConfirmView, PasswordResetView
 
@@ -28,3 +30,5 @@ urlpatterns = [
          PasswordResetConfirmView.as_view(),
          name='password_reset_confirm'),
 ]
+
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

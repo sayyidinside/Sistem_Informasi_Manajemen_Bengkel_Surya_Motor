@@ -1,5 +1,5 @@
 from django.contrib import admin
-from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail, Role,
+from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail,
                            Sales, Sales_detail, Sparepart, Storage, Supplier)
 
 
@@ -22,10 +22,6 @@ class RestockAdmin(admin.ModelAdmin):
 
 class RestockDetailAdmin(admin.ModelAdmin):
     readonly_fields = ['restock_detail_id']
-
-
-class RoleAdmin(admin.ModelAdmin):
-    readonly_fields = ['role_id']
 
 
 class SalesAdmin(admin.ModelAdmin):
@@ -55,7 +51,6 @@ admin.site.register(Restock, RestockAdmin)
 admin.site.register(Restock_detail, RestockDetailAdmin)
 admin.site.register(Sales, SalesAdmin)
 admin.site.register(Sales_detail, SalesDetailAdmin)
-admin.site.register(Role, RoleAdmin)
 admin.site.register(Supplier, SupplierAdmin)
 admin.site.register(Storage, StorageAdmin)
 admin.site.register(Sparepart, SparepartAdmin)

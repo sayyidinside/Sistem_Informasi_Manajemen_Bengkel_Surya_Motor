@@ -1,24 +1,9 @@
-from django.db import models
 from django.contrib.auth.models import User
+from django.db import models
 from django.utils.translation import gettext_lazy as _
+from uuid import uuid4
 
 # Create your models here.
-
-
-# role tabel to categorize user to different role and permission
-# consist of role_id as pk, name as role name
-class Role(models.Model):
-    role_id = models.SmallAutoField(
-        primary_key=True,
-        unique=True,
-    )
-    name = models.CharField(max_length=30)
-
-    def __str__(self) -> str:
-        return f'{self.name}'
-
-    class Meta:
-        db_table = 'role'
 
 
 # Profile tabel is extended of user tabel to give each user their perpective informations
@@ -29,31 +14,35 @@ class Profile(models.Model):
         db_column='user_id'
     )
     name = models.CharField(max_length=30, default='')
-    contact_number = models.CharField(max_length=13, default='')
-    role_id = models.ForeignKey(
-        Role,
-        on_delete=models.SET_NULL,
-        null=True,
-        db_column='role_id'
+    contact = models.CharField(max_length=13, default='')
+
+    class Roles(models.TextChoices):
+        PEMILIK = 'P', _('Pemilik')
+        ADMIN = 'A', _('Admin')
+
+    role = models.CharField(
+        max_length=1,
+        choices=Roles.choices,
+        default=Roles.ADMIN
     )
 
     def __str__(self) -> str:
-        return f'{self.name} as {self.role_id.name}'
+        return f'{self.name} as {self.get_role_display()}'
 
     class Meta:
         db_table = 'profile'
 
 
 # log table to store user activity against certain table
-# the table tracked are sales, sales_detail, restock, restock_detail, sparepart
-# log table consist of log_id as pk, log_at, log_at (time), table_name, user_id
+# the table tracked are sales, restock, service, sparepart
+# log table consist of log_id as pk, log_at, log_at (time), table, user_id
 class Logs(models.Model):
     log_id = models.AutoField(
         primary_key=True,
         unique=True,
     )
     log_at = models.DateTimeField(auto_now_add=True)
-    table_name = models.CharField(max_length=20)
+    table = models.CharField(max_length=10, default='Sparepart')
 
     class Operations(models.TextChoices):
         CREATE = 'C', _('Create')
@@ -68,17 +57,36 @@ class Logs(models.Model):
     user_id = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
-        null=True,
-        db_column='user_id'
+        db_column='user_id',
+        null=True
     )
 
     def __str__(self) -> str:
         return f"at {self.log_at.strftime('%d-%m-%Y %H:%M:%S')} {self.user_id.profile.name} "\
-               f"{self.get_operation_display()} a record from {self.table_name}"\
+               f"{self.get_operation_display()} a record from {self.table}"\
 
 
     class Meta:
         db_table = 'log'
+
+
+# Customer table to store customer data, purchase and service records
+class Customer(models.Model):
+    customer_id = models.AutoField(
+        primary_key=True,
+        unique=True,
+    )
+    name = models.CharField(max_length=30)
+    contact = models.CharField(max_length=15)
+    number_of_service = models.PositiveSmallIntegerField()
+    total_payment = models.DecimalField(max_digits=15, decimal_places=0)
+
+    def __str__(self) -> str:
+        return f'{self.name} | Total payment = Rp {self.total_payment}| '\
+               f'Total service = {self.number_of_service}'
+
+    class Meta:
+        db_table = 'customer'
 
 
 # abstract base table for transactions
@@ -93,20 +101,24 @@ class Base_transaction(models.Model):
 
 
 # sales table to store surface level sales information
-# consist of sales_id as pk, customer_name, sub_total, discount, user_id,
-# total, is_paid_off, created_at, updated_at
 class Sales(Base_transaction):
     sales_id = models.BigAutoField(
         primary_key=True,
         unique=True
     )
-    customer_name = models.CharField(max_length=25, blank=True)
-    customer_contact = models.CharField(max_length=13, blank=True)
+    deposit = models.DecimalField(max_digits=15, decimal_places=0, default=0)
+
     user_id = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
         null=True,
         db_column='user_id'
+    )
+    customer_id = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        null=True,
+        db_column='customer_id'
     )
 
     def __str__(self) -> str:
@@ -117,15 +129,15 @@ class Sales(Base_transaction):
 
 
 # sales_detail table store the detail of sales per sparepart
-# consist of sales_detail_id as pk, quantity, individual_price, total_price
-# sales_id
 class Sales_detail(models.Model):
     sales_detail_id = models.BigAutoField(
         primary_key=True,
         unique=True
     )
     quantity = models.PositiveSmallIntegerField()
-    is_grosir = models.BooleanField(default=False)
+    is_workshop = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
     sales_id = models.ForeignKey(
         Sales,
         on_delete=models.CASCADE,
@@ -140,8 +152,7 @@ class Sales_detail(models.Model):
 
     def __str__(self) -> str:
         return f'{self.sales_id.sales_id}-{self.sales_detail_id}| '\
-               f'{self.sparepart_id.name} sold {self.quantity}s qty | '\
-               f'grosir={self.is_grosir}'
+               f'{self.sparepart_id.name} sold {self.quantity}s qty | '
 
     class Meta:
         db_table = 'sales_detail'
@@ -154,7 +165,6 @@ class Sales_detail(models.Model):
 
 
 # restock table to store surface level information of restock
-# consist of restock_id as pk, user_id, supplier_id
 class Restock(Base_transaction):
     restock_id = models.BigAutoField(
         primary_key=True,
@@ -162,6 +172,8 @@ class Restock(Base_transaction):
     )
     no_faktur = models.CharField(max_length=30, default='')
     due_date = models.DateField(null=True)
+    deposit = models.DecimalField(max_digits=15, decimal_places=0, default=0)
+
     user_id = models.ForeignKey(
         User,
         on_delete=models.PROTECT,
@@ -183,8 +195,6 @@ class Restock(Base_transaction):
 
 
 # restock_detail table store the detail of restock per sparepart
-# consist of restock_detail_id as pk, quantity, individual_price, total_price,
-# restock_id, sparepart_id
 class Restock_detail(models.Model):
     restock_detail_id = models.BigAutoField(
         primary_key=True,
@@ -192,6 +202,8 @@ class Restock_detail(models.Model):
     )
     quantity = models.PositiveSmallIntegerField()
     individual_price = models.DecimalField(max_digits=15, decimal_places=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
     restock_id = models.ForeignKey(
         Restock,
         on_delete=models.CASCADE,
@@ -199,8 +211,8 @@ class Restock_detail(models.Model):
     )
     sparepart_id = models.ForeignKey(
         'Sparepart',
-        on_delete=models.SET_NULL,
         null=True,
+        on_delete=models.SET_NULL,
         db_column='sparepart_id'
     )
 
@@ -218,8 +230,7 @@ class Restock_detail(models.Model):
         ]
 
 
-# Supplier table to store supplier information that supplies us sparepart
-# consist of supplier_id as pk, name, address, contact_number
+# Supplier table to store supplier information that supplies workshop with sparepart
 class Supplier(models.Model):
     supplier_id = models.AutoField(
         primary_key=True,
@@ -227,26 +238,55 @@ class Supplier(models.Model):
     )
     name = models.CharField(max_length=20)
     address = models.CharField(max_length=30)
-    contact_number = models.CharField(max_length=13)
-    salesman_name = models.CharField(max_length=30, blank=True)
-    salesman_contact = models.CharField(max_length=13, blank=True)
+    contact = models.CharField(max_length=13)
 
     def __str__(self) -> str:
-        return f'{self.name} | {self.contact_number}'
+        return f'{self.name} | {self.contact}'
 
     class Meta:
         db_table = 'supplier'
 
 
+# Salesman table to store salesman information, representation from supplier
+class Salesman(models.Model):
+    salesman_id = models.AutoField(
+        primary_key=True,
+        unique=True
+    )
+
+    name = models.CharField(max_length=20)
+    contact = models.CharField(max_length=13)
+
+    supplier_id = models.ForeignKey(
+        Supplier,
+        on_delete=models.CASCADE,
+        db_column='supplier_id'
+    )
+
+    def __str__(self) -> str:
+        return f'{self.name} | {self.contact}'
+
+    class Meta:
+        db_table = 'salesman'
+
+
 # storage table to store sparepart location information
-# consist of storage_id as pk, code, location, is_full
 class Storage(models.Model):
     storage_id = models.AutoField(
         primary_key=True,
         unique=True
     )
     code = models.CharField(max_length=8)
-    location = models.CharField(max_length=20)
+
+    class Locations(models.TextChoices):
+        FIRST = '1', _('Bengkel 1 Jalan ...')
+        SECOND = '2', _('Bengkel 2 Jalan ...')
+    location = models.CharField(
+        max_length=30,
+        choices=Locations.choices,
+        default=Locations.FIRST
+    )
+
     is_full = models.BooleanField(default=False)
 
     def __str__(self) -> str:
@@ -257,7 +297,6 @@ class Storage(models.Model):
 
 
 # brand table to store brand name of sparepart
-# consist of brand_id as pk, name
 class Brand(models.Model):
     brand_id = models.AutoField(
         primary_key=True,
@@ -272,21 +311,41 @@ class Brand(models.Model):
         db_table = 'brand'
 
 
+# Category table to store category name of sparepart
+class Category(models.Model):
+    category_id = models.AutoField(
+        primary_key=True,
+        unique=True
+    )
+    name = models.CharField(max_length=20)
+
+    def __str__(self) -> str:
+        return f'{self.name}'
+
+    class Meta:
+        db_table = 'category'
+
+
 # sparepart table to store information about sparepart
-# consist of sparepart_id as pk, name, quantity, type, price, created_at,
-# updated_at, brand_id, storage_id
 class Sparepart(models.Model):
+    def sparepart_image_filename(instance, filename) -> str:
+        extension = filename.split('.')[-1]
+        filename = str(uuid4())
+        return f'images/spareparts/{filename}.{extension}'
+
     sparepart_id = models.AutoField(
         primary_key=True,
         unique=True
     )
-    name = models.CharField(max_length=20, db_index=True)
+    name = models.CharField(max_length=30, db_index=True)
     partnumber = models.CharField(max_length=20, default='')
     quantity = models.PositiveSmallIntegerField()
     motor_type = models.CharField(max_length=20, default='')
-    sparepart_type = models.CharField(max_length=10)
+    sparepart_type = models.CharField(max_length=20)
+    image = models.ImageField(null=True, blank=True, upload_to=sparepart_image_filename)
     price = models.DecimalField(max_digits=15, decimal_places=0)
-    grosir_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)
+    workshop_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)
+    install_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     brand_id = models.ForeignKey(
@@ -294,6 +353,12 @@ class Sparepart(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         db_column='brand_id'
+    )
+    category_id = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        db_column='category_id'
     )
     storage_id = models.ForeignKey(
         Storage,
@@ -307,3 +372,118 @@ class Sparepart(models.Model):
 
     class Meta:
         db_table = 'sparepart'
+
+
+# Mechanic table to store workshop's mechanic data
+class Mechanic(models.Model):
+    mechanic_id = models.AutoField(
+        primary_key=True,
+        unique=True,
+    )
+    name = models.CharField(max_length=30)
+    contact = models.CharField(max_length=15)
+    address = models.CharField(max_length=30)
+
+    def __str__(self) -> str:
+        return f'{self.name}'
+
+    class Meta:
+        db_table = 'mechanic'
+
+
+# Service table to store surface level information of service
+class Service(Base_transaction):
+    service_id = models.BigAutoField(
+        primary_key=True,
+        unique=True,
+    )
+
+    police_number = models.CharField(max_length=10)
+    motor_type = models.CharField(max_length=20)
+    deposit = models.DecimalField(max_digits=15, decimal_places=0)
+    discount = models.DecimalField(max_digits=15, decimal_places=0)
+
+    user_id = models.ForeignKey(
+        User,
+        on_delete=models.PROTECT,
+        null=True,
+        db_column='user_id'
+    )
+    mechanic_id = models.ForeignKey(
+        Mechanic,
+        on_delete=models.PROTECT,
+        db_column='mechanic_id'
+    )
+    customer_id = models.ForeignKey(
+        Customer,
+        on_delete=models.PROTECT,
+        null=True,
+        db_column='customer_id'
+    )
+
+    def __str__(self) -> str:
+        return f'{self.service_id} | Rp {self.deposit} | Lunas={self.is_paid_off}'
+
+    class Meta:
+        db_table = 'service'
+
+
+# Service action table to store the all action required per service
+class Service_action(models.Model):
+    service_action_id = models.BigAutoField(
+        primary_key=True,
+        unique=True,
+    )
+
+    name = models.CharField(max_length=30)
+    cost = models.DecimalField(max_digits=15, decimal_places=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    service_id = models.ForeignKey(
+        Service,
+        on_delete=models.PROTECT,
+        db_column='service_id'
+    )
+
+    def __str__(self) -> str:
+        return f'{self.service_id} - Rp {self.service_action_id}| '\
+               f'{self.name} - Rp {self.cost}'
+
+    class Meta:
+        db_table = 'service_action'
+
+
+# Service sparepart table to store the usage of sparepart per service
+class Service_sparepart(models.Model):
+    service_sparepart_id = models.BigAutoField(
+        primary_key=True,
+        unique=True,
+    )
+    quantity = models.PositiveSmallIntegerField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    service_id = models.ForeignKey(
+        Service,
+        on_delete=models.PROTECT,
+        null=True,
+        db_column='service_id'
+    )
+    sparepart_id = models.ForeignKey(
+        Sparepart,
+        on_delete=models.PROTECT,
+        null=True,
+        db_column='sparepart_id'
+    )
+
+    def __str__(self) -> str:
+        return f'{self.service_id} - Rp {self.service_sparepart_id}| '\
+               f'{self.sparepart_id.name} |  {self.quantity}s qty'
+
+    class Meta:
+        db_table = 'service_sparepart'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['service_id', 'sparepart_id'],
+                name='unique_service_sparepart',
+            )
+        ]
