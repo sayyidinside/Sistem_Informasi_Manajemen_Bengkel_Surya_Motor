@@ -8,25 +8,32 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
     serializers for searching sparepart
     """
     brand = serializers.ReadOnlyField(source='brand_id.name')
-    location = serializers.ReadOnlyField(source='storage_id.location')
+    location = serializers.ReadOnlyField(source='storage_id.code')
+    category = serializers.ReadOnlyField(source='category_id.name')
+    image = serializers.ImageField(required=False, allow_empty_file=True, use_url=True)
 
     class Meta:
         model = Sparepart
         fields = [
             'sparepart_id',
+            'image',
             'name',
             'partnumber',
             'quantity',
+            'category',
             'motor_type',
             'sparepart_type',
             'brand',
             'price',
-            'grosir_price',
+            'workshop_price',
+            'install_price',
             'location',
         ]
 
 
 class SparepartSerializers(serializers.ModelSerializer):
+    image = serializers.ImageField(required=False, allow_empty_file=True, use_url=True)
+
     class Meta:
         model = Sparepart
         fields = [
@@ -34,12 +41,15 @@ class SparepartSerializers(serializers.ModelSerializer):
             'name',
             'partnumber',
             'quantity',
+            'category_id',
             'motor_type',
             'sparepart_type',
             'brand_id',
             'price',
-            'grosir_price',
-            'storage_id'
+            'workshop_price',
+            'install_price',
+            'storage_id',
+            'image',
         ]
 
 
@@ -48,15 +58,24 @@ class SalesDetailSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Sales_detail
-        fields = ['sales_detail_id', 'sparepart', 'quantity', 'is_grosir']
+        fields = ['sales_detail_id', 'sparepart', 'quantity', 'is_workshop']
 
 
 class SalesSerializers(serializers.ModelSerializer):
     content = SalesDetailSerializers(many=True, source='sales_detail_set')
+    customer = serializers.ReadOnlyField(source='customer_id.name')
+    contact = serializers.ReadOnlyField(source='customer_id.contact')
 
     class Meta:
         model = Sales
-        fields = ['sales_id', 'customer_name', 'customer_contact', 'is_paid_off', 'content']
+        fields = [
+            'sales_id',
+            'customer',
+            'contact',
+            'is_paid_off',
+            'deposit',
+            'content'
+        ]
 
 
 class SalesDetailPostSerializers(serializers.ModelSerializer):
@@ -64,7 +83,7 @@ class SalesDetailPostSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Sales_detail
-        fields = ['sales_detail_id', 'sparepart_id', 'quantity', 'is_grosir']
+        fields = ['sales_detail_id', 'sparepart_id', 'quantity', 'is_workshop']
 
 
 class SalesPostSerializers(serializers.ModelSerializer):
@@ -72,7 +91,13 @@ class SalesPostSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Sales
-        fields = ['sales_id', 'customer_name', 'customer_contact', 'is_paid_off', 'content']
+        fields = [
+            'sales_id',
+            'customer_id',
+            'is_paid_off',
+            'deposit',
+            'content'
+        ]
 
     def create(self, validated_data):
         # get the nested objects list
@@ -91,9 +116,9 @@ class SalesPostSerializers(serializers.ModelSerializer):
         validated_details = validated_data.pop('sales_detail_set')
 
         # Assigning input (validated_data) to object (instance)
-        instance.customer_name = validated_data.get('customer_name', instance.customer_name)
-        instance.customer_contact = validated_data.get('customer_contact', instance.customer_contact)
+        instance.customer_id = validated_data.get('customer_id', instance.customer_id)
         instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
+        instance.deposit = validated_data.get('deposit', instance.deposit)
 
         # get all nested objects related with this instance and make a dict(id, object)
         details_dict = dict((i.sales_detail_id, i) for i in instance.sales_detail_set.all())
@@ -135,11 +160,25 @@ class RestockDetailSerializers(serializers.ModelSerializer):
 class RestockSerializers(serializers.ModelSerializer):
     due_date = serializers.DateField(format="%d-%m-%Y")
     supplier = serializers.ReadOnlyField(source='supplier_id.name')
+    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact')
+    salesman = serializers.ReadOnlyField(source='salesman_id.name')
+    salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
     content = RestockDetailSerializers(many=True, source='restock_detail_set')
 
     class Meta:
         model = Restock
-        fields = ['restock_id', 'no_faktur', 'due_date', 'supplier', 'is_paid_off', 'content']
+        fields = [
+            'restock_id',
+            'no_faktur',
+            'due_date',
+            'supplier',
+            'supplier_contact',
+            'salesman',
+            'salesman_contact',
+            'is_paid_off',
+            'deposit',
+            'content'
+        ]
 
 
 class RestockDetailPostSerializers(serializers.ModelSerializer):
@@ -156,7 +195,16 @@ class RestockPostSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Restock
-        fields = ['restock_id', 'no_faktur', 'due_date', 'supplier_id', 'is_paid_off', 'content']
+        fields = [
+            'restock_id',
+            'no_faktur',
+            'due_date',
+            'supplier_id',
+            'salesman_id',
+            'is_paid_off',
+            'deposit',
+            'content'
+        ]
 
     def create(self, validated_data):
         # get the nested objects list
@@ -179,6 +227,7 @@ class RestockPostSerializers(serializers.ModelSerializer):
         instance.due_date = validated_data.get('customer_contact', instance.due_date)
         instance.supplier_id = validated_data.get('customer_contact', instance.supplier_id)
         instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
+        instance.deposit = validated_data.get('deposit', instance.deposit)
 
         # get all nested objects related with this instance and make a dict(id, object)
         details_dict = dict((i.restock_detail_id, i) for i in instance.restock_detail_set.all())
@@ -212,13 +261,15 @@ class RestockPostSerializers(serializers.ModelSerializer):
 class SupplierSerializers(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = ['supplier_id', 'name', 'address', 'contact_number', 'salesman_name', 'salesman_contact']
+        fields = ['supplier_id', 'name', 'address', 'contact']
 
 
 class SalesReportSerializers(serializers.ModelSerializer):
     admin = serializers.ReadOnlyField(source='user_id.profile.name')
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    customer = serializers.ReadOnlyField(source='customer_id.name')
+    contact = serializers.ReadOnlyField(source='customer_id.contact')
 
     class Meta:
         model = Sales
@@ -227,9 +278,10 @@ class SalesReportSerializers(serializers.ModelSerializer):
             'admin',
             'created_at',
             'updated_at',
-            'customer_name',
-            'customer_contact',
+            'customer',
+            'contact',
             'is_paid_off',
+            'deposit',
         ]
 
 
@@ -237,6 +289,8 @@ class SalesReportDetailSerializers(serializers.ModelSerializer):
     admin = serializers.ReadOnlyField(source='user_id.profile.name')
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    customer = serializers.ReadOnlyField(source='customer_id.name')
+    contact = serializers.ReadOnlyField(source='customer_id.contact')
     content = SalesDetailSerializers(many=True, source='sales_detail_set')
 
     class Meta:
@@ -246,9 +300,10 @@ class SalesReportDetailSerializers(serializers.ModelSerializer):
             'admin',
             'created_at',
             'updated_at',
-            'customer_name',
-            'customer_contact',
+            'customer',
+            'contact',
             'is_paid_off',
+            'deposit',
             'content',
         ]
 
@@ -259,9 +314,9 @@ class RestockReportSerializers(serializers.ModelSerializer):
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     due_date = serializers.DateField(format="%d-%m-%Y")
     supplier = serializers.ReadOnlyField(source='supplier_id.name')
-    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact_number')
-    salesman = serializers.ReadOnlyField(source='supplier_id.salesman_name')
-    salesman_contact = serializers.ReadOnlyField(source='supplier_id.salesman_contact')
+    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact')
+    salesman = serializers.ReadOnlyField(source='salesman_id.name')
+    salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
 
     class Meta:
         model = Restock
@@ -272,6 +327,7 @@ class RestockReportSerializers(serializers.ModelSerializer):
             'updated_at',
             'no_faktur',
             'is_paid_off',
+            'deposit',
             'due_date',
             'supplier',
             'supplier_contact',
@@ -286,9 +342,9 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     due_date = serializers.DateField(format="%d-%m-%Y")
     supplier = serializers.ReadOnlyField(source='supplier_id.name')
-    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact_number')
-    salesman = serializers.ReadOnlyField(source='supplier_id.salesman_name')
-    salesman_contact = serializers.ReadOnlyField(source='supplier_id.salesman_contact')
+    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact')
+    salesman = serializers.ReadOnlyField(source='salesman_id.name')
+    salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
     content = RestockDetailSerializers(many=True, source='restock_detail_set')
 
     class Meta:
@@ -300,6 +356,7 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
             'updated_at',
             'no_faktur',
             'is_paid_off',
+            'deposit',
             'due_date',
             'supplier',
             'supplier_contact',
@@ -311,11 +368,11 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
 
 class ProfileSerializers(serializers.ModelSerializer):
     email = serializers.ReadOnlyField(source='user_id.email')
-    role = serializers.ReadOnlyField(source='role_id.name')
+    role = serializers.CharField(source='get_role_display')
 
     class Meta:
         model = Profile
-        fields = ['name', 'email', 'contact_number', 'role']
+        fields = ['name', 'email', 'contact', 'role']
 
 
 class ProfileUpdateSerializers(serializers.ModelSerializer):
@@ -323,7 +380,7 @@ class ProfileUpdateSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['name', 'email', 'contact_number']
+        fields = ['name', 'email', 'contact']
 
     def update(self, instance, validated_data):
         # get email and assigning to user instance
@@ -335,7 +392,7 @@ class ProfileUpdateSerializers(serializers.ModelSerializer):
 
         # Assigning to profile instance
         instance.name = validated_data.get('name', instance.name)
-        instance.contact_number = validated_data.get('contact_number', instance.contact_number)
+        instance.contact = validated_data.get('contact', instance.contact)
         instance.save()
 
         return instance
@@ -348,4 +405,4 @@ class LogSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Logs
-        fields = ['log_id', 'log_at', 'user', 'table_name', 'operation']
+        fields = ['log_id', 'log_at', 'user', 'table', 'operation']

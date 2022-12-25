@@ -22,7 +22,7 @@ from dj_rest_auth.views import PasswordResetConfirmView, PasswordResetView
 
 urlpatterns = [
     path('', include('si_mbe.urls')),
-    path('admin/', admin.site.urls),
+    path('django-admin/', admin.site.urls),
     path('auth/', include('dj_rest_auth.urls')),
     path('auth/password-change/', CustomPasswordChangeView.as_view(), name='password_change'),
     path('auth/password-reset/', PasswordResetView.as_view(), name='password_reset'),

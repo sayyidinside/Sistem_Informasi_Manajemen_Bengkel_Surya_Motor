@@ -4,8 +4,9 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import (Brand, Profile, Restock, Restock_detail, Role,
-                           Sales, Sales_detail, Sparepart, Storage, Supplier)
+from si_mbe.models import (Brand, Category, Customer, Profile, Restock,
+                           Restock_detail, Sales, Sales_detail, Salesman,
+                           Sparepart, Storage, Supplier)
 
 
 # Create your tests here.
@@ -13,13 +14,11 @@ class SetTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and non-admin user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='worldmind', password='XandarianWorldmind')
-        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role='P')
 
         return super().setUpTestData()
 
@@ -64,9 +63,11 @@ class SparepartDataListTestCase(SetTestCase):
 
         # Setting up storage data
         cls.storage = Storage.objects.create(
-            code='6ABC',
-            location='Rak Biru B6'
+            code='AD-34',
         )
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Add-On')
 
         # Setting up sparepart data
         cls.name = 'Spakbord C70'
@@ -79,9 +80,11 @@ class SparepartDataListTestCase(SetTestCase):
                 motor_type='Yamaha Nmax',
                 sparepart_type='24Q-22',
                 price=5400000,
-                grosir_price=5300000,
+                workshop_price=5300000,
+                install_price=5500000,
                 brand_id=cls.brand,
-                storage_id=cls.storage
+                storage_id=cls.storage,
+                category_id=cls.category
             )
 
         cls.sparepart = Sparepart.objects.all()
@@ -99,39 +102,48 @@ class SparepartDataListTestCase(SetTestCase):
         self.assertEqual(response.data['results'], [
             {
                 'sparepart_id': self.sparepart[0].sparepart_id,
+                'image': None,
                 'name': self.sparepart[0].name,
                 'partnumber': self.sparepart[0].partnumber,
                 'quantity': self.sparepart[0].quantity,
+                'category': self.sparepart[0].category_id.name,
                 'motor_type': self.sparepart[0].motor_type,
                 'sparepart_type': self.sparepart[0].sparepart_type,
                 'brand': self.sparepart[0].brand_id.name,
                 'price': str(self.sparepart[0].price),
-                'grosir_price': str(self.sparepart[0].grosir_price),
-                'location': self.storage.location
+                'workshop_price': str(self.sparepart[0].workshop_price),
+                'install_price': str(self.sparepart[0].install_price),
+                'location': self.storage.code
             },
             {
                 'sparepart_id': self.sparepart[1].sparepart_id,
+                'image': None,
                 'name': self.sparepart[1].name,
                 'partnumber': self.sparepart[1].partnumber,
                 'quantity': self.sparepart[1].quantity,
+                'category': self.sparepart[1].category_id.name,
                 'motor_type': self.sparepart[1].motor_type,
                 'sparepart_type': self.sparepart[1].sparepart_type,
                 'brand': self.sparepart[1].brand_id.name,
                 'price': str(self.sparepart[1].price),
-                'grosir_price': str(self.sparepart[1].grosir_price),
-                'location': self.storage.location
+                'workshop_price': str(self.sparepart[1].workshop_price),
+                'install_price': str(self.sparepart[1].install_price),
+                'location': self.storage.code
             },
             {
                 'sparepart_id': self.sparepart[2].sparepart_id,
+                'image': None,
                 'name': self.sparepart[2].name,
                 'partnumber': self.sparepart[2].partnumber,
                 'quantity': self.sparepart[2].quantity,
+                'category': self.sparepart[2].category_id.name,
                 'motor_type': self.sparepart[2].motor_type,
                 'sparepart_type': self.sparepart[2].sparepart_type,
                 'brand': self.sparepart[2].brand_id.name,
                 'price': str(self.sparepart[2].price),
-                'grosir_price': str(self.sparepart[2].grosir_price),
-                'location': self.storage.location
+                'workshop_price': str(self.sparepart[2].workshop_price),
+                'install_price': str(self.sparepart[2].install_price),
+                'location': self.storage.code
             }
 
         ])
@@ -164,10 +176,10 @@ class SparepartDataAddTestCase(SetTestCase):
         cls.brand = Brand.objects.create(name='Shimada')
 
         # Setting up storage data
-        cls.storage = Storage.objects.create(
-            code='6ABC',
-            location='Rak Biru B6'
-        )
+        cls.storage = Storage.objects.create(code='JKG-299')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Engine')
 
         # Creating data that gonna be use as input
         cls.data_sparepart = {
@@ -177,9 +189,12 @@ class SparepartDataAddTestCase(SetTestCase):
             'motor_type': 'Yamaha Nmax',
             'sparepart_type': '24Q-22',
             'price': 5400000,
-            'grosir_price': 5300000,
+            'workshop_price': 5300000,
+            'install_price': 5500000,
             'brand_id': cls.brand.brand_id,
-            'storage_id': cls.storage.storage_id
+            'storage_id': cls.storage.storage_id,
+            'category_id': cls.category.category_id,
+            'image': ''
         }
 
         return super().setUpTestData()
@@ -199,8 +214,11 @@ class SparepartDataAddTestCase(SetTestCase):
         self.assertEqual(response.data['sparepart_type'], self.data_sparepart['sparepart_type'])
         self.assertEqual(response.data['brand_id'], self.data_sparepart['brand_id'])
         self.assertEqual(int(response.data['price']), self.data_sparepart['price'])
-        self.assertEqual(int(response.data['grosir_price']), self.data_sparepart['grosir_price'])
+        self.assertEqual(int(response.data['workshop_price']), self.data_sparepart['workshop_price'])
+        self.assertEqual(int(response.data['install_price']), self.data_sparepart['install_price'])
         self.assertEqual(response.data['storage_id'], self.data_sparepart['storage_id'])
+        self.assertEqual(response.data['category_id'], self.data_sparepart['category_id'])
+        self.assertEqual(response.data['image'], None)
 
     def test_nonlogin_user_failed_to_add_new_sparepart_data(self) -> None:
         """
@@ -252,17 +270,23 @@ class SparepartDataUpdateTestCase(SetTestCase):
             location='Rak Biru B6'
         )
 
+        # Setting up category
+        cls.category = Category.objects.create(name='Pathfinder')
+
         # Setting up new data to update sparepart data
         cls.data = {
             'name': 'Razor Crest PF-30',
             'partnumber': '7asAA-9293B',
             'quantity': 20,
-            'motor_type': 'Navigations',
+            'category_id': cls.category.category_id,
+            'motor_type': 'Spase Ship',
             'sparepart_type': '24Q-22',
-            'price': 5800000,
-            'grosir_price': 5400000,
             'brand_id': cls.brand.brand_id,
-            'storage_id': cls.storage.storage_id
+            'price': 5800000,
+            'workshop_price': 5400000,
+            'install_price': 5500000,
+            'storage_id': cls.storage.storage_id,
+            'image': ''
         }
 
         return super().setUpTestData()
@@ -277,8 +301,10 @@ class SparepartDataUpdateTestCase(SetTestCase):
                 motor_type='Navigations',
                 sparepart_type='24Q-22',
                 price=5800000,
-                grosir_price=5400000,
-                brand_id=self.brand
+                workshop_price=5400000,
+                install_price=5500000,
+                brand_id=self.brand,
+                category_id=self.category
             )
 
         # Getting newly added sparepart it's sparepart_id then set it to kwargs in reverse url
@@ -302,8 +328,11 @@ class SparepartDataUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['sparepart_type'], self.data['sparepart_type'])
         self.assertEqual(response.data['brand_id'], self.data['brand_id'])
         self.assertEqual(int(response.data['price']), self.data['price'])
-        self.assertEqual(int(response.data['grosir_price']), self.data['grosir_price'])
+        self.assertEqual(int(response.data['workshop_price']), self.data['workshop_price'])
+        self.assertEqual(int(response.data['install_price']), self.data['install_price'])
         self.assertEqual(response.data['storage_id'], self.data['storage_id'])
+        self.assertEqual(response.data['category_id'], self.data['category_id'])
+        self.assertEqual(response.data['image'], None)
 
     def test_nonlogin_user_failed_to_update_sparepart_data(self) -> None:
         """
@@ -328,7 +357,7 @@ class SparepartDataUpdateTestCase(SetTestCase):
         Ensure admin cannot / Failed update non-exist sparepart data
         """
         self.client.force_authenticate(user=self.user)
-        response = self.client.put(reverse('sparepart_data_update', kwargs={'sparepart_id': 4563}),
+        response = self.client.put(reverse('sparepart_data_update', kwargs={'sparepart_id': 45631}),
                                    self.data)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data sparepart tidak ditemukan')
@@ -359,6 +388,12 @@ class SparepartDataDeleteTestCase(SetTestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Mistborn')
 
+        # Setting up category data
+        cls.category = Category.objects.create(name='Storage')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='AP-20')
+
         return super().setUpTestData()
 
     def setUp(self) -> None:
@@ -371,8 +406,11 @@ class SparepartDataDeleteTestCase(SetTestCase):
                 motor_type='Trader Ship',
                 sparepart_type='24Q-22',
                 price=800000,
-                grosir_price=750000,
-                brand_id=self.brand
+                workshop_price=750000,
+                install_price=850000,
+                brand_id=self.brand,
+                category_id=self.category,
+                storage_id=self.storage
             )
 
         # Getting newly added sparepart it's sparepart_id then set it to kwargs in reverse url
@@ -424,6 +462,12 @@ class SalesListTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up category
+        cls.category = Category.objects.create(name='Transform Device')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Nein')
+
         # Setting up sparepart data and getting their id
         for i in range(5):
             Sparepart.objects.create(
@@ -433,17 +477,24 @@ class SalesListTestCase(SetTestCase):
                 motor_type='Fuuto Wind',
                 sparepart_type='USB',
                 price=5400000,
-                grosir_price=5300000,
-                brand_id=None
+                workshop_price=5300000,
+                install_price=5500000,
+                brand_id=cls.brand,
+                category_id=cls.category
             )
 
         cls.spareparts = Sparepart.objects.all()
 
+        # Setting up customer
+        cls.customer = Customer.objects.create(
+            name='Brandon Sanderson',
+            contact='085456105311'
+        )
+
         # Setting up sales data and getting their id
         for i in range(2):
             Sales.objects.create(
-                customer_name='Brandon Sanderson',
-                customer_contact='085456105311',
+                customer_id=cls.customer
             )
 
         cls.sales = Sales.objects.all()
@@ -451,19 +502,19 @@ class SalesListTestCase(SetTestCase):
         # Setting up sales detail data and getting their id
         cls.sales_details_1 = Sales_detail.objects.create(
             quantity=2,
-            is_grosir=False,
+            is_workshop=False,
             sales_id=cls.sales[0],
             sparepart_id=cls.spareparts[3]
         )
         cls.sales_details_2 = Sales_detail.objects.create(
             quantity=5,
-            is_grosir=False,
+            is_workshop=False,
             sales_id=cls.sales[1],
             sparepart_id=cls.spareparts[0]
         )
         cls.sales_details_3 = Sales_detail.objects.create(
             quantity=3,
-            is_grosir=False,
+            is_workshop=False,
             sales_id=cls.sales[1],
             sparepart_id=cls.spareparts[1]
         )
@@ -481,35 +532,37 @@ class SalesListTestCase(SetTestCase):
         self.assertEqual(response.data['results'], [
             {
                 'sales_id': self.sales[0].sales_id,
-                'customer_name': 'Brandon Sanderson',
-                'customer_contact': '085456105311',
+                'customer': self.sales[0].customer_id.name,
+                'contact': self.sales[0].customer_id.contact,
                 'is_paid_off': False,
+                'deposit': str(self.sales[0].deposit),
                 'content': [
                     {
                         'sales_detail_id': self.sales_details_1.sales_detail_id,
                         'sparepart': self.spareparts[3].name,
                         'quantity': 2,
-                        'is_grosir': False,
+                        'is_workshop': False,
                     }
                 ]
             },
             {
                 'sales_id': self.sales[1].sales_id,
-                'customer_name': 'Brandon Sanderson',
-                'customer_contact': '085456105311',
+                'customer': self.sales[1].customer_id.name,
+                'contact': self.sales[1].customer_id.contact,
                 'is_paid_off': False,
+                'deposit': str(self.sales[1].deposit),
                 'content': [
                     {
                         'sales_detail_id': self.sales_details_2.sales_detail_id,
                         'sparepart': self.spareparts[0].name,
                         'quantity': 5,
-                        'is_grosir': False,
+                        'is_workshop': False,
                     },
                     {
                         'sales_detail_id': self.sales_details_3.sales_detail_id,
                         'sparepart': self.spareparts[1].name,
                         'quantity': 3,
-                        'is_grosir': False,
+                        'is_workshop': False,
                     }
                 ]
             }
@@ -539,6 +592,15 @@ class SalesAddTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='GA-9')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Stark Industries')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Fuel')
+
         # Setting up sparepart data and getting their id
         for i in range(3):
             Sparepart.objects.create(
@@ -548,27 +610,36 @@ class SalesAddTestCase(SetTestCase):
                 motor_type='Queen Jet',
                 sparepart_type='Oil',
                 price=5400000,
-                grosir_price=5300000,
-                brand_id=None
+                workshop_price=5300000,
+                install_price=5500000,
+                brand_id=cls.brand,
+                storage_id=cls.storage,
+                category_id=cls.category
             )
 
         cls.spareparts = Sparepart.objects.all()
 
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Fjord',
+            contact='084531584533'
+        )
+
         # Creating data that gonna be use as input
         cls.data = {
-            'customer_name': 'Matt Mercer',
-            'customer_contact': '085634405602',
+            'customer_id': cls.customer.customer_id,
             'is_paid_off': False,
+            'deposit': 200000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[1].sparepart_id,
                     'quantity': 1,
-                    'is_grosir': False,
+                    'is_workshop': False,
                 },
                 {
                     'sparepart_id': cls.spareparts[0].sparepart_id,
                     'quantity': 30,
-                    'is_grosir': True,
+                    'is_workshop': True,
                 }
             ]
         }
@@ -583,11 +654,13 @@ class SalesAddTestCase(SetTestCase):
         response = self.client.post(self.sales_add_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['message'], 'Data penjualan berhasil ditambah')
-        self.assertEqual(response.data['customer_name'], 'Matt Mercer')
+        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
+        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
+        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(len(response.data['content']), 2)
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[1].sparepart_id)
         self.assertEqual(response.data['content'][0]['quantity'], 1)
-        self.assertEqual(response.data['content'][0]['is_grosir'], False)
+        self.assertEqual(response.data['content'][0]['is_workshop'], False)
 
     def test_nonlogin_user_failed_to_add_sales(self) -> None:
         """
@@ -630,6 +703,15 @@ class SalesAddTestCase(SetTestCase):
 class SalesUpdateTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='DG-001')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Doom Guys')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Weapon')
+
         # Setting up sparepart data and getting their id
         for i in range(3):
             Sparepart.objects.create(
@@ -637,21 +719,29 @@ class SalesUpdateTestCase(SetTestCase):
                 partnumber=f'JKL03uf-U-{i}',
                 quantity=int(f'5{i}'),
                 motor_type='Dreadnought',
-                sparepart_type='Weapon',
+                sparepart_type='Barrel',
                 price=105000,
-                grosir_price=100000,
-                brand_id=None
+                workshop_price=100000,
+                install_price=110000,
+                brand_id=cls.brand,
+                storage_id=cls.storage,
+                category_id=cls.category
             )
 
         cls.spareparts = Sparepart.objects.all()
+
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Clem Andor',
+            contact='085425502660'
+        )
 
         return super().setUpTestData()
 
     def setUp(self) -> None:
         # Setting up sales data and getting their id
         self.sales = Sales.objects.create(
-            customer_name='Clem Andor',
-            customer_contact='085425502660',
+            customer_id=self.customer
         )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -660,34 +750,34 @@ class SalesUpdateTestCase(SetTestCase):
         # Setting up sales detail data and getting their id
         self.sales_detail_1 = Sales_detail.objects.create(
             quantity=1,
-            is_grosir=False,
+            is_workshop=False,
             sales_id=self.sales,
             sparepart_id=self.spareparts[2]
         )
         self.sales_detail_2 = Sales_detail.objects.create(
             quantity=31,
-            is_grosir=True,
+            is_workshop=True,
             sales_id=self.sales,
             sparepart_id=self.spareparts[0]
         )
 
         # Creating data that gonna be use as input
         self.data = {
-            'customer_name': 'Cassian Andor',
-            'customer_contact': '087425502660',
+            'customer_id': self.customer.customer_id,
             'is_paid_off': True,
+            'deposit': 5000000,
             'content': [
                 {
                     'sales_detail_id': self.sales_detail_1.sales_detail_id,
                     'sparepart_id': self.spareparts[2].sparepart_id,
                     'quantity': 2,
-                    'is_grosir': False,
+                    'is_workshop': False,
                 },
                 {
                     'sales_detail_id': self.sales_detail_2.sales_detail_id,
                     'sparepart_id': self.spareparts[0].sparepart_id,
                     'quantity': 30,
-                    'is_grosir': True,
+                    'is_workshop': True,
                 }
             ]
         }
@@ -702,14 +792,16 @@ class SalesUpdateTestCase(SetTestCase):
         response = self.client.put(self.sales_update_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Data penjualan berhasil dirubah')
-        self.assertEqual(response.data['customer_name'], 'Cassian Andor')
+        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
+        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
+        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(len(response.data['content']), 2)
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[2].sparepart_id)
         self.assertEqual(response.data['content'][0]['quantity'], 2)
-        self.assertEqual(response.data['content'][0]['is_grosir'], False)
+        self.assertEqual(response.data['content'][0]['is_workshop'], False)
         self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[0].sparepart_id)
         self.assertEqual(response.data['content'][1]['quantity'], 30)
-        self.assertEqual(response.data['content'][1]['is_grosir'], True)
+        self.assertEqual(response.data['content'][1]['is_workshop'], True)
 
     def test_nonlogin_failed_to_update_sales(self) -> None:
         """
@@ -762,6 +854,15 @@ class SalesUpdateTestCase(SetTestCase):
 class SalesDeleteTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='DG-001')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Doom Guys')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Weapon')
+
         # Setting up sparepart data and getting their id
         for i in range(3):
             Sparepart.objects.create(
@@ -771,19 +872,28 @@ class SalesDeleteTestCase(SetTestCase):
                 motor_type='Space Ship',
                 sparepart_type='Core',
                 price=105000,
-                grosir_price=100000,
-                brand_id=None
+                workshop_price=100000,
+                install_price=110000,
+                brand_id=cls.brand,
+                category_id=cls.category,
+                storage_id=cls.storage
             )
 
         cls.spareparts = Sparepart.objects.all()
+
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Zurat Gracdion',
+            contact='085425045263'
+        )
 
         return super().setUpTestData()
 
     def setUp(self) -> None:
         # Setting up sales data and getting their id
         self.sales = Sales.objects.create(
-            customer_name='Zurat Gracdion',
-            customer_contact='085425045263',
+            customer_id=self.customer,
+            deposit=400000,
         )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -792,13 +902,13 @@ class SalesDeleteTestCase(SetTestCase):
         # Setting up sales detail data
         Sales_detail.objects.create(
             quantity=1,
-            is_grosir=False,
+            is_workshop=False,
             sales_id=self.sales,
             sparepart_id=self.spareparts[2]
         )
         Sales_detail.objects.create(
             quantity=51,
-            is_grosir=True,
+            is_workshop=True,
             sales_id=self.sales,
             sparepart_id=self.spareparts[0]
         )
@@ -853,10 +963,24 @@ class RestockListTestCase(SetTestCase):
         cls.supplier = Supplier.objects.create(
             name='Arasaka',
             address='Night City',
-            contact_number='084894564563',
-            salesman_name='Saburo Arasaka',
-            salesman_contact='084523015663'
+            contact='084894564563'
         )
+
+        # Setting up salesman data
+        cls.salesman = Salesman.objects.create(
+            supplier_id=cls.supplier,
+            name='Saburo Arasaka',
+            contact='084523015663'
+        )
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='CP-77')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Arasaka')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Cyberware')
 
         # Setting up sparepart data and getting their id
         for i in range(4):
@@ -865,10 +989,13 @@ class RestockListTestCase(SetTestCase):
                 partnumber=f'0Y3AD-FY{i}',
                 quantity=50,
                 motor_type='Cyberpunk',
-                sparepart_type='Cyberware',
+                sparepart_type='Back Body',
                 price=4700000,
-                grosir_price=4620000,
-                brand_id=None
+                workshop_price=4620000,
+                install_price=4830000,
+                brand_id=cls.brand,
+                storage_id=cls.storage,
+                category_id=cls.category
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -879,7 +1006,8 @@ class RestockListTestCase(SetTestCase):
                 no_faktur=f'URH45/28394/2022-N{i}D',
                 due_date=date(2023, 4, 13),
                 supplier_id=cls.supplier,
-                is_paid_off=False
+                is_paid_off=False,
+                salesman_id=cls.salesman
             )
 
         cls.restocks = Restock.objects.all()
@@ -917,7 +1045,11 @@ class RestockListTestCase(SetTestCase):
                 'no_faktur': 'URH45/28394/2022-N0D',
                 'due_date': '13-04-2023',
                 'supplier': self.supplier.name,
+                'supplier_contact': self.supplier.contact,
+                'salesman': self.salesman.name,
+                'salesman_contact': self.salesman.contact,
                 'is_paid_off': False,
+                'deposit': str(self.restocks[0].deposit),
                 'content': [
                     {
                         'restock_detail_id': self.restock_detail_1.restock_detail_id,
@@ -932,7 +1064,11 @@ class RestockListTestCase(SetTestCase):
                 'no_faktur': 'URH45/28394/2022-N1D',
                 'due_date': '13-04-2023',
                 'supplier': self.supplier.name,
+                'supplier_contact': self.supplier.contact,
+                'salesman': self.salesman.name,
+                'salesman_contact': self.salesman.contact,
                 'is_paid_off': False,
+                'deposit': str(self.restocks[1].deposit),
                 'content': [
                     {
                         'restock_detail_id': self.restock_detail_2.restock_detail_id,
@@ -978,10 +1114,24 @@ class RestockAddTestCase(SetTestCase):
         cls.supplier = Supplier.objects.create(
             name='Parker Industries',
             address='New York st.long walk',
-            contact_number='084526301053',
-            salesman_name='Peter Parker',
-            salesman_contact='084105634154'
+            contact='084526301053',
         )
+
+        # Setting up salesman data
+        cls.salesman = Salesman.objects.create(
+            supplier_id=cls.supplier,
+            name='Peter Parker',
+            contact='084105634154'
+        )
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='SP-31')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Parker')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Accessories')
 
         # Setting up sparepart data and getting their id
         for i in range(3):
@@ -992,8 +1142,11 @@ class RestockAddTestCase(SetTestCase):
                 motor_type='Wrist Device',
                 sparepart_type='Braclet',
                 price=5400000,
-                grosir_price=5300000,
-                brand_id=None
+                workshop_price=5300000,
+                install_price=5500000,
+                brand_id=cls.brand,
+                category_id=cls.category,
+                storage_id=cls.storage
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -1003,7 +1156,9 @@ class RestockAddTestCase(SetTestCase):
             'no_faktur': 'URH45/28394/2022-N1D',
             'due_date': date(2023, 4, 13),
             'supplier_id': cls.supplier.supplier_id,
+            'salesman_id': cls.salesman.salesman_id,
             'is_paid_off': False,
+            'deposit': 5000000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[0].sparepart_id,
@@ -1031,7 +1186,9 @@ class RestockAddTestCase(SetTestCase):
         self.assertEqual(response.data['no_faktur'], 'URH45/28394/2022-N1D')
         self.assertEqual(response.data['due_date'], '13-04-2023')
         self.assertEqual(response.data['supplier_id'], self.supplier.supplier_id)
+        self.assertEqual(response.data['salesman_id'], self.salesman.salesman_id)
         self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(len(response.data['content']), 2)
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
         self.assertEqual(response.data['content'][0]['individual_price'], '4700000')
@@ -1087,10 +1244,24 @@ class RestockUpdateTestCase(SetTestCase):
         cls.supplier = Supplier.objects.create(
             name='Invulnerable Vagrant',
             address='Zadash market disctrict',
-            contact_number='084526301053',
-            salesman_name='Pumat Sol',
-            salesman_contact='084105634154'
+            contact='084526301053',
         )
+
+        # Setting up salesman data
+        cls.salesman = Salesman.objects.create(
+            supplier_id=cls.supplier,
+            name='Pumat Sol',
+            contact='084105634154'
+        )
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='P-3')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Cerbereus')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Potion')
 
         # Setting up sparepart data and getting their id
         for i in range(3):
@@ -1099,9 +1270,10 @@ class RestockUpdateTestCase(SetTestCase):
                 partnumber=f'0Y3AD-FY{i}',
                 quantity=50,
                 motor_type='Adventurer',
-                sparepart_type='Potion',
+                sparepart_type='Buff',
                 price=5400000,
-                grosir_price=5300000,
+                workshop_price=5300000,
+                install_price=5500000,
                 brand_id=None
             )
 
@@ -1115,6 +1287,7 @@ class RestockUpdateTestCase(SetTestCase):
                 no_faktur='78SDFBH/2022-YE/FA89',
                 due_date=date(2023, 4, 13),
                 supplier_id=self.supplier,
+                salesman_id=self.salesman,
                 is_paid_off=False
             )
 
@@ -1140,7 +1313,9 @@ class RestockUpdateTestCase(SetTestCase):
             'no_faktur': '78SDFBH/2022-YE/FA89',
             'due_date': date(2023, 4, 13),
             'supplier_id': self.supplier.supplier_id,
+            'salesman_id': self.salesman.salesman_id,
             'is_paid_off': True,
+            'deposit': 0,
             'content': [
                 {
                     'restock_detail_id': self.restock_detail_1.restock_detail_id,
@@ -1169,7 +1344,10 @@ class RestockUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data pengadaan berhasil dirubah')
         self.assertEqual(response.data['no_faktur'], '78SDFBH/2022-YE/FA89')
         self.assertEqual(response.data['due_date'], '13-04-2023')
+        self.assertEqual(response.data['supplier_id'], self.supplier.supplier_id)
+        self.assertEqual(response.data['salesman_id'], self.salesman.salesman_id)
         self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(len(response.data['content']), 2)
         self.assertEqual(response.data['content'][0]['restock_detail_id'], self.restock_detail_1.restock_detail_id)
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
@@ -1237,10 +1415,24 @@ class RestockDeleteTestCase(SetTestCase):
         cls.supplier = Supplier.objects.create(
             name="Future Fondations",
             address='New York Street',
-            contact_number='084526301053',
-            salesman_name='Reed Richards',
-            salesman_contact='084105634154'
+            contact='084526301053',
         )
+
+        # Setting up salesman data
+        cls.salesman = Salesman.objects.create(
+            supplier_id=cls.supplier,
+            name='Reed Richards',
+            contact='084105634154'
+        )
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='FF-31')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Baster Creation')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Debuff')
 
         # Setting up sparepart data and getting their id
         for i in range(3):
@@ -1251,8 +1443,11 @@ class RestockDeleteTestCase(SetTestCase):
                 motor_type='Inventions',
                 sparepart_type='Device',
                 price=105000,
-                grosir_price=100000,
-                brand_id=None
+                workshop_price=100000,
+                install_price=110000,
+                brand_id=cls.brand,
+                category_id=cls.category,
+                storage_id=cls.storage
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -1265,6 +1460,7 @@ class RestockDeleteTestCase(SetTestCase):
                 no_faktur='78SDFBH/2022-YE/FA89',
                 due_date=date(2023, 4, 13),
                 supplier_id=self.supplier,
+                salesman_id=self.salesman,
                 is_paid_off=False
             )
 
@@ -1335,23 +1531,17 @@ class SupplierListTestCase(SetTestCase):
         cls.supplier_1 = Supplier.objects.create(
             name='Alpha Flight',
             address='Canada',
-            contact_number='088464105635',
-            salesman_name='Logan',
-            salesman_contact='080186153054'
+            contact='088464105635',
         )
         cls.supplier_2 = Supplier.objects.create(
             name='New Warriors',
             address='America',
-            contact_number='084108910563',
-            salesman_name='Nova Richard Rider',
-            salesman_contact='081526348561'
+            contact='084108910563',
         )
         cls.supplier_3 = Supplier.objects.create(
             name='Quite Council',
             address='Krakoa',
-            contact_number='089661056345',
-            salesman_name='Charles Xavier',
-            salesman_contact='084856105314'
+            contact='089661056345',
         )
 
         return super().setUpTestData()
@@ -1364,11 +1554,9 @@ class SupplierListTestCase(SetTestCase):
         response = self.client.get(self.supplier_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 3)
-        self.assertEqual(response.data['results'][1]['name'], 'New Warriors')
-        self.assertEqual(response.data['results'][1]['address'], 'America')
-        self.assertEqual(response.data['results'][1]['contact_number'], '084108910563')
-        self.assertEqual(response.data['results'][1]['salesman_name'], 'Nova Richard Rider')
-        self.assertEqual(response.data['results'][1]['salesman_contact'], '081526348561')
+        self.assertEqual(response.data['results'][2]['name'], 'Quite Council')
+        self.assertEqual(response.data['results'][2]['address'], 'Krakoa')
+        self.assertEqual(response.data['results'][2]['contact'], '089661056345')
 
     def test_nonlogin_user_failed_to_access_supplier_list(self) -> None:
         """
@@ -1398,9 +1586,7 @@ class SupplierAddTestCase(SetTestCase):
         cls.data = {
             'name': 'Mighty Nein',
             'address': 'Wildemount',
-            'contact_number': '084110864563',
-            'salesman_name': 'Caleb Widogast',
-            'salesman_contact': '089854024860'
+            'contact': '084110864563'
         }
 
         return super().setUpTestData()
@@ -1415,9 +1601,7 @@ class SupplierAddTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data supplier berhasil ditambah')
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['address'], self.data['address'])
-        self.assertEqual(response.data['contact_number'], self.data['contact_number'])
-        self.assertEqual(response.data['salesman_name'], self.data['salesman_name'])
-        self.assertEqual(response.data['salesman_contact'], self.data['salesman_contact'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
 
     def test_nonlogin_user_failed_to_add_new_supplier(self) -> None:
         """
@@ -1464,9 +1648,7 @@ class SupplierUpdateTestCase(SetTestCase):
         cls.data = {
             'name': 'Yukumo Village',
             'address': 'Misty Peaks',
-            'contact_number': '081526210523',
-            'salesman_name': 'Yukumo Village Chief',
-            'salesman_contact': '082418596323'
+            'contact': '081526210523',
         }
 
         return super().setUpTestData()
@@ -1476,16 +1658,12 @@ class SupplierUpdateTestCase(SetTestCase):
         self.supplier_1 = Supplier.objects.create(
             name='Pokke Village',
             address='Furahiya Mountains',
-            contact_number='089661056345',
-            salesman_name='Pokke Village Chief',
-            salesman_contact='084856105314'
+            contact='089661056345',
         )
         self.supplier_2 = Supplier.objects.create(
             name='Yukumo',
             address='Misty Peaks',
-            contact_number='084108910563',
-            salesman_name='Chief',
-            salesman_contact='081526348561'
+            contact='084108910563',
         )
 
         self.supplier_update_url = reverse('supplier_update', kwargs={'supplier_id': self.supplier_2.supplier_id})
@@ -1502,9 +1680,7 @@ class SupplierUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data supplier berhasil dirubah')
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['address'], self.data['address'])
-        self.assertEqual(response.data['contact_number'], self.data['contact_number'])
-        self.assertEqual(response.data['salesman_name'], self.data['salesman_name'])
-        self.assertEqual(response.data['salesman_contact'], self.data['salesman_contact'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
 
     def test_nonlogin_user_failed_to_update_supplier(self) -> None:
         """
@@ -1529,7 +1705,7 @@ class SupplierUpdateTestCase(SetTestCase):
         Ensure admin cannot update non-exist supplier
         """
         self.client.force_authenticate(user=self.user)
-        response = self.client.put(reverse('supplier_update', kwargs={'supplier_id': 52653}),
+        response = self.client.put(reverse('supplier_update', kwargs={'supplier_id': 526523}),
                                    self.data)
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data supplier tidak ditemukan')
@@ -1561,16 +1737,12 @@ class SupplierDeleteTestCase(SetTestCase):
         cls.supplier_1 = Supplier.objects.create(
             name='Overwatch',
             address='Brooklyn',
-            contact_number='088464105635',
-            salesman_name='Winston',
-            salesman_contact='080186153054'
+            contact='088464105635',
         )
         cls.supplier_2 = Supplier.objects.create(
             name='Null Sector',
             address='London',
-            contact_number='084108910563',
-            salesman_name='Ramattra',
-            salesman_contact='081526348561'
+            contact='084108910563',
         )
 
         # Getting newly added supplier it's supplier_id then set it to kwargs in reverse url

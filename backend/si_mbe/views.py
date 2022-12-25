@@ -69,7 +69,7 @@ class SparepartDataAdd(generics.CreateAPIView):
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 8:
+        if len(request.data) < 10:
             return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -80,7 +80,7 @@ class SparepartDataAdd(generics.CreateAPIView):
         data = serializer.data
         data['message'] = 'Data sparepart berhasil ditambah'
 
-        perform_log(request=request, operation='C', table_name='Sparepart')
+        perform_log(request=request, operation='C', table='Sparepart')
 
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -99,7 +99,7 @@ class SparepartDataUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 8:
+        if len(request.data) < 10:
             return Response({'message': 'Data sparepart tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -116,7 +116,7 @@ class SparepartDataUpdate(generics.RetrieveUpdateAPIView):
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
-        perform_log(request=request, operation='E', table_name='Sparepart')
+        perform_log(request=request, operation='E', table='Sparepart')
 
         return Response(data)
 
@@ -138,7 +138,7 @@ class SparepartDataDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data sparepart berhasil dihapus'}
 
-        perform_log(request=request, operation='R', table_name='Sparepart')
+        perform_log(request=request, operation='R', table='Sparepart')
 
         return Response(message, status=status.HTTP_204_NO_CONTENT)
 
@@ -171,7 +171,7 @@ class SalesAdd(generics.CreateAPIView):
         data = serializer.data
         data['message'] = 'Data penjualan berhasil ditambah'
 
-        perform_log(request=request, operation='C', table_name='Sales')
+        perform_log(request=request, operation='C', table='Sales')
 
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -211,7 +211,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
-        perform_log(request=request, operation='E', table_name='Sales')
+        perform_log(request=request, operation='E', table='Sales')
 
         return Response(data)
 
@@ -234,7 +234,7 @@ class SalesDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data penjualan berhasil dihapus'}
 
-        perform_log(request=request, operation='R', table_name='Sales')
+        perform_log(request=request, operation='R', table='Sales')
 
         return Response(message, status=status.HTTP_204_NO_CONTENT)
 
@@ -252,7 +252,7 @@ class RestockAdd(generics.CreateAPIView):
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 5:
+        if len(request.data) < 7:
             return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
@@ -267,7 +267,7 @@ class RestockAdd(generics.CreateAPIView):
         data = serializer.data
         data['message'] = 'Data pengadaan berhasil ditambah'
 
-        perform_log(request=request, operation='C', table_name='Restock')
+        perform_log(request=request, operation='C', table='Restock')
 
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
@@ -286,7 +286,7 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 5:
+        if len(request.data) < 7:
             return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
@@ -307,7 +307,7 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
             # forcibly invalidate the prefetch cache on the instance.
             instance._prefetched_objects_cache = {}
 
-        perform_log(request=request, operation='E', table_name='Restock')
+        perform_log(request=request, operation='E', table='Restock')
 
         return Response(data)
 
@@ -330,7 +330,7 @@ class RestockDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data pengadaan berhasil dihapus'}
 
-        perform_log(request=request, operation='R', table_name='Restock')
+        perform_log(request=request, operation='R', table='Restock')
 
         return Response(message, status=status.HTTP_204_NO_CONTENT)
 
@@ -348,7 +348,7 @@ class SupplierAdd(generics.CreateAPIView):
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 5:
+        if len(request.data) < 3:
             return Response({'message': 'Data supplier tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(data=request.data)
@@ -374,7 +374,7 @@ class SupplierUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 5:
+        if len(request.data) < 3:
             return Response({'message': 'Data supplier tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         partial = kwargs.pop('partial', False)

@@ -4,8 +4,9 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail, Role,
-                           Sales, Sales_detail, Sparepart, Supplier)
+from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
+                           Restock_detail, Sales, Sales_detail, Salesman,
+                           Sparepart, Storage, Supplier)
 from si_mbe.tests.test_admin import SetTestCase
 
 
@@ -15,15 +16,20 @@ class SalesReportListTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and owner user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role='P')
 
+        # Setting up brand data
         cls.brand = Brand.objects.create(name='Dragon Steel')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='EP-12')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Book')
 
         # Setting up sparepart data and getting their object
         for i in range(3):
@@ -32,23 +38,34 @@ class SalesReportListTestCase(APITestCase):
                 partnumber=f'0Y3AD-FY{i}',
                 quantity=50,
                 motor_type='Fantasy',
-                sparepart_type='Book',
+                sparepart_type='Ori',
                 price=5400000,
-                grosir_price=5300000,
-                brand_id=cls.brand
+                workshop_price=5300000,
+                install_price=5500000,
+                brand_id=cls.brand,
+                storage_id=cls.storage,
+                category_id=cls.category
             )
 
         cls.spareparts = Sparepart.objects.all()
 
+        # Setting up customer data
+        cls.customer_1 = Customer.objects.create(
+            name='Hoid',
+            contact='085456105311'
+        )
+        cls.customer_2 = Customer.objects.create(
+            name='Vasheer',
+            contact='085456102341'
+        )
+
         # Setting up sales data and getting their object
         cls.sales_1 = Sales.objects.create(
-                customer_name='Hoid',
-                customer_contact='085456105311',
+                customer_id=cls.customer_1,
                 user_id=cls.user,
             )
         cls.sales_2 = Sales.objects.create(
-                customer_name='Vasheer',
-                customer_contact='085456105311',
+                customer_id=cls.customer_2,
                 is_paid_off=True,
                 user_id=cls.user,
             )
@@ -75,18 +92,20 @@ class SalesReportListTestCase(APITestCase):
                 'admin': 'Richard Rider',
                 'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'customer_name': self.sales_1.customer_name,
-                'customer_contact': self.sales_1.customer_contact,
-                'is_paid_off': False
+                'customer': self.sales_1.customer_id.name,
+                'contact': self.sales_1.customer_id.contact,
+                'is_paid_off': False,
+                'deposit': str(self.sales_1.deposit)
             },
             {
                 'sales_id': self.sales_2.sales_id,
                 'admin': 'Richard Rider',
                 'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
                 'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
-                'customer_name': self.sales_2.customer_name,
-                'customer_contact': self.sales_2.customer_contact,
-                'is_paid_off': True
+                'customer': self.sales_2.customer_id.name,
+                'contact': self.sales_2.customer_id.contact,
+                'is_paid_off': True,
+                'deposit': str(self.sales_2.deposit)
             }
         ])
 
@@ -113,15 +132,20 @@ class SalesReportDetail(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and owner user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role='P')
 
+        # Setting up brand data
         cls.brand = Brand.objects.create(name='Steins Gate')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='JD-24')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Machine')
 
         # Setting up sparepart data and getting their object
         for i in range(3):
@@ -130,18 +154,26 @@ class SalesReportDetail(APITestCase):
                 partnumber=f'0Y3AD-FY{i}',
                 quantity=50,
                 motor_type='Time Machine',
-                sparepart_type='Phrase',
+                sparepart_type='DIY',
                 price=5400000,
-                grosir_price=5300000,
-                brand_id=cls.brand
+                workshop_price=5300000,
+                install_price=5500000,
+                brand_id=cls.brand,
+                category_id=cls.category,
+                storage_id=cls.storage
             )
 
         cls.spareparts = Sparepart.objects.all()
 
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Rintaro Okabe',
+            contact='084468104651',
+        )
+
         # Setting up sales data and getting their object
         cls.sales = Sales.objects.create(
-                customer_name='Rintaro Okabe',
-                customer_contact='084468104651',
+                customer_id=cls.customer,
                 user_id=cls.user,
             )
 
@@ -151,19 +183,19 @@ class SalesReportDetail(APITestCase):
         # Setting up sales detail data and getting their object
         cls.sales_details_1 = Sales_detail.objects.create(
             quantity=15,
-            is_grosir=False,
+            is_workshop=False,
             sales_id=cls.sales,
             sparepart_id=cls.spareparts[2]
         )
         cls.sales_details_2 = Sales_detail.objects.create(
             quantity=10,
-            is_grosir=False,
+            is_workshop=False,
             sales_id=cls.sales,
             sparepart_id=cls.spareparts[0]
         )
         cls.sales_details_3 = Sales_detail.objects.create(
             quantity=20,
-            is_grosir=True,
+            is_workshop=True,
             sales_id=cls.sales,
             sparepart_id=cls.spareparts[1]
         )
@@ -185,27 +217,28 @@ class SalesReportDetail(APITestCase):
                 'admin': 'Richard Rider',
                 'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'customer_name': self.sales.customer_name,
-                'customer_contact': self.sales.customer_contact,
+                'customer': self.sales.customer_id.name,
+                'contact': self.sales.customer_id.contact,
                 'is_paid_off': False,
+                'deposit': str(self.sales.deposit),
                 'content': [
                     {
                         'sales_detail_id': self.sales_details_1.sales_detail_id,
                         'sparepart': self.spareparts[2].name,
                         'quantity': 15,
-                        'is_grosir': False
+                        'is_workshop': False
                     },
                     {
                         'sales_detail_id': self.sales_details_2.sales_detail_id,
                         'sparepart': self.spareparts[0].name,
                         'quantity': 10,
-                        'is_grosir': False
+                        'is_workshop': False
                     },
                     {
                         'sales_detail_id': self.sales_details_3.sales_detail_id,
                         'sparepart': self.spareparts[1].name,
                         'quantity': 20,
-                        'is_grosir': True
+                        'is_workshop': True
                     }
                 ]
             }
@@ -236,24 +269,33 @@ class RestockReportTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and owner user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role='P')
 
         # Setting up brand
         cls.brand = Brand.objects.create(name='Cosmic Being')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='FF-20')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Creature')
 
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='Galactus',
             address='Planet Taa',
-            contact_number='084894564563',
-            salesman_name='Galan',
-            salesman_contact='084523015663'
+            contact='084894564563',
+        )
+
+        # Setting up salesman
+        cls.salesman = Salesman.objects.create(
+            name='Galan',
+            contact='084523015663',
+            supplier_id=cls.supplier
         )
 
         # Setting up sparepart data and getting their object
@@ -263,10 +305,13 @@ class RestockReportTestCase(APITestCase):
                 partnumber=f'0Y3AD-FY{i}',
                 quantity=50,
                 motor_type='Cosmic Energy',
-                sparepart_type='Creature',
+                sparepart_type='Bio',
                 price=4700000,
-                grosir_price=4620000,
-                brand_id=cls.brand
+                workshop_price=4620000,
+                install_price=5500000,
+                brand_id=cls.brand,
+                category_id=cls.category,
+                storage_id=cls.storage
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -278,7 +323,8 @@ class RestockReportTestCase(APITestCase):
                 due_date=date(2023, 4, 13),
                 supplier_id=cls.supplier,
                 is_paid_off=False,
-                user_id=cls.user
+                user_id=cls.user,
+                salesman_id=cls.salesman
             )
 
         cls.restocks = Restock.objects.all()
@@ -307,11 +353,12 @@ class RestockReportTestCase(APITestCase):
                 'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'no_faktur': self.restocks[0].no_faktur,
                 'is_paid_off': False,
+                'deposit': str(self.restocks[0].deposit),
                 'due_date': self.restocks[0].due_date.strftime('%d-%m-%Y'),
                 'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact_number,
-                'salesman': self.supplier.salesman_name,
-                'salesman_contact': self.supplier.salesman_contact
+                'supplier_contact': self.supplier.contact,
+                'salesman': self.restocks[0].salesman_id.name,
+                'salesman_contact': self.restocks[0].salesman_id.contact
             },
             {
                 'restock_id': self.restocks[1].restock_id,
@@ -320,11 +367,12 @@ class RestockReportTestCase(APITestCase):
                 'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
                 'no_faktur': self.restocks[1].no_faktur,
                 'is_paid_off': False,
+                'deposit': str(self.restocks[1].deposit),
                 'due_date': self.restocks[1].due_date.strftime('%d-%m-%Y'),
                 'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact_number,
-                'salesman': self.supplier.salesman_name,
-                'salesman_contact': self.supplier.salesman_contact
+                'supplier_contact': self.supplier.contact,
+                'salesman': self.restocks[1].salesman_id.name,
+                'salesman_contact': self.restocks[1].salesman_id.contact
             }
         ])
 
@@ -351,24 +399,33 @@ class RestockReportDetailTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and owner user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role='P')
 
-        # Setting up brand
+        # Setting up brand data
         cls.brand = Brand.objects.create(name='Galactic Empire')
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='DS-01')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Connector')
 
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='narkina 5',
             address='Planet Narkina, Outer Rim',
-            contact_number='084894564563',
-            salesman_name='Kino Loy',
-            salesman_contact='084523015663'
+            contact='084894564563'
+        )
+
+        # Setting up salesman data
+        cls.salesman = Salesman.objects.create(
+            name='Kino Loy',
+            contact='084523015663',
+            supplier_id=cls.supplier
         )
 
         # Setting up sparepart data and getting their object
@@ -378,10 +435,13 @@ class RestockReportDetailTestCase(APITestCase):
                 partnumber=f'0Y3AD-FY{i}',
                 quantity=50,
                 motor_type='Deathstar',
-                sparepart_type='Connector',
+                sparepart_type='OEM',
                 price=4700000,
-                grosir_price=4620000,
-                brand_id=cls.brand
+                workshop_price=4620000,
+                install_price=5500000,
+                brand_id=cls.brand,
+                category_id=cls.category,
+                storage_id=cls.storage
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -392,7 +452,8 @@ class RestockReportDetailTestCase(APITestCase):
                 due_date=date(2023, 4, 13),
                 supplier_id=cls.supplier,
                 is_paid_off=False,
-                user_id=cls.user
+                user_id=cls.user,
+                salesman_id=cls.salesman
             )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -426,7 +487,7 @@ class RestockReportDetailTestCase(APITestCase):
 
     def test_owner_successfully_access_restock_report_detail(self):
         """
-        Ensure owner can get restock report list
+        Ensure owner can get restock report detail
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.restock_report_detail_url)
@@ -438,11 +499,12 @@ class RestockReportDetailTestCase(APITestCase):
                 'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
                 'no_faktur': self.restock.no_faktur,
                 'is_paid_off': False,
+                'deposit': str(self.restock.deposit),
                 'due_date': self.restock.due_date.strftime('%d-%m-%Y'),
                 'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact_number,
-                'salesman': self.supplier.salesman_name,
-                'salesman_contact': self.supplier.salesman_contact,
+                'supplier_contact': self.supplier.contact,
+                'salesman': self.restock.salesman_id.name,
+                'salesman_contact': self.restock.salesman_id.contact,
                 'content': [
                     {
                         'restock_detail_id': self.restock_detail_1.restock_detail_id,
@@ -491,21 +553,19 @@ class LogTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and owner user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Pemilik')
         cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+        Profile.objects.create(user_id=cls.owner, role='P')
 
         cls.log_1 = Logs.objects.create(
-            table_name='Sales',
+            table='Sales',
             operation='R',
             user_id=cls.user
         )
         cls.log_2 = Logs.objects.create(
-            table_name='Sparepart',
+            table='Sparepart',
             operation='E',
             user_id=cls.user
         )
@@ -528,14 +588,14 @@ class LogTestCase(APITestCase):
                 'log_id': self.log_1.log_id,
                 'log_at': self.time_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'user': self.log_1.user_id.profile.name,
-                'table_name': self.log_1.table_name,
+                'table': self.log_1.table,
                 'operation': self.log_1.get_operation_display()
             },
             {
                 'log_id': self.log_2.log_id,
                 'log_at': self.time_2.strftime('%d-%m-%Y %H:%M:%S'),
                 'user': self.log_2.user_id.profile.name,
-                'table_name': self.log_2.table_name,
+                'table': self.log_2.table,
                 'operation': self.log_2.get_operation_display()
             }
         ])
@@ -563,9 +623,14 @@ class OwnerDashboardTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up customer
+        cls.customer = Customer.objects.create(
+            name='Caduceus Clay',
+            contact='085456105311'
+        )
+
         Sales.objects.create(
-            customer_name='Caduceus Clay',
-            customer_contact='085456105311',
+            customer_id=cls.customer
         )
 
         return super().setUpTestData()

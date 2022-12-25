@@ -5,20 +5,18 @@ from django.urls import reverse
 from django.utils.encoding import force_str
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import Brand, Profile, Role, Sparepart, Storage
+from si_mbe.models import Brand, Category, Profile, Sparepart, Storage
 
 
 class SetTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and non-admin user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role_id=cls.role, name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
 
-        cls.owner_role = Role.objects.create(name='Pemilik')
-        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role_id=cls.owner_role)
+        cls.owner = User.objects.create_user(username='oneaboveall', password='TrueComicBookWriter')
+        Profile.objects.create(user_id=cls.owner, role='P', name='One Above All')
 
         return super().setUpTestData()
 
@@ -130,9 +128,11 @@ class SparepartSearchTestCase(APITestCase):
 
         # Setting up storage data
         cls.storage = Storage.objects.create(
-            code='6ABC',
-            location='Rak Biru B6'
+            code='WB31'
         )
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Power')
 
         # Setting up sparepart data
         cls.sparepart = Sparepart.objects.create(
@@ -140,10 +140,12 @@ class SparepartSearchTestCase(APITestCase):
                             partnumber='AB17623-ha2092d',
                             quantity=50,
                             motor_type='Yamaha Nmax',
-                            sparepart_type='24Q-22',
+                            sparepart_type='KW',
                             price=5400000,
-                            grosir_price=5300000,
+                            workshop_price=5300000,
+                            install_price=5500000,
                             brand_id=cls.brand,
+                            category_id=cls.category,
                             storage_id=cls.storage
                         )
 
@@ -160,15 +162,18 @@ class SparepartSearchTestCase(APITestCase):
         self.assertEqual(response.data['results'], [
             {
                 'sparepart_id': self.sparepart.sparepart_id,
+                'image': None,
                 'name': self.sparepart.name,
                 'partnumber': self.sparepart.partnumber,
                 'quantity': self.sparepart.quantity,
+                'category': self.sparepart.category_id.name,
                 'motor_type': self.sparepart.motor_type,
                 'sparepart_type': self.sparepart.sparepart_type,
                 'brand': self.sparepart.brand_id.name,
                 'price': str(self.sparepart.price),
-                'grosir_price': str(self.sparepart.grosir_price),
-                'location': self.storage.location
+                'workshop_price': str(self.sparepart.workshop_price),
+                'install_price': str(self.sparepart.install_price),
+                'location': self.storage.code
             }
         ])
 
@@ -335,7 +340,6 @@ class ProfileDetailTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up admin user and non-admin user
-        cls.role = Role.objects.create(name='Admin')
         cls.user = User.objects.create_user(
             username='richardrider',
             password='NovaPrimeAnnahilations',
@@ -343,12 +347,11 @@ class ProfileDetailTestCase(APITestCase):
         )
         Profile.objects.create(
             user_id=cls.user,
-            role_id=cls.role,
+            role='A',
             name='Richard Rider',
-            contact_number='081256456948'
+            contact='081256456948'
         )
 
-        cls.nonadmin_role = Role.objects.create(name='Karyawan')
         cls.nonadmin_user = User.objects.create_user(
             username='Phalanx',
             password='TryintoTakeOver',
@@ -356,9 +359,9 @@ class ProfileDetailTestCase(APITestCase):
         )
         Profile.objects.create(
             user_id=cls.nonadmin_user,
-            role_id=cls.nonadmin_role,
+            role='P',
             name='Ultron',
-            contact_number='011011000111'
+            contact='011011000111'
         )
 
         return super().setUpTestData()
@@ -373,8 +376,8 @@ class ProfileDetailTestCase(APITestCase):
         self.assertEqual(response.data, {
             'name': self.user.profile.name,
             'email': self.user.email,
-            'contact_number': self.user.profile.contact_number,
-            'role': self.user.profile.role_id.name
+            'contact': self.user.profile.contact,
+            'role': self.user.profile.get_role_display()
         })
 
     def test_nonlogin_user_failed_to_access_profile_detail(self) -> None:
@@ -404,18 +407,14 @@ class ProfileDetailTestCase(APITestCase):
         self.assertEqual(response.data, {
             'name': self.nonadmin_user.profile.name,
             'email': self.nonadmin_user.email,
-            'contact_number': self.nonadmin_user.profile.contact_number,
-            'role': self.nonadmin_user.profile.role_id.name
+            'contact': self.nonadmin_user.profile.contact,
+            'role': self.nonadmin_user.profile.get_role_display()
         })
 
 
 class ProfileUpdateTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
-        # Setting up admin user and non-admin user
-        cls.role = Role.objects.create(name='Admin')
-        cls.nonadmin_role = Role.objects.create(name='Karyawan')
-
         # Setting up admin user and non-admin user details
         cls.user = User.objects.create_user(
             username='richardrider',
@@ -432,23 +431,23 @@ class ProfileUpdateTestCase(APITestCase):
         # Setting up admin and non-admin user profile
         Profile.objects.create(
             user_id=cls.user,
-            role_id=cls.role,
+            role='A',
             name='Richard Rider',
-            contact_number='081256456948'
+            contact='081256456948'
         )
 
         Profile.objects.create(
             user_id=cls.nonadmin_user,
-            role_id=cls.nonadmin_role,
+            role='P',
             name='Ultron',
-            contact_number='011011000111'
+            contact='011011000111'
         )
 
         # Setting up input data
         cls.data = {
             'name': 'Sam Alexander',
             'email': 'kidnova@gmail.com',
-            'contact_number': '085263486045',
+            'contact': '085263486045',
         }
 
         return super().setUpTestData()
@@ -468,7 +467,7 @@ class ProfileUpdateTestCase(APITestCase):
         self.assertEqual(response.data, {
             'name': self.data['name'],
             'email': self.data['email'],
-            'contact_number': self.data['contact_number'],
+            'contact': self.data['contact'],
             'message': 'Profile berhasil dirubah'
         })
 
@@ -539,6 +538,6 @@ class ProfileUpdateTestCase(APITestCase):
         self.assertEqual(response.data, {
             'name': self.data['name'],
             'email': self.data['email'],
-            'contact_number': self.data['contact_number'],
+            'contact': self.data['contact'],
             'message': 'Profile berhasil dirubah'
         })

@@ -15,7 +15,7 @@ class IsAdminRole(permissions.BasePermission):
     message = {'message': 'Akses ditolak'}
 
     def has_permission(self, request, view):
-        if request.user.profile.role_id.name == 'Admin':
+        if request.user.profile.role == 'A':
             return True
 
         return False
@@ -25,7 +25,7 @@ class IsOwnerRole(permissions.BasePermission):
     message = {'message': 'Akses ditolak'}
 
     def has_permission(self, request, view):
-        if request.user.profile.role_id.name == 'Pemilik':
+        if request.user.profile.role == 'P':
             return True
 
         return False
@@ -35,7 +35,7 @@ class IsRelatedUserOrAdmin(permissions.BasePermission):
     message = {'message': 'Akses ditolak'}
 
     def has_object_permission(self, request, view, obj):
-        if request.user.profile.role_id.name == 'Admin':
+        if request.user.profile.role == 'A':
             return True
 
         return obj.user_id == request.user
