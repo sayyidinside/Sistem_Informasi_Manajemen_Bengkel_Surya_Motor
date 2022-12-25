@@ -35,7 +35,6 @@ class Profile(models.Model):
 
 # log table to store user activity against certain table
 # the table tracked are sales, restock, service, sparepart
-# log table consist of log_id as pk, log_at, log_at (time), table, user_id
 class Logs(models.Model):
     log_id = models.AutoField(
         primary_key=True,
@@ -78,8 +77,8 @@ class Customer(models.Model):
     )
     name = models.CharField(max_length=30)
     contact = models.CharField(max_length=15)
-    number_of_service = models.PositiveSmallIntegerField()
-    total_payment = models.DecimalField(max_digits=15, decimal_places=0)
+    number_of_service = models.PositiveSmallIntegerField(default=0)
+    total_payment = models.DecimalField(max_digits=15, decimal_places=0, default=0)
 
     def __str__(self) -> str:
         return f'{self.name} | Total payment = Rp {self.total_payment}| '\
@@ -186,6 +185,12 @@ class Restock(Base_transaction):
         null=True,
         db_column='supplier_id'
     )
+    salesman_id = models.ForeignKey(
+        'Salesman',
+        on_delete=models.SET_NULL,
+        null=True,
+        db_column='salesman_id'
+    )
 
     def __str__(self) -> str:
         return f'{self.restock_id} at {self.created_at} | Lunas={self.is_paid_off}'
@@ -276,7 +281,7 @@ class Storage(models.Model):
         primary_key=True,
         unique=True
     )
-    code = models.CharField(max_length=8)
+    code = models.CharField(max_length=8, unique=True)
 
     class Locations(models.TextChoices):
         FIRST = '1', _('Bengkel 1 Jalan ...')
@@ -400,7 +405,7 @@ class Service(Base_transaction):
 
     police_number = models.CharField(max_length=10)
     motor_type = models.CharField(max_length=20)
-    deposit = models.DecimalField(max_digits=15, decimal_places=0)
+    deposit = models.DecimalField(max_digits=15, decimal_places=0, default=0)
     discount = models.DecimalField(max_digits=15, decimal_places=0)
 
     user_id = models.ForeignKey(
