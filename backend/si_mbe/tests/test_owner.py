@@ -661,3 +661,47 @@ class OwnerDashboardTestCase(SetTestCase):
         response = self.client.get(self.owner_dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class AdminListTestCase(SetTestCase):
+    admin_list_url = reverse('admin_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up additional admin data
+        cls.admin = User.objects.create_user(
+            username='nottthebrave',
+            password='Veth',
+            email='samreigel@yahoo.com'
+        )
+
+        Profile.objects.create(user_id=cls.admin, role='A', name='Nott The Brave', contact='085360467830')
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_admin_list(self) -> None:
+        """
+        Ensure owner can access owner dashboard
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.admin_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+
+    def test_nonlogin_user_failed_to_access_admin_list(self) -> None:
+        """
+        Ensure non-login user cannot access admin list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.admin_list_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_admin_list(self) -> None:
+        """
+        Ensure non-owner user cannot access admin list
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.admin_list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

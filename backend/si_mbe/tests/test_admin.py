@@ -15,10 +15,10 @@ class SetTestCase(APITestCase):
     def setUpTestData(cls) -> None:
         # Setting up admin user and non-admin user
         cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
+        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider', contact='085260121548')
 
         cls.owner = User.objects.create_user(username='worldmind', password='XandarianWorldmind')
-        Profile.objects.create(user_id=cls.owner, role='P')
+        Profile.objects.create(user_id=cls.owner, role='P', name='Nova Worldmind', contact='084086351044')
 
         return super().setUpTestData()
 

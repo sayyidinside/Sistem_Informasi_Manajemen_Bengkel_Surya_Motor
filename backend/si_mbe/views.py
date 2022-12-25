@@ -2,6 +2,7 @@ from calendar import monthrange
 from datetime import date
 
 from dj_rest_auth.views import PasswordChangeView
+from django.contrib.auth.models import User
 from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
@@ -11,8 +12,8 @@ from si_mbe.models import Logs, Profile, Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.serializers import (LogSerializers, ProfileSerializers,
-                                ProfileUpdateSerializers,
+from si_mbe.serializers import (AdminSerializers, LogSerializers,
+                                ProfileSerializers, ProfileUpdateSerializers,
                                 RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
@@ -518,3 +519,10 @@ class OwnerDashboard(generics.GenericAPIView):
                 'sales_in_mont': self.sales_in_month
             },
             status=status.HTTP_200_OK)
+
+
+class AdminList(generics.ListAPIView):
+    queryset = User.objects.prefetch_related('profile').filter(is_active=True, profile__role='A').order_by('id')
+    serializer_class = AdminSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsOwnerRole]

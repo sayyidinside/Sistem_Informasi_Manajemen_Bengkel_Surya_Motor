@@ -5,6 +5,8 @@ from si_mbe import views
 urlpatterns = [
      path('', views.Home.as_view(), name='homepage'),
      path('sparepart/find/', views.SearchSparepart.as_view(), name='search_sparepart'),
+
+     # Admin endpoint access
      path('admin/', views.AdminDashboard.as_view(), name='admin_dashboard'),
      path('admin/sparepart/', views.SparepartDataList.as_view(), name='sparepart_data_list'),
      path('admin/sparepart/add/', views.SparepartDataAdd.as_view(), name='sparepart_data_add'),
@@ -24,6 +26,8 @@ urlpatterns = [
      path('admin/supplier/add/', views.SupplierAdd.as_view(), name='supplier_add'),
      path('admin/supplier/edit/<int:supplier_id>/', views.SupplierUpdate.as_view(), name='supplier_update'),
      path('admin/supplier/delete/<int:supplier_id>/', views.SupplierDelete.as_view(), name='supplier_delete'),
+
+     # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
      path('owner/report/sales/', views.SalesReportList.as_view(), name='sales_report_list'),
      path('owner/report/sales/<int:sales_id>/', views.SalesReportDetail.as_view(), name='sales_report_detail'),
@@ -31,5 +35,6 @@ urlpatterns = [
      path('owner/report/restock/<int:restock_id>/', views.RestockReportDetail.as_view(), name='restock_report_detail'),
      path('owner/profile/<int:user_id>/', views.ProfileDetail.as_view(), name='profile_detail'),
      path('owner/profile/edit/<int:user_id>/', views.ProfileUpdate.as_view(), name='profile_update'),
-     path('log/', views.LogList.as_view(), name='log'),
+     path('owner/log/', views.LogList.as_view(), name='log'),
+     path('owner/admin/', views.AdminList.as_view(), name='admin_list'),
 ]

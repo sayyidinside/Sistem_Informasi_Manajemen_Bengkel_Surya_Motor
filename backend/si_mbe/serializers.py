@@ -1,4 +1,5 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from si_mbe.models import (Logs, Profile, Restock, Restock_detail, Sales,
                            Sales_detail, Sparepart, Supplier)
 
@@ -406,3 +407,12 @@ class LogSerializers(serializers.ModelSerializer):
     class Meta:
         model = Logs
         fields = ['log_id', 'log_at', 'user', 'table', 'operation']
+
+
+class AdminSerializers(serializers.ModelSerializer):
+    name = serializers.CharField(source='profile.name')
+    contact = serializers.CharField(source='profile.contact')
+
+    class Meta:
+        model = User
+        fields = ['name', 'email', 'username', 'contact']
