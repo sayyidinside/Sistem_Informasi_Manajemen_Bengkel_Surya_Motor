@@ -263,6 +263,15 @@ class SalesReportDetail(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
+    def test_owner_failed_to_access_non_exist_sales_report_detail(self) -> None:
+        """
+        Ensure owner user cannot access non exist sales report detail
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(reverse('sales_report_detail', kwargs={'sales_id': 930514}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data penjualan tidak ditemukan')
+
 
 class RestockReportTestCase(APITestCase):
     restock_report_url = reverse('restock_report_list')
@@ -546,6 +555,15 @@ class RestockReportDetailTestCase(APITestCase):
         response = self.client.get(self.restock_report_detail_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_failed_to_access_non_exist_restock_report_detail(self) -> None:
+        """
+        Ensure owner user cannot access non exist restock report detail
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(reverse('restock_report_detail', kwargs={'restock_id': 930514}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data pengadaan tidak ditemukan')
 
 
 class LogTestCase(APITestCase):

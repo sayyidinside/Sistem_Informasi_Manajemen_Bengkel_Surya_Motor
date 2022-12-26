@@ -432,6 +432,11 @@ class SalesReportDetail(generics.RetrieveAPIView):
     lookup_field = 'sales_id'
     lookup_url_kwarg = 'sales_id'
 
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = SalesNotFound()
+        return super().handle_exception(exc)
+
 
 class RestockReportList(generics.ListAPIView):
     queryset = Restock.objects.all().order_by('restock_id')
@@ -447,6 +452,11 @@ class RestockReportDetail(generics.RetrieveAPIView):
 
     lookup_field = 'restock_id'
     lookup_url_kwarg = 'restock_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = RestockNotFound()
+        return super().handle_exception(exc)
 
 
 class CustomPasswordChangeView(PasswordChangeView):
