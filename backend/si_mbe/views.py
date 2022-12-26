@@ -6,9 +6,10 @@ from django.contrib.auth.models import User
 from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
-from si_mbe.exceptions import (RestockNotFound, SalesNotFound,
-                               SparepartNotFound, SupplierNotFound, AdminNotFound)
-from si_mbe.models import Logs, Profile, Restock, Sales, Sparepart, Supplier
+from si_mbe.exceptions import (AdminNotFound, RestockNotFound, SalesNotFound,
+                               SparepartNotFound, SupplierNotFound)
+from si_mbe.models import (Logs, Profile, Restock, Sales, Service, Sparepart,
+                           Supplier)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
@@ -22,7 +23,8 @@ from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 SalesReportDetailSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
-                                SparepartSerializers, SupplierSerializers)
+                                ServiceReportSerializers, SparepartSerializers,
+                                SupplierSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -596,3 +598,10 @@ class AdminDelete(generics.DestroyAPIView):
         message = {'message': 'Data admin berhasil dihapus'}
 
         return Response(data=message, status=status.HTTP_204_NO_CONTENT)
+
+
+class ServiceReportList(generics.ListAPIView):
+    queryset = Service.objects.all().order_by('service_id')
+    serializer_class = ServiceReportSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsOwnerRole]

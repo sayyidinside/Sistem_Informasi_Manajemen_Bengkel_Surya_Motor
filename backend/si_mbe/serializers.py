@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from si_mbe.models import (Logs, Profile, Restock, Restock_detail, Sales,
-                           Sales_detail, Sparepart, Supplier)
+                           Sales_detail, Sparepart, Supplier, Service)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -475,3 +475,28 @@ class AdminUpdateSerializers(serializers.ModelSerializer):
         profile.save()
 
         return instance
+
+
+class ServiceReportSerializers(serializers.ModelSerializer):
+    admin = serializers.ReadOnlyField(source='user_id.profile.name')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    mechanic = serializers.ReadOnlyField(source='mechanic_id.name')
+    customer = serializers.ReadOnlyField(source='customer_id.name')
+    customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
+
+    class Meta:
+        model = Service
+        fields = [
+            'service_id',
+            'admin',
+            'created_at',
+            'updated_at',
+            'police_number',
+            'mechanic',
+            'customer',
+            'customer_contact',
+            'is_paid_off',
+            'deposit',
+            'discount'
+        ]

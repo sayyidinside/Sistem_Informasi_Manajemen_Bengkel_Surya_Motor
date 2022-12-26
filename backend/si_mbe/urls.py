@@ -33,6 +33,7 @@ urlpatterns = [
      path('owner/report/sales/<int:sales_id>/', views.SalesReportDetail.as_view(), name='sales_report_detail'),
      path('owner/report/restock/', views.RestockReportList.as_view(), name='restock_report_list'),
      path('owner/report/restock/<int:restock_id>/', views.RestockReportDetail.as_view(), name='restock_report_detail'),
+     path('owner/report/service/', views.ServiceReportList.as_view(), name='service_report_list'),
      path('owner/profile/<int:user_id>/', views.ProfileDetail.as_view(), name='profile_detail'),
      path('owner/profile/edit/<int:user_id>/', views.ProfileUpdate.as_view(), name='profile_update'),
      path('owner/log/', views.LogList.as_view(), name='log'),
