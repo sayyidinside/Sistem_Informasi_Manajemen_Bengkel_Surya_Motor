@@ -793,3 +793,96 @@ class AdminAddTestCase(SetTestCase):
         response = self.client.post(self.admin_add_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data admin tidak sesuai / tidak lengkap')
+
+
+class AdminUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up additional admin data
+        cls.admin = User.objects.create_user(
+            username='arthagan',
+            password='feywildsarchfey',
+            email='arthagan@hotmail.com'
+        )
+
+        Profile.objects.create(user_id=cls.admin, role='A', name='Arthagan', contact='088526446044')
+
+        cls.admin_update_url = reverse('admin_update', kwargs={'pk': cls.admin.pk})
+
+        cls.data = {
+            'username': 'thetraveller',
+            'name': 'The Traveller',
+            'email': 'thetraveller@hotmail.com',
+            'contact': '086501651011',
+            'address': 'Jln Fey Wilds'
+        }
+
+        cls.incomplete_data = {
+            'username': 'moonkinds',
+            'name': 'Moon Walker',
+            'contact': '086484560466'
+        }
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_update_admin(self) -> None:
+        """
+        Ensure owner can update user admin
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.admin_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Admin berhasil dirubah')
+        self.assertEqual(response.data['username'], self.data['username'])
+        self.assertEqual(response.data['email'], self.data['email'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['address'], self.data['address'])
+
+    def test_nonlogin_user_failed_to_update_admin(self) -> None:
+        """
+        Ensure non-login user cannot update admin
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.admin_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_update_admin(self) -> None:
+        """
+        Ensure non-owner user cannot update admin
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.admin_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_failed_to_update_non_exist_admin(self) -> None:
+        """
+        Ensure owner user cannot update non exist admin
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(
+            reverse('admin_update', kwargs={'pk': 64505}),
+            self.data
+        )
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data admin tidak ditemukan')
+
+    def test_owner_failed_to_update_admin_with_empty_data(self) -> None:
+        """
+        Ensure owner user cannot update admin with empty data
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.admin_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data admin tidak sesuai / tidak lengkap')
+
+    def test_owner_failed_to_update_admin_with_incomplete_data(self) -> None:
+        """
+        Ensure owner user cannot update admin with incomplete data
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.admin_update_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data admin tidak sesuai / tidak lengkap')

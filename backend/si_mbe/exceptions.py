@@ -19,3 +19,7 @@ class RestockNotFound(NotFound):
 
 class SupplierNotFound(NotFound):
     default_detail = {'message': 'Data supplier tidak ditemukan'}
+
+
+class AdminNotFound(NotFound):
+    default_detail = {'message': 'Data admin tidak ditemukan'}

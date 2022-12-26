@@ -7,14 +7,14 @@ from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
 from si_mbe.exceptions import (RestockNotFound, SalesNotFound,
-                               SparepartNotFound, SupplierNotFound)
+                               SparepartNotFound, SupplierNotFound, AdminNotFound)
 from si_mbe.models import Logs, Profile, Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
 from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
-                                LogSerializers, ProfileSerializers,
-                                ProfileUpdateSerializers,
+                                AdminUpdateSerializers, LogSerializers,
+                                ProfileSerializers, ProfileUpdateSerializers,
                                 RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
@@ -546,3 +546,33 @@ class AdminAdd(generics.CreateAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         return super().create(request, *args, **kwargs)
+
+
+class AdminUpdate(generics.RetrieveUpdateAPIView):
+    queryset = User.objects.prefetch_related('profile').filter(profile__role='A')
+    serializer_class = AdminUpdateSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = AdminNotFound()
+        return super().handle_exception(exc)
+
+    def update(self, request, *args, **kwargs):
+        if len(request.data) < 5:
+            return Response({'message': 'Data admin tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        data = serializer.data
+        data['message'] = 'Admin berhasil dirubah'
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(data)

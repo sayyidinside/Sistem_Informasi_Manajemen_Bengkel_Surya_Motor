@@ -428,10 +428,10 @@ class AdminPostSerializers(serializers.ModelSerializer):
         model = User
         fields = [
             'name',
-            'contact',
-            'address',
             'email',
             'username',
+            'contact',
+            'address',
             'password',
             'password_2'
         ]
@@ -447,3 +447,31 @@ class AdminPostSerializers(serializers.ModelSerializer):
         Profile.objects.create(user_id=user, **profile_data)
 
         return user
+
+
+class AdminUpdateSerializers(serializers.ModelSerializer):
+    name = serializers.CharField(source='profile.name')
+    contact = serializers.CharField(source='profile.contact')
+    address = serializers.CharField(source='profile.address')
+
+    class Meta:
+        model = User
+        fields = ['name', 'email', 'username', 'contact', 'address']
+
+    def update(self, instance, validated_data):
+        # get the profile field data
+        profile_data = validated_data.pop('profile')
+
+        # assigning user data
+        instance.username = validated_data.get('username', instance.username)
+        instance.email = validated_data.get('email', instance.email)
+        instance.save()
+
+        # assigning profile data
+        profile = instance.profile
+        profile.name = profile_data.get('name', profile.name)
+        profile.contact = profile_data.get('contact', profile.contact)
+        profile.address = profile_data.get('address', profile.address)
+        profile.save()
+
+        return instance
