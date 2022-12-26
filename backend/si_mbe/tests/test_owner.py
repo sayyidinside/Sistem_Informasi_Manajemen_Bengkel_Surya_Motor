@@ -914,27 +914,27 @@ class AdminDeleteTestCase(SetTestCase):
         self.assertEqual(len(User.objects.filter(profile__role='A')), 2)
         self.assertEqual(len(User.objects.filter(profile__role='A', is_active=True)), 1)
 
-    def test_nonlogin_user_failed_to_update_admin(self) -> None:
+    def test_nonlogin_user_failed_to_delete_admin(self) -> None:
         """
-        Ensure non-login user cannot update admin
+        Ensure non-login user cannot delete admin
         """
         self.client.force_authenticate(user=None, token=None)
         response = self.client.delete(self.admin_delete_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_nonowner_user_failed_to_update_admin(self) -> None:
+    def test_nonowner_user_failed_to_delete_admin(self) -> None:
         """
-        Ensure non-owner user cannot update admin
+        Ensure non-owner user cannot delete admin
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.delete(self.admin_delete_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
-    def test_owner_failed_to_update_non_exist_admin(self) -> None:
+    def test_owner_failed_to_delete_non_exist_admin(self) -> None:
         """
-        Ensure owner user cannot update non exist admin
+        Ensure owner user cannot delete non exist admin
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.delete(reverse('admin_delete', kwargs={'pk': 43852}))
