@@ -39,4 +39,5 @@ urlpatterns = [
      path('owner/admin/', views.AdminList.as_view(), name='admin_list'),
      path('owner/admin/add/', views.AdminAdd.as_view(), name='admin_add'),
      path('owner/admin/edit/<int:pk>/', views.AdminUpdate.as_view(), name='admin_update'),
+     path('owner/admin/delete/<int:pk>/', views.AdminDelete.as_view(), name='admin_delete'),
 ]

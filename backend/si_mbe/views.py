@@ -530,7 +530,7 @@ class AdminList(generics.ListAPIView):
 
 
 class AdminAdd(generics.CreateAPIView):
-    queryset = User.objects.prefetch_related('profile').filter(profile__role='A')
+    queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
     serializer_class = AdminPostSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
@@ -549,7 +549,7 @@ class AdminAdd(generics.CreateAPIView):
 
 
 class AdminUpdate(generics.RetrieveUpdateAPIView):
-    queryset = User.objects.prefetch_related('profile').filter(profile__role='A')
+    queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
     serializer_class = AdminUpdateSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
@@ -576,3 +576,23 @@ class AdminUpdate(generics.RetrieveUpdateAPIView):
             instance._prefetched_objects_cache = {}
 
         return Response(data)
+
+
+class AdminDelete(generics.DestroyAPIView):
+    queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
+    serializer_class = AdminPostSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = AdminNotFound()
+        return super().handle_exception(exc)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.is_active = False
+        instance.save()
+
+        message = {'message': 'Data admin berhasil dihapus'}
+
+        return Response(data=message, status=status.HTTP_204_NO_CONTENT)

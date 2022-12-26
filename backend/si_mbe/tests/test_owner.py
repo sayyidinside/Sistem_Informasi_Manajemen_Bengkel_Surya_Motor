@@ -827,7 +827,7 @@ class AdminUpdateTestCase(SetTestCase):
 
     def test_owner_successfully_update_admin(self) -> None:
         """
-        Ensure owner can update user admin
+        Ensure owner can update admin
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.put(self.admin_update_url, self.data)
@@ -886,3 +886,57 @@ class AdminUpdateTestCase(SetTestCase):
         response = self.client.put(self.admin_update_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data admin tidak sesuai / tidak lengkap')
+
+
+class AdminDeleteTestCase(SetTestCase):
+    def setUp(self) -> None:
+        # Setting up additional admin data
+        self.admin = User.objects.create_user(
+            username='lucien',
+            password='theeyeofnine',
+            email='nanagon@hotmail.com'
+        )
+
+        Profile.objects.create(user_id=self.admin, role='A', name='Lucien', contact='081086016510')
+
+        self.admin_delete_url = reverse('admin_delete', kwargs={'pk': self.admin.pk})
+
+        return super().setUp()
+
+    def test_owner_successfully_delete_admin(self) -> None:
+        """
+        Ensure owner can delete admin (is_active=False)
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(self.admin_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data admin berhasil dihapus')
+        self.assertEqual(len(User.objects.filter(profile__role='A')), 2)
+        self.assertEqual(len(User.objects.filter(profile__role='A', is_active=True)), 1)
+
+    def test_nonlogin_user_failed_to_update_admin(self) -> None:
+        """
+        Ensure non-login user cannot update admin
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.admin_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_update_admin(self) -> None:
+        """
+        Ensure non-owner user cannot update admin
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.admin_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_failed_to_update_non_exist_admin(self) -> None:
+        """
+        Ensure owner user cannot update non exist admin
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(reverse('admin_delete', kwargs={'pk': 43852}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data admin tidak ditemukan')
