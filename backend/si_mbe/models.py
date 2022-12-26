@@ -15,6 +15,7 @@ class Profile(models.Model):
     )
     name = models.CharField(max_length=30, default='')
     contact = models.CharField(max_length=13, default='')
+    address = models.CharField(max_length=30, default='')
 
     class Roles(models.TextChoices):
         PEMILIK = 'P', _('Pemilik')

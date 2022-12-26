@@ -12,8 +12,9 @@ from si_mbe.models import Logs, Profile, Restock, Sales, Sparepart, Supplier
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.serializers import (AdminSerializers, LogSerializers,
-                                ProfileSerializers, ProfileUpdateSerializers,
+from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
+                                LogSerializers, ProfileSerializers,
+                                ProfileUpdateSerializers,
                                 RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
@@ -526,3 +527,22 @@ class AdminList(generics.ListAPIView):
     serializer_class = AdminSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
+
+
+class AdminAdd(generics.CreateAPIView):
+    queryset = User.objects.prefetch_related('profile').filter(profile__role='A')
+    serializer_class = AdminPostSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    def create(self, request, *args, **kwargs):
+        # Check if user give incomplete input
+        if len(request.data) < 7:
+            return Response({'message': 'Data admin tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Check if password and confirm passowrd is different
+        if self.request.data['password'] != self.request.data['password_2']:
+            return Response({'message': 'Password dan Konfirmasi Password Berbeda'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        return super().create(request, *args, **kwargs)

@@ -416,3 +416,34 @@ class AdminSerializers(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['name', 'email', 'username', 'contact']
+
+
+class AdminPostSerializers(serializers.ModelSerializer):
+    name = serializers.CharField(source='profile.name')
+    contact = serializers.CharField(source='profile.contact')
+    address = serializers.CharField(source='profile.address')
+    password_2 = serializers.CharField(write_only=True)
+
+    class Meta:
+        model = User
+        fields = [
+            'name',
+            'contact',
+            'address',
+            'email',
+            'username',
+            'password',
+            'password_2'
+        ]
+
+    def create(self, validated_data):
+        # remove password_2 data
+        validated_data.pop('password_2')
+
+        # get the profile field data
+        profile_data = validated_data.pop('profile')
+
+        user = User.objects.create_user(**validated_data)
+        Profile.objects.create(user_id=user, **profile_data)
+
+        return user

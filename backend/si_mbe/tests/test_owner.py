@@ -705,3 +705,91 @@ class AdminListTestCase(SetTestCase):
         response = self.client.get(self.admin_list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class AdminAddTestCase(SetTestCase):
+    admin_add_url = reverse('admin_add')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.data = {
+            'username': 'samalexander',
+            'name': 'Sam Alexander',
+            'password': 'NewNova1',
+            'password_2': 'NewNova1',
+            'email': 'newnovahere@gmail.com',
+            'contact': '084654464866',
+            'address': 'Jln Stanford School',
+        }
+
+        cls.data_wrong_password = {
+            'username': 'samalexander',
+            'name': 'Sam Alexander',
+            'password': 'NewNova1',
+            'password_2': 'NewWarriors',
+            'email': 'newnovahere@gmail.com',
+            'contact': '084654464866',
+            'address': 'Jln Stanford School',
+        }
+
+        cls.incomplete_data = {
+            'username': 'abinshurr',
+            'name': 'Abin Shurr',
+            'contact': '085231313101'
+        }
+        return super().setUpTestData()
+
+    def test_owner_successfully_add_admin(self) -> None:
+        """
+        Ensure owner can add user admin
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.admin_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(len(User.objects.filter(profile__role='A')), 2)
+
+    def test_nonlogin_user_failed_to_add_admin(self) -> None:
+        """
+        Ensure non-login user cannot add admin
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.admin_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_add_admin(self) -> None:
+        """
+        Ensure non-owner user cannot add admin
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.admin_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_failed_to_add_admin_with_wrong_password(self) -> None:
+        """
+        Ensure owner cannot add admin with wrong password
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.admin_add_url, self.data_wrong_password)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Password dan Konfirmasi Password Berbeda')
+        self.assertEqual(len(User.objects.filter(profile__role='A')), 1)
+
+    def test_owner_failed_to_add_admin_with_incomplete_empty(self) -> None:
+        """
+        Ensure owner cannot add admin with incomplete empty
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.admin_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data admin tidak sesuai / tidak lengkap')
+
+    def test_owner_failed_to_add_admin_with_incomplete_data(self) -> None:
+        """
+        Ensure owner cannot add admin with incomplete data
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.admin_add_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data admin tidak sesuai / tidak lengkap')
