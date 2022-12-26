@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
 from si_mbe.models import (Logs, Profile, Restock, Restock_detail, Sales,
-                           Sales_detail, Sparepart, Supplier, Service)
+                           Sales_detail, Sparepart, Supplier, Service, Service_action, Service_sparepart)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -499,4 +499,49 @@ class ServiceReportSerializers(serializers.ModelSerializer):
             'is_paid_off',
             'deposit',
             'discount'
+        ]
+
+
+class ServiceActionSerializers(serializers.ModelSerializer):
+    service_name = serializers.ReadOnlyField(source='name')
+
+    class Meta:
+        model = Service_action
+        fields = ['service_action_id', 'service_name', 'cost']
+
+
+class ServiceSparepartSerializers(serializers.ModelSerializer):
+    sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
+
+    class Meta:
+        model = Service_sparepart
+        fields = ['service_sparepart_id', 'sparepart', 'quantity']
+
+
+class ServiceReportDetailSerializers(serializers.ModelSerializer):
+    admin = serializers.ReadOnlyField(source='user_id.profile.name')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    mechanic = serializers.ReadOnlyField(source='mechanic_id.name')
+    customer = serializers.ReadOnlyField(source='customer_id.name')
+    customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
+    service_actions = ServiceActionSerializers(many=True, source='service_action_set')
+    service_spareparts = ServiceSparepartSerializers(many=True, source='service_sparepart_set')
+
+    class Meta:
+        model = Service
+        fields = [
+            'service_id',
+            'admin',
+            'created_at',
+            'updated_at',
+            'police_number',
+            'mechanic',
+            'customer',
+            'customer_contact',
+            'is_paid_off',
+            'deposit',
+            'discount',
+            'service_actions',
+            'service_spareparts'
         ]

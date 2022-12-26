@@ -23,3 +23,7 @@ class SupplierNotFound(NotFound):
 
 class AdminNotFound(NotFound):
     default_detail = {'message': 'Data admin tidak ditemukan'}
+
+
+class ServiceNotFound(NotFound):
+    default_detail = {'message': 'Data servis tidak ditemukan'}

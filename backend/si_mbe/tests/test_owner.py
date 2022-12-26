@@ -6,7 +6,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
                            Restock, Restock_detail, Sales, Sales_detail,
-                           Salesman, Service, Sparepart, Storage, Supplier)
+                           Salesman, Service, Service_action,
+                           Service_sparepart, Sparepart, Storage, Supplier)
 from si_mbe.tests.test_admin import SetTestCase
 
 
@@ -1032,98 +1033,173 @@ class ServiceReportTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
 
-# class ServiceDetailTestCase(SetTestCase):
-#     service_report_detail_url = reverse('service_report_detail_list')
+class ServiceReportDetailTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up additional admin data
+        cls.admin = User.objects.create_user(
+            username='jester',
+            password='littlesaphire',
+            email='jester@hotmail.com'
+        )
+        Profile.objects.create(
+            user_id=cls.admin,
+            role='A',
+            name='Jester Lavorre',
+            contact='081086016510',
+            address='Nicrodanas'
+        )
 
-#     @classmethod
-#     def setUpTestData(cls) -> None:
-#         # Setting up additional admin data
-#         cls.admin = User.objects.create_user(
-#             username='jester',
-#             password='littlesaphire',
-#             email='jester@hotmail.com'
-#         )
-#         Profile.objects.create(
-#             user_id=cls.admin,
-#             role='A',
-#             name='Jester Lavorre',
-#             contact='081086016510',
-#             address='Nicrodanas'
-#         )
+        # Setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='Percy Deloro The Third',
+            contact='086206164404',
+            address='Whitestone'
+        )
 
-#         # Setting up mechanic data
-#         cls.mechanic = Mechanic.objects.create(
-#             name='Percy Deloro The Third',
-#             contact='086206164404',
-#             address='Whitestone'
-#         )
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Scanlant Shorthalt',
+            contact='082541684051',
+        )
 
-#         # Setting up customer data
-#         cls.customer = Customer.objects.create(
-#             name='Scanlant Shorthalt',
-#             contact='082541684051',
-#         )
+        cls.service = Service.objects.create(
+            police_number='B 1293 A',
+            motor_type='Beneli',
+            deposit=500000,
+            discount=20000,
+            user_id=cls.admin,
+            mechanic_id=cls.mechanic,
+            customer_id=cls.customer
+        )
 
-#         cls.service = Service.objects.create(
-#             police_number='B 1293 A',
-#             motor_type='Beneli',
-#             deposit=500000,
-#             discount=20000,
-#             user_id=cls.admin,
-#             mechanic_id=cls.mechanic,
-#             customer_id=cls.customer
-#         )
+        cls.service_report_detail_url = reverse(
+            'service_report_detail',
+            kwargs={'service_id': cls.service.service_id}
+        )
 
-#         # Setting up service actions
-#         cls.action_1 = Service_action.objects.create(
-#             name='Pompa Ban',
-#             cost='10000',
-#             service_id=cls.service
-#         )
-#         cls.action_2 = Service_action.objects.create(
-#             name='Bongkar Mesin',
-#             cost='400000',
-#             service_id=cls.service
-#         )
-#         cls.action_3 = Service_action.objects.create(
-#             name='Angkat Lampu',
-#             cost='300000',
-#             service_id=cls.service
-#         )
+        # Setting up service actions
+        cls.action_1 = Service_action.objects.create(
+            name='Pompa Ban',
+            cost='10000',
+            service_id=cls.service
+        )
+        cls.action_2 = Service_action.objects.create(
+            name='Bongkar Mesin',
+            cost='400000',
+            service_id=cls.service
+        )
+        cls.action_3 = Service_action.objects.create(
+            name='Angkat Lampu',
+            cost='300000',
+            service_id=cls.service
+        )
 
-#         # Setting up storage data
-#         cls.storage = Storage.objects.create(code='MN-9')
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='MN-9')
 
-#         # Setting up brand data
-#         cls.brand = Brand.objects.create(name='Lavish Chateau')
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Lavish Chateau')
 
-#         # Setting up category data
-#         cls.category = Category.objects.create(name='Fodd')
+        # Setting up category data
+        cls.category = Category.objects.create(name='Fodd')
 
-#         # Setting up sparepart data
-#         cls.sparepart = Sparepart.objects.create(
-#             name='Chorcoal Cupcake',
-#             partnumber='JFLJ23-Aj',
-#             quantity=50,
-#             motor_type='Humans',
-#             sparepart_type='Spices',
-#             price=105000,
-#             workshop_price=100000,
-#             install_price=110000,
-#             brand_id=cls.brand,
-#             category_id=cls.category,
-#             storage_id=cls.storage
-#         )
+        # Setting up sparepart data
+        cls.sparepart = Sparepart.objects.create(
+            name='Chorcoal Cupcake',
+            partnumber='JFLJ23-Aj',
+            quantity=50,
+            motor_type='Humans',
+            sparepart_type='Spices',
+            price=105000,
+            workshop_price=100000,
+            install_price=110000,
+            brand_id=cls.brand,
+            category_id=cls.category,
+            storage_id=cls.storage
+        )
 
-#         # Setting up service sparepart
-#         cls.service_sparepart = Service_sparepart(
-#             quantity=2,
-#             service_id=cls.service,
-#             sparepart_id=cls.sparepart
-#         )
+        # Setting up service sparepart
+        cls.service_sparepart = Service_sparepart.objects.create(
+            quantity=2,
+            service_id=cls.service,
+            sparepart_id=cls.sparepart
+        )
 
-#         # Setting up time data for test comparison
-#         cls.created_at = cls.service.created_at + timedelta(hours=7)
-#         cls.updated_at = cls.service.updated_at + timedelta(hours=7)
+        # Setting up time data for test comparison
+        cls.created_at = cls.service.created_at + timedelta(hours=7)
+        cls.updated_at = cls.service.updated_at + timedelta(hours=7)
 
-#         return super().setUpTestData()
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_service_report_detail(self) -> None:
+        """
+        Ensure owner can access service report detail
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.service_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {
+            'service_id': self.service.service_id,
+            'admin': self.service.user_id.profile.name,
+            'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+            'police_number': self.service.police_number,
+            'mechanic': self.service.mechanic_id.name,
+            'customer': self.service.customer_id.name,
+            'customer_contact': self.service.customer_id.contact,
+            'is_paid_off': self.service.is_paid_off,
+            'deposit': str(self.service.deposit),
+            'discount': str(self.service.discount),
+            'service_actions': [
+                {
+                    'service_action_id': self.action_1.service_action_id,
+                    'service_name': self.action_1.name,
+                    'cost': str(self.action_1.cost)
+                },
+                {
+                    'service_action_id': self.action_2.service_action_id,
+                    'service_name': self.action_2.name,
+                    'cost': str(self.action_2.cost)
+                },
+                {
+                    'service_action_id': self.action_3.service_action_id,
+                    'service_name': self.action_3.name,
+                    'cost': str(self.action_3.cost)
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'service_sparepart_id': self.service_sparepart.service_sparepart_id,
+                    'sparepart': self.service_sparepart.sparepart_id.name,
+                    'quantity': self.service_sparepart.quantity
+                }
+            ]
+        })
+
+    def test_nonlogin_user_failed_to_access_service_report_detail(self) -> None:
+        """
+        Ensure non-login user cannot access service report detail
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.service_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_service_report_detail(self) -> None:
+        """
+        Ensure non-owner user cannot access service report detail
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.service_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_failed_to_access_non_exist_service_report_detail(self) -> None:
+        """
+        Ensure owner user cannot access non exist service report detail
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(reverse('service_report_detail', kwargs={'service_id': 930514}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')
