@@ -1,7 +1,7 @@
 from django.contrib.auth.models import User
 from rest_framework import serializers
-from si_mbe.models import (Logs, Profile, Restock, Restock_detail, Sales,
-                           Sales_detail, Service, Service_action,
+from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail,
+                           Sales, Sales_detail, Service, Service_action,
                            Service_sparepart, Sparepart, Storage, Supplier)
 
 
@@ -714,3 +714,9 @@ class StorageSerializers(serializers.ModelSerializer):
     class Meta:
         model = Storage
         fields = ['storage_id', 'code', 'location', 'is_full']
+
+
+class BrandSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Brand
+        fields = ['brand_id', 'name']

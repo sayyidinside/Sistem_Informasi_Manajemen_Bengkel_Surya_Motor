@@ -2479,9 +2479,9 @@ class StorageListTestCase(SetTestCase):
 
         return super().setUpTestData()
 
-    def test_admin_successfully_access_(self) -> None:
+    def test_admin_successfully_access_storage_list(self) -> None:
         """
-        Ensure admin can get supplier list successfully
+        Ensure admin can get storage list successfully
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.storage_url)
@@ -2725,3 +2725,48 @@ class StorageDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('storage_delete', kwargs={'storage_id': 86591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak ditemukan')
+
+
+class BrandListTestCase(SetTestCase):
+    brand_url = reverse('brand_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up brand data
+        Brand.objects.create(
+            name='The Way Of King'
+        )
+        Brand.objects.create(
+            name='Elantris'
+        )
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_brand_list(self) -> None:
+        """
+        Ensure admin can get brand list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.brand_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'][0]['name'], 'The Way Of King')
+        self.assertEqual(response.data['results'][1]['name'], 'Elantris')
+
+    def test_nonlogin_user_failed_to_access_brand_list(self) -> None:
+        """
+        Ensure non-login user cannot access brand list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.brand_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_brand_list(self) -> None:
+        """
+        Ensure non-admin user cannot access brand list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.brand_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

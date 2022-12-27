@@ -9,14 +9,15 @@ from rest_framework.response import Response
 from si_mbe.exceptions import (AdminNotFound, RestockNotFound, SalesNotFound,
                                ServiceNotFound, SparepartNotFound,
                                StorageNotFound, SupplierNotFound)
-from si_mbe.models import (Logs, Profile, Restock, Sales, Service, Sparepart,
-                           Storage, Supplier)
+from si_mbe.models import (Brand, Logs, Profile, Restock, Sales, Service,
+                           Sparepart, Storage, Supplier)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
 from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
-                                AdminUpdateSerializers, LogSerializers,
-                                ProfileSerializers, ProfileUpdateSerializers,
+                                AdminUpdateSerializers, BrandSerializers,
+                                LogSerializers, ProfileSerializers,
+                                ProfileUpdateSerializers,
                                 RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
@@ -807,3 +808,10 @@ class StorageDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data lokasi penyimpanan berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class BrandList(generics.ListAPIView):
+    queryset = Brand.objects.all().order_by('brand_id')
+    serializer_class = BrandSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]
