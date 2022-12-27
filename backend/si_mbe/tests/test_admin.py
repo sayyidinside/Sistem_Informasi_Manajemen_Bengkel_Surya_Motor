@@ -2375,3 +2375,91 @@ class ServiceUpdate(SetTestCase):
         response = self.client.put(self.service_update_url, self.incomplete_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data servis tidak sesuai / tidak lengkap')
+
+
+class ServiceDeleteTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='Bodger Bloger',
+            contact='086206164404',
+            address='Honeywood'
+        )
+
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Bartholomew Osiris Bladesong',
+            contact='082541684051',
+        )
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        self.service = Service.objects.create(
+            police_number='B 1293 A',
+            motor_type='Beneli',
+            deposit=500000,
+            discount=20000,
+            user_id=self.user,
+            mechanic_id=self.mechanic,
+            customer_id=self.customer
+        )
+
+        # Getting newly added service it's service_id then set it to kwargs in reverse url
+        self.service_delete_url = reverse('service_delete', kwargs={'service_id': self.service.service_id})
+
+        # Setting up service actions
+        Service_action.objects.create(
+            name='Pompa Ban',
+            cost='10000',
+            service_id=self.service
+        )
+
+        # Setting up service sparepart
+        Service_sparepart.objects.create(
+            quantity=2,
+            service_id=self.service,
+            sparepart_id=None
+        )
+
+        return super().setUp()
+
+    def test_admin_successfully_delete_service(self) -> None:
+        """
+        Ensure admin can delete service data successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.service_delete_url, format='json')
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data servis berhasil dihapus')
+        self.assertEqual(len(Service.objects.all()), 0)
+        self.assertEqual(len(Service_action.objects.all()), 0)
+        self.assertEqual(len(Service_sparepart.objects.all()), 0)
+
+    def test_nonlogin_user_failed_to_delete_service(self) -> None:
+        """
+        Ensure non-login user cannot delete service
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.service_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_delete_service(self) -> None:
+        """
+        Ensure non-admin user cannot delete service
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(self.service_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_delete_nonexist_service(self) -> None:
+        """
+        Ensure admin cannot / failed to delete non-exist service
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(reverse('service_delete', kwargs={'service_id': 85635}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')
