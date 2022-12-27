@@ -2661,3 +2661,67 @@ class StorageUpdateTestCase(SetTestCase):
         response = self.client.put(self.storage_update_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')
+
+
+class StorageDeleteTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        Storage.objects.create(
+            code='KF-13',
+            location='1',
+            is_full=False
+        )
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        # Setting up storage data
+        self.storage = Storage.objects.create(
+            code='DB-14',
+            location='2',
+            is_full=True
+        )
+
+        self.storage_delete_url = reverse(
+            'storage_delete',
+            kwargs={'storage_id': self.storage.storage_id}
+        )
+
+        return super().setUp()
+
+    def test_admin_successfully_delete_storage(self) -> None:
+        """
+        Ensure admin can delete storage successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.storage_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan berhasil dihapus')
+        self.assertEqual(len(Storage.objects.all()), 1)
+
+    def test_nonlogin_user_failed_to_delete_storage(self) -> None:
+        """
+        Ensure non-login user cannot delete storage
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.storage_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_delete_storage(self) -> None:
+        """
+        Ensure non-admin user cannot delete storage
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(self.storage_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_delete_nonexist_storage(self) -> None:
+        """
+        Ensure admin cannot to delete non-exist storage
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(reverse('storage_delete', kwargs={'storage_id': 86591}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak ditemukan')
