@@ -7,7 +7,8 @@ from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
 from si_mbe.exceptions import (AdminNotFound, RestockNotFound, SalesNotFound,
-                               SparepartNotFound, SupplierNotFound, ServiceNotFound)
+                               ServiceNotFound, SparepartNotFound,
+                               SupplierNotFound)
 from si_mbe.models import (Logs, Profile, Restock, Sales, Service, Sparepart,
                            Supplier)
 from si_mbe.paginations import CustomPagination
@@ -23,8 +24,9 @@ from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 SalesReportDetailSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
-                                ServiceReportSerializers, SparepartSerializers,
-                                SupplierSerializers, ServiceReportDetailSerializers)
+                                ServiceReportDetailSerializers,
+                                ServiceReportSerializers, ServiceSerializers,
+                                SparepartSerializers, SupplierSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -629,3 +631,11 @@ class ServiceReportDetail(generics.RetrieveAPIView):
         if isinstance(exc, Http404):
             exc = ServiceNotFound()
         return super().handle_exception(exc)
+
+
+class ServiceList(generics.ListAPIView):
+    queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set').order_by('service_id')
+    serializer_class = ServiceSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+    pagination_class = CustomPagination
+    pagination_class.page_size = 100

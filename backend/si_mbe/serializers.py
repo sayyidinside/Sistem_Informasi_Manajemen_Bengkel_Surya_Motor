@@ -545,3 +545,28 @@ class ServiceReportDetailSerializers(serializers.ModelSerializer):
             'service_actions',
             'service_spareparts'
         ]
+
+
+class ServiceSerializers(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    mechanic = serializers.ReadOnlyField(source='mechanic_id.name')
+    customer = serializers.ReadOnlyField(source='customer_id.name')
+    customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
+    service_actions = ServiceActionSerializers(many=True, source='service_action_set')
+    service_spareparts = ServiceSparepartSerializers(many=True, source='service_sparepart_set')
+
+    class Meta:
+        model = Service
+        fields = [
+            'service_id',
+            'created_at',
+            'police_number',
+            'mechanic',
+            'customer',
+            'customer_contact',
+            'is_paid_off',
+            'deposit',
+            'discount',
+            'service_actions',
+            'service_spareparts'
+        ]

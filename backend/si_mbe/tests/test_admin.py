@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 from django.contrib.auth.models import User
 from django.urls import reverse
@@ -6,7 +6,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from si_mbe.models import (Brand, Category, Customer, Profile, Restock,
                            Restock_detail, Sales, Sales_detail, Salesman,
-                           Sparepart, Storage, Supplier)
+                           Service, Service_action, Service_sparepart,
+                           Sparepart, Storage, Supplier, Mechanic)
 
 
 # Create your tests here.
@@ -1769,7 +1770,7 @@ class SupplierDeleteTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_delete_supplier(self) -> None:
+    def test_nonadmin_user_failed_to_delete_supplier(self) -> None:
         """
         Ensure non-admin user cannot delete supplier
         """
@@ -1786,3 +1787,227 @@ class SupplierDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('supplier_delete', kwargs={'supplier_id': 8591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data supplier tidak ditemukan')
+
+
+class ServiceTestCase(SetTestCase):
+    service_list_url = reverse('service_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up additional admin data
+        cls.admin = User.objects.create_user(
+            username='greg',
+            password='GregTheGarlicFarmer',
+            email='greg@skycraft.com'
+        )
+        Profile.objects.create(
+            user_id=cls.admin,
+            role='A',
+            name='Greg',
+            contact='081086016510',
+            address='Honeywood'
+        )
+
+        # Setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='Bodger Bloger',
+            contact='086206164404',
+            address='Honeywood'
+        )
+
+        # Setting up customer data
+        cls.customer_1 = Customer.objects.create(
+            name='Bartholomew Osiris Bladesong',
+            contact='082541684051',
+        )
+        cls.customer_2 = Customer.objects.create(
+            name='Baradun',
+            contact='082541684051',
+        )
+
+        cls.service_1 = Service.objects.create(
+            police_number='B 1293 A',
+            motor_type='Beneli',
+            deposit=500000,
+            discount=20000,
+            user_id=cls.admin,
+            mechanic_id=cls.mechanic,
+            customer_id=cls.customer_1
+        )
+
+        cls.service_2 = Service.objects.create(
+            police_number='B 4   CA',
+            motor_type='Kymco',
+            deposit=40000,
+            discount=5000,
+            user_id=cls.admin,
+            mechanic_id=cls.mechanic,
+            customer_id=cls.customer_2
+        )
+
+        # Setting up service actions
+        cls.action_1 = Service_action.objects.create(
+            name='Pompa Ban',
+            cost='10000',
+            service_id=cls.service_1
+        )
+        cls.action_2 = Service_action.objects.create(
+            name='Bongkar Mesin',
+            cost='400000',
+            service_id=cls.service_1
+        )
+        cls.action_3 = Service_action.objects.create(
+            name='Angkat Lampu',
+            cost='300000',
+            service_id=cls.service_1
+        )
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='MN-9')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Lavish Chateau')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Food')
+
+        # Setting up sparepart data
+        cls.sparepart_1 = Sparepart.objects.create(
+            name='Chorcoal Cupcake',
+            partnumber='JFLJ23-Aj',
+            quantity=50,
+            motor_type='Human',
+            sparepart_type='Spices',
+            price=105000,
+            workshop_price=100000,
+            install_price=110000,
+            brand_id=cls.brand,
+            category_id=cls.category,
+            storage_id=cls.storage
+        )
+        cls.sparepart_2 = Sparepart.objects.create(
+            name='Dead People Tea',
+            partnumber='HF9912-2',
+            quantity=35,
+            motor_type='Human',
+            sparepart_type='Tea Leaf',
+            price=75000,
+            workshop_price=70000,
+            install_price=80000,
+            brand_id=cls.brand,
+            category_id=cls.category,
+            storage_id=cls.storage
+        )
+
+        # Setting up service sparepart
+        cls.service_sparepart_1 = Service_sparepart.objects.create(
+            quantity=2,
+            service_id=cls.service_1,
+            sparepart_id=cls.sparepart_1
+        )
+        cls.service_sparepart_2 = Service_sparepart.objects.create(
+            quantity=3,
+            service_id=cls.service_2,
+            sparepart_id=cls.sparepart_1
+        )
+        cls.service_sparepart_3 = Service_sparepart.objects.create(
+            quantity=5,
+            service_id=cls.service_2,
+            sparepart_id=cls.sparepart_2
+        )
+
+        # Setting up time data for test comparison
+        cls.created_at_1 = cls.service_1.created_at + timedelta(hours=7)
+        cls.updated_at_1 = cls.service_1.updated_at + timedelta(hours=7)
+        cls.created_at_2 = cls.service_2.created_at + timedelta(hours=7)
+        cls.updated_at_2 = cls.service_2.updated_at + timedelta(hours=7)
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_service_list(self) -> None:
+        """
+        Ensure admin can get service list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.service_list_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'], [
+            {
+                'service_id': self.service_1.service_id,
+                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
+                'police_number': self.service_1.police_number,
+                'mechanic': self.service_1.mechanic_id.name,
+                'customer': self.service_1.customer_id.name,
+                'customer_contact': self.service_1.customer_id.contact,
+                'is_paid_off': self.service_1.is_paid_off,
+                'deposit': str(self.service_1.deposit),
+                'discount': str(self.service_1.discount),
+                'service_actions': [
+                    {
+                        'service_action_id': self.action_1.service_action_id,
+                        'service_name': self.action_1.name,
+                        'cost': str(self.action_1.cost)
+                    },
+                    {
+                        'service_action_id': self.action_2.service_action_id,
+                        'service_name': self.action_2.name,
+                        'cost': str(self.action_2.cost)
+                    },
+                    {
+                        'service_action_id': self.action_3.service_action_id,
+                        'service_name': self.action_3.name,
+                        'cost': str(self.action_3.cost)
+                    }
+                ],
+                'service_spareparts': [
+                    {
+                        'service_sparepart_id': self.service_sparepart_1.service_sparepart_id,
+                        'sparepart': self.service_sparepart_1.sparepart_id.name,
+                        'quantity': self.service_sparepart_1.quantity
+                    }
+                ]
+            },
+            {
+                'service_id': self.service_2.service_id,
+                'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
+                'police_number': self.service_2.police_number,
+                'mechanic': self.service_2.mechanic_id.name,
+                'customer': self.service_2.customer_id.name,
+                'customer_contact': self.service_2.customer_id.contact,
+                'is_paid_off': self.service_2.is_paid_off,
+                'deposit': str(self.service_2.deposit),
+                'discount': str(self.service_2.discount),
+                'service_actions': [],
+                'service_spareparts': [
+                    {
+                        'service_sparepart_id': self.service_sparepart_2.service_sparepart_id,
+                        'sparepart': self.service_sparepart_2.sparepart_id.name,
+                        'quantity': self.service_sparepart_2.quantity
+                    },
+                    {
+                        'service_sparepart_id': self.service_sparepart_3.service_sparepart_id,
+                        'sparepart': self.service_sparepart_3.sparepart_id.name,
+                        'quantity': self.service_sparepart_3.quantity
+                    }
+                ]
+            }
+        ])
+
+    def test_nonlogin_user_failed_to_access_service_list(self) -> None:
+        """
+        Ensure non-login user cannot access service list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.service_list_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_service_list(self) -> None:
+        """
+        Ensure non-admin user cannot access service list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.service_list_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
