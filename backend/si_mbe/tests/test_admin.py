@@ -1656,18 +1656,13 @@ class SupplierUpdateTestCase(SetTestCase):
 
     def setUp(self) -> None:
         # Setting up supplier
-        self.supplier_1 = Supplier.objects.create(
-            name='Pokke Village',
-            address='Furahiya Mountains',
-            contact='089661056345',
-        )
-        self.supplier_2 = Supplier.objects.create(
+        self.supplier = Supplier.objects.create(
             name='Yukumo',
             address='Misty Peaks',
             contact='084108910563',
         )
 
-        self.supplier_update_url = reverse('supplier_update', kwargs={'supplier_id': self.supplier_2.supplier_id})
+        self.supplier_update_url = reverse('supplier_update', kwargs={'supplier_id': self.supplier.supplier_id})
 
         return super().setUp()
 
@@ -2577,5 +2572,92 @@ class StorageAddTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.storage_add_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')
+
+
+class StorageUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up storage data
+        cls.storage = Storage.objects.create(
+            code='DB-14',
+            location='2',
+            is_full=True
+        )
+
+        cls.storage_update_url = reverse(
+            'storage_update',
+            kwargs={'storage_id': cls.storage.storage_id}
+        )
+
+        # Setting up input data
+        cls.data = {
+            'code': 'DB-14',
+            'location': '2',
+            'is_full': False
+        }
+        # Setting up input data
+        cls.incomplete_data = {
+            'is_full': False
+        }
+
+        return super().setUpTestData()
+
+    def test_successfully_update_storage(self) -> None:
+        """
+        Ensure admin can update storage successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.storage_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan berhasil dirubah')
+        self.assertEqual(response.data['code'], self.data['code'])
+        self.assertEqual(response.data['location'], self.data['location'])
+        self.assertEqual(response.data['is_full'], self.data['is_full'])
+
+    def test_nonlogin_user_failed_to_update_storage(self) -> None:
+        """
+        Ensure non-login user cannot update storage
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.storage_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_storage(self) -> None:
+        """
+        Ensure non-admin user cannot update storage
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.storage_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_update_nonexist_storage(self) -> None:
+        """
+        Ensure admin cannot update non-exist storage
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('storage_update', kwargs={'storage_id': 526523}),
+                                   self.data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak ditemukan')
+
+    def test_admin_failed_to_update_storage_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data storage with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.storage_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_update_storage_with_incomplete_data(self) -> None:
+        """
+        Ensure admin cannot update data storage with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.storage_update_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')

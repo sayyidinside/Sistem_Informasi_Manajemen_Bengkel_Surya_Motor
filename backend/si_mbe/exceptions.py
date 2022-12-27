@@ -27,3 +27,7 @@ class AdminNotFound(NotFound):
 
 class ServiceNotFound(NotFound):
     default_detail = {'message': 'Data servis tidak ditemukan'}
+
+
+class StorageNotFound(NotFound):
+    default_detail = {'message': 'Data lokasi penyimpanan tidak ditemukan'}
