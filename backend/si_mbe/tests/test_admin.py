@@ -2463,3 +2463,50 @@ class ServiceDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('service_delete', kwargs={'service_id': 85635}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')
+
+
+class StorageListTestCase(SetTestCase):
+    storage_url = reverse('storage_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # setting up storage data
+        cls.storage = Storage.objects.create(
+            code='A-23',
+            location='1',
+            is_full=True
+        )
+        Storage.objects.create(
+            code='OT-3',
+            location='2',
+            is_full=False
+        )
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_(self) -> None:
+        """
+        Ensure admin can get supplier list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.storage_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+
+    def test_nonlogin_user_failed_to_access_storage_list(self) -> None:
+        """
+        Ensure non-login user cannot access storage list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.storage_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_storage_list(self) -> None:
+        """
+        Ensure non-admin user cannot access storage list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.storage_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

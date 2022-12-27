@@ -1,7 +1,8 @@
-from rest_framework import serializers
 from django.contrib.auth.models import User
+from rest_framework import serializers
 from si_mbe.models import (Logs, Profile, Restock, Restock_detail, Sales,
-                           Sales_detail, Sparepart, Supplier, Service, Service_action, Service_sparepart)
+                           Sales_detail, Service, Service_action,
+                           Service_sparepart, Sparepart, Storage, Supplier)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -707,3 +708,9 @@ class ServicePostSerializers(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+class StorageSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Storage
+        fields = ['storage_id', 'code', 'location', 'is_full']

@@ -10,7 +10,7 @@ from si_mbe.exceptions import (AdminNotFound, RestockNotFound, SalesNotFound,
                                ServiceNotFound, SparepartNotFound,
                                SupplierNotFound)
 from si_mbe.models import (Logs, Profile, Restock, Sales, Service, Sparepart,
-                           Supplier)
+                           Supplier, Storage)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
@@ -24,9 +24,11 @@ from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 SalesReportDetailSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
+                                ServicePostSerializers,
                                 ServiceReportDetailSerializers,
                                 ServiceReportSerializers, ServiceSerializers,
-                                SparepartSerializers, SupplierSerializers, ServicePostSerializers)
+                                SparepartSerializers, StorageSerializers,
+                                SupplierSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -727,3 +729,10 @@ class ServiceDelete(generics.DestroyAPIView):
         perform_log(request=request, operation='R', table='Service')
 
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class StorageList(generics.ListAPIView):
+    queryset = Storage.objects.all().order_by('storage_id')
+    serializer_class = StorageSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]
