@@ -736,3 +736,21 @@ class StorageList(generics.ListAPIView):
     serializer_class = StorageSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+
+class StorageAdd(generics.CreateAPIView):
+    queryset = Storage.objects.all()
+    serializer_class = StorageSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        if len(request.data) < 3:
+            return Response({'message': 'Data lokasi penyimpanan tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = serializer.data
+        data['message'] = 'Data lokasi penyimpanan berhasil ditambah'
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
