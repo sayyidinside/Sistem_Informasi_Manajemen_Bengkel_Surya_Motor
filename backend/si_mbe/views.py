@@ -26,7 +26,7 @@ from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 SearchSparepartSerializers,
                                 ServiceReportDetailSerializers,
                                 ServiceReportSerializers, ServiceSerializers,
-                                SparepartSerializers, SupplierSerializers)
+                                SparepartSerializers, SupplierSerializers, ServicePostSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -639,3 +639,21 @@ class ServiceList(generics.ListAPIView):
     permission_classes = [IsLogin, IsAdminRole]
     pagination_class = CustomPagination
     pagination_class.page_size = 100
+
+
+class ServiceAdd(generics.CreateAPIView):
+    queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
+    serializer_class = ServicePostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        if len(request.data) < 9:
+            return Response({'message': 'Data servis tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = serializer.data
+        data['message'] = 'Data servis berhasil ditambah'
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)

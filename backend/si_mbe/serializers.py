@@ -570,3 +570,68 @@ class ServiceSerializers(serializers.ModelSerializer):
             'service_actions',
             'service_spareparts'
         ]
+
+
+class ServiceActionPostSerializers(serializers.ModelSerializer):
+    service_action_id = serializers.IntegerField(required=False)
+    service_name = serializers.CharField(source='name')
+
+    class Meta:
+        model = Service_action
+        fields = ['service_action_id', 'service_name', 'cost']
+
+
+class ServiceSparepartPostSerializers(serializers.ModelSerializer):
+    service_sparepart_id = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = Service_sparepart
+        fields = ['service_sparepart_id', 'sparepart_id', 'quantity']
+
+
+class ServicePostSerializers(serializers.ModelSerializer):
+    service_actions = ServiceActionPostSerializers(many=True, source='service_action_set')
+    service_spareparts = ServiceSparepartPostSerializers(many=True, source='service_sparepart_set')
+
+    class Meta:
+        model = Service
+        fields = [
+            'service_id',
+            'mechanic_id',
+            'customer_id',
+            'police_number',
+            'motor_type',
+            'is_paid_off',
+            'deposit',
+            'discount',
+            'service_actions',
+            'service_spareparts'
+        ]
+
+    def create(self, validated_data):
+        # get the service actions nested objects list
+        action_details = validated_data.pop('service_action_set')
+
+        # get the service spareparts nested objects list
+        sparepart_details = validated_data.pop('service_sparepart_set')
+
+        # create service data / instance
+        service = Service.objects.create(**validated_data)
+
+        # create service action data / instance
+        for detail in action_details:
+            try:
+                detail.pop('service_action_id')
+            except Exception:
+                pass
+            Service_action.objects.create(service_id=service, **detail)
+
+        # create service sparepart data / instance
+        for detail in sparepart_details:
+            try:
+                detail.pop('service_sparepart_id')
+            except Exception:
+                pass
+            Service_sparepart.objects.create(service_id=service, **detail)
+
+        return service

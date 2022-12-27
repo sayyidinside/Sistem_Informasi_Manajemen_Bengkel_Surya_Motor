@@ -44,7 +44,7 @@ class AdminDashboardTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_access_admin_dashboard(self) -> None:
+    def test_nonadmin_user_failed_to_access_admin_dashboard(self) -> None:
         """
         Ensure non-admin user cannot access admin dashboard
         """
@@ -158,7 +158,7 @@ class SparepartDataListTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_access_sparepart_data_list(self) -> None:
+    def test_nonadmin_user_failed_to_access_sparepart_data_list(self) -> None:
         """
         Ensure non-admin user cannot access sparepart data list
         """
@@ -230,7 +230,7 @@ class SparepartDataAddTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_add_new_sparepart_data(self) -> None:
+    def test_nonadmin_user_failed_to_add_new_sparepart_data(self) -> None:
         """
         Ensure non-admin user cannot add new sparepart data
         """
@@ -344,7 +344,7 @@ class SparepartDataUpdateTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_update_sparepart_data(self) -> None:
+    def test_nonadmin_user_failed_to_update_sparepart_data(self) -> None:
         """
         Ensure non-admin user cannot update sparepart data
         """
@@ -439,7 +439,7 @@ class SparepartDataDeleteTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_delete_sparepart_data(self) -> None:
+    def test_nonadmin_user_failed_to_delete_sparepart_data(self) -> None:
         """
         Ensure non-admin user cannot delete sparepart data
         """
@@ -578,7 +578,7 @@ class SalesListTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_access_sales_list(self) -> None:
+    def test_nonadmin_user_failed_to_access_sales_list(self) -> None:
         """
         Ensure non-admin user cannot access sales list
         """
@@ -813,7 +813,7 @@ class SalesUpdateTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_update_sales(self) -> None:
+    def test_nonadmin_user_failed_to_update_sales(self) -> None:
         """
         Ensure non-admin user cannot update sales
         """
@@ -936,7 +936,7 @@ class SalesDeleteTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_delete_sales(self) -> None:
+    def test_nonadmin_user_failed_to_delete_sales(self) -> None:
         """
         Ensure non-admin user cannot delete sales
         """
@@ -1096,7 +1096,7 @@ class RestockListTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_access_restock_list(self) -> None:
+    def test_nonadmin_user_failed_to_access_restock_list(self) -> None:
         """
         Ensure non-admin user cannot access restock list
         """
@@ -1368,7 +1368,7 @@ class RestockUpdateTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_update_restock(self) -> None:
+    def test_nonadmin_user_failed_to_update_restock(self) -> None:
         """
         Ensure non-admin user cannot update restock
         """
@@ -1504,7 +1504,7 @@ class RestockDeleteTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_delete_restock(self) -> None:
+    def test_nonadmin_user_failed_to_delete_restock(self) -> None:
         """
         Ensure non-admin user cannot delete restock
         """
@@ -1568,7 +1568,7 @@ class SupplierListTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_access_supplier_list(self) -> None:
+    def test_nonadmin_user_failed_to_access_supplier_list(self) -> None:
         """
         Ensure non-admin user cannot access supplier list
         """
@@ -1613,7 +1613,7 @@ class SupplierAddTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_add_new_supplier(self) -> None:
+    def test_nonadmin_user_failed_to_add_new_supplier(self) -> None:
         """
         Ensure non-admin user cannot add new supplier
         """
@@ -1692,7 +1692,7 @@ class SupplierUpdateTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
-    def test_owner_failed_to_update_supplier(self) -> None:
+    def test_nonadmin_user_failed_to_update_supplier(self) -> None:
         """
         Ensure non-admin user cannot update supplier
         """
@@ -1918,9 +1918,7 @@ class ServiceTestCase(SetTestCase):
 
         # Setting up time data for test comparison
         cls.created_at_1 = cls.service_1.created_at + timedelta(hours=7)
-        cls.updated_at_1 = cls.service_1.updated_at + timedelta(hours=7)
         cls.created_at_2 = cls.service_2.created_at + timedelta(hours=7)
-        cls.updated_at_2 = cls.service_2.updated_at + timedelta(hours=7)
 
         return super().setUpTestData()
 
@@ -2011,3 +2009,152 @@ class ServiceTestCase(SetTestCase):
         response = self.client.get(self.service_list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class ServiceAdd(SetTestCase):
+    service_add_url = reverse('service_add')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='Bodger Bloger',
+            contact='086206164404',
+            address='Honeywood'
+        )
+
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Bartholomew Osiris Bladesong',
+            contact='082541684051',
+        )
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='MN-9')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Lavish Chateau')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Food')
+
+        # Setting up sparepart data
+        cls.sparepart = Sparepart.objects.create(
+            name='Chorcoal Cupcake',
+            partnumber='JFLJ23-Aj',
+            quantity=50,
+            motor_type='Human',
+            sparepart_type='Spices',
+            price=105000,
+            workshop_price=100000,
+            install_price=110000,
+            brand_id=cls.brand,
+            category_id=cls.category,
+            storage_id=cls.storage
+        )
+
+        cls.data = {
+            'mechanic_id': cls.mechanic.mechanic_id,
+            'customer_id': cls.customer.customer_id,
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'is_paid_off': False,
+            'deposit': 30000,
+            'discount': 5000,
+            'service_actions': [
+                {
+                    'service_name': 'Angkat Spion',
+                    'cost': 50000,
+                },
+                {
+                    'service_name': 'Isi Bensin',
+                    'cost': 10000,
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'sparepart_id': cls.sparepart.sparepart_id,
+                    'quantity': 2
+                }
+            ]
+        }
+
+        cls.incomplete_data = {
+            'mechanic_id': cls.mechanic.mechanic_id,
+            'customer_id': cls.customer.customer_id,
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'is_paid_off': False
+        }
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_add_service(self) -> None:
+        """
+        Ensure admin can add new service data with it's content
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.service_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data servis berhasil ditambah')
+        self.assertEqual(response.data['mechanic_id'], self.mechanic.mechanic_id)
+        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
+        self.assertEqual(response.data['police_number'], self.data['police_number'])
+        self.assertEqual(response.data['motor_type'], self.data['motor_type'])
+        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
+        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
+        self.assertEqual(int(response.data['discount']), self.data['discount'])
+
+        self.assertEqual(response.data['service_actions'][0]['service_name'],
+                         self.data['service_actions'][0]['service_name'])
+
+        self.assertEqual(int(response.data['service_actions'][0]['cost']),
+                         self.data['service_actions'][0]['cost'])
+
+        self.assertEqual(response.data['service_actions'][1]['service_name'],
+                         self.data['service_actions'][1]['service_name'])
+
+        self.assertEqual(int(response.data['service_actions'][1]['cost']),
+                         self.data['service_actions'][1]['cost'])
+
+        self.assertEqual(response.data['service_spareparts'][0]['sparepart_id'],
+                         self.data['service_spareparts'][0]['sparepart_id'])
+
+        self.assertEqual(response.data['service_spareparts'][0]['quantity'],
+                         self.data['service_spareparts'][0]['quantity'])
+
+    def test_nonlogin_user_failed_to_add_service(self) -> None:
+        """
+        Ensure non-login cannot add new service data with it's content
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.service_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_failed_to_add_service(self) -> None:
+        """
+        Ensure non-admin cannot add new service data with it's content
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.service_add_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_add_service_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot add service with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.service_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data servis tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_add_service_with_incomplete_data(self) -> None:
+        """
+        Ensure admin cannot add data service with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.service_add_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data servis tidak sesuai / tidak lengkap')
