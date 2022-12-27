@@ -28,6 +28,7 @@ urlpatterns = [
      path('admin/supplier/delete/<int:supplier_id>/', views.SupplierDelete.as_view(), name='supplier_delete'),
      path('admin/service/', views.ServiceList.as_view(), name='service_list'),
      path('admin/service/add/', views.ServiceAdd.as_view(), name='service_add'),
+     path('admin/service/edit/<int:service_id>/', views.ServiceUpdate.as_view(), name='service_update'),
 
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),

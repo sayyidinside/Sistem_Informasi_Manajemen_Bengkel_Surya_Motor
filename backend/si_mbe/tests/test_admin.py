@@ -2158,3 +2158,220 @@ class ServiceAdd(SetTestCase):
         response = self.client.post(self.service_add_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data servis tidak sesuai / tidak lengkap')
+
+
+class ServiceUpdate(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='Bodger Bloger',
+            contact='086206164404',
+            address='Honeywood'
+        )
+
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Bartholomew Osiris Bladesong',
+            contact='082541684051',
+        )
+
+        # Setting up storage data
+        cls.storage = Storage.objects.create(code='MN-9')
+
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Lavish Chateau')
+
+        # Setting up category data
+        cls.category = Category.objects.create(name='Food')
+
+        # Setting up sparepart data
+        cls.sparepart = Sparepart.objects.create(
+            name='Chorcoal Cupcake',
+            partnumber='JFLJ23-Aj',
+            quantity=50,
+            motor_type='Human',
+            sparepart_type='Spices',
+            price=105000,
+            workshop_price=100000,
+            install_price=110000,
+            brand_id=cls.brand,
+            category_id=cls.category,
+            storage_id=cls.storage
+        )
+
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        self.service = Service.objects.create(
+            police_number='B 1293 A',
+            motor_type='Beneli',
+            deposit=500000,
+            discount=20000,
+            user_id=self.user,
+            mechanic_id=self.mechanic,
+            customer_id=self.customer
+        )
+
+        # Getting newly added service it's service_id then set it to kwargs in reverse url
+        self.service_update_url = reverse('service_update', kwargs={'service_id': self.service.service_id})
+
+        # Setting up service actions
+        self.action_1 = Service_action.objects.create(
+            name='Pompa Ban',
+            cost='10000',
+            service_id=self.service
+        )
+        self.action_2 = Service_action.objects.create(
+            name='Bongkar Mesin',
+            cost='800000',
+            service_id=self.service
+        )
+
+        # Setting up service sparepart
+        self.service_sparepart = Service_sparepart.objects.create(
+            quantity=2,
+            service_id=self.service,
+            sparepart_id=self.sparepart
+        )
+
+        self.data = {
+            'mechanic_id': self.mechanic.mechanic_id,
+            'customer_id': self.customer.customer_id,
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'is_paid_off': False,
+            'deposit': 600000,
+            'discount': 5000,
+            'service_actions': [
+                {
+                    'service_action_id': self.action_1.service_action_id,
+                    'service_name': 'Pompa Ban',
+                    'cost': 10000,
+                },
+                {
+                    'service_action_id': self.action_2.service_action_id,
+                    'service_name': 'Bongkar Mesin',
+                    'cost': 800000,
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'service_sparepart_id': self.service_sparepart.service_sparepart_id,
+                    'sparepart_id': self.sparepart.sparepart_id,
+                    'quantity': 2
+                }
+            ]
+        }
+
+        self.incomplete_data = {
+            'motor_type': 'Yamaha',
+            'is_paid_off': False,
+            'deposit': 600000,
+            'discount': 5000,
+            'service_actions': [
+                {
+                    'service_action_id': self.action_1.service_action_id,
+                    'service_name': 'Pompa Ban',
+                    'cost': 10000,
+                },
+            ],
+            'service_spareparts': [
+                {
+                    'service_sparepart_id': self.service_sparepart.service_sparepart_id,
+                    'sparepart_id': self.sparepart.sparepart_id,
+                    'quantity': 2
+                }
+            ]
+        }
+
+        return super().setUp()
+
+    def test_admin_successfully_update_service(self) -> None:
+        """
+        Ensure admin can update service data successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.service_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data servis berhasil dirubah')
+        self.assertEqual(response.data['mechanic_id'], self.data['mechanic_id'])
+        self.assertEqual(response.data['customer_id'], self.data['customer_id'])
+        self.assertEqual(response.data['police_number'], self.data['police_number'])
+        self.assertEqual(response.data['motor_type'], self.data['motor_type'])
+        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
+        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
+        self.assertEqual(int(response.data['discount']), self.data['discount'])
+
+        self.assertEqual(response.data['service_actions'][0]['service_action_id'],
+                         self.data['service_actions'][0]['service_action_id'])
+
+        self.assertEqual(response.data['service_actions'][0]['service_name'],
+                         self.data['service_actions'][0]['service_name'])
+
+        self.assertEqual(int(response.data['service_actions'][0]['cost']),
+                         self.data['service_actions'][0]['cost'])
+
+        self.assertEqual(response.data['service_actions'][1]['service_action_id'],
+                         self.data['service_actions'][1]['service_action_id'])
+
+        self.assertEqual(response.data['service_actions'][1]['service_name'],
+                         self.data['service_actions'][1]['service_name'])
+
+        self.assertEqual(int(response.data['service_actions'][1]['cost']),
+                         self.data['service_actions'][1]['cost'])
+
+        self.assertEqual(response.data['service_spareparts'][0]['service_sparepart_id'],
+                         self.data['service_spareparts'][0]['service_sparepart_id'])
+
+        self.assertEqual(response.data['service_spareparts'][0]['sparepart_id'],
+                         self.data['service_spareparts'][0]['sparepart_id'])
+
+        self.assertEqual(response.data['service_spareparts'][0]['quantity'],
+                         self.data['service_spareparts'][0]['quantity'])
+
+    def test_nonlogin_failed_to_update_service(self) -> None:
+        """
+        Ensure non-login user cannot update service
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.service_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_service(self) -> None:
+        """
+        Ensure non-admin user cannot update service
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.service_update_url, self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_update_nonexist_service(self) -> None:
+        """
+        Ensure admin cannot / Failed update non-exist service
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('service_update', kwargs={'service_id': 89152}),
+                                   self.data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')
+
+    def test_admin_failed_to_update_service_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update service with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.service_update_url, {}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data servis tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_update_service_with_incomplete_data(self) -> None:
+        """
+        Ensure admin cannot update service with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.service_update_url, self.incomplete_data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data servis tidak sesuai / tidak lengkap')

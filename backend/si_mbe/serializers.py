@@ -635,3 +635,75 @@ class ServicePostSerializers(serializers.ModelSerializer):
             Service_sparepart.objects.create(service_id=service, **detail)
 
         return service
+
+    def update(self, instance, validated_data):
+        # get the service actions nested objects list
+        action_details = validated_data.pop('service_action_set')
+
+        # get the service spareparts nested objects list
+        sparepart_details = validated_data.pop('service_sparepart_set')
+
+        # Assigning input (validated_data) to object (instance) if there is no data using default object
+        instance.customer_id = validated_data.get('customer_id', instance.customer_id)
+        instance.mechanic_id = validated_data.get('mechanic_id', instance.mechanic_id)
+        instance.police_number = validated_data.get('police_number', instance.police_number)
+        instance.motor_type = validated_data.get('motor_type', instance.motor_type)
+        instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
+        instance.deposit = validated_data.get('deposit', instance.deposit)
+        instance.discount = validated_data.get('discount', instance.discount)
+
+        # get all service action nested objects related with this instance
+        # and make a dict(id, object)
+        action_dict = dict((i.service_action_id, i) for i in instance.service_action_set.all())
+
+        # Updating service actions of particular service
+        for validated_detail in action_details:
+            if 'service_action_id' in validated_detail:
+                # if exists service_action_id remove from the dict and update
+                detail = action_dict.pop(validated_detail['service_action_id'])
+
+                # remove service_action_id from validated data as we don't require it.
+                validated_detail.pop('service_action_id')
+
+                # loop through the rest of keys in validated data to assign it to its respective field
+                for key in validated_detail.keys():
+                    setattr(detail, key, validated_detail[key])
+
+                detail.save()
+            else:
+                Service_action.objects.create(service_id=instance, **validated_detail)
+
+        # delete remaining service action elements because they're not present in update call
+        if len(action_dict) > 0:
+            for detail in action_dict.values():
+                detail.delete()
+
+        # get all service sparepart nested objects related with this instance
+        # and make a dict(id, object)
+        sparepart_dict = dict((i.service_sparepart_id, i) for i in instance.service_sparepart_set.all())
+
+        # Updating service spareparts of particular service
+        for validated_detail in sparepart_details:
+            if 'service_sparepart_id' in validated_detail:
+                # if exists service_sparepart_id remove from the dict and update
+                detail = sparepart_dict.pop(validated_detail['service_sparepart_id'])
+
+                # remove service_sparepart_id from validated data as we don't require it.
+                validated_detail.pop('service_sparepart_id')
+
+                # loop through the rest of keys in validated data to assign it to its respective field
+                for key in validated_detail.keys():
+                    setattr(detail, key, validated_detail[key])
+
+                detail.save()
+            else:
+                Service_sparepart.objects.create(service_id=instance, **validated_detail)
+
+        # delete remaining service sparepart elements because they're not present in update call
+        if len(sparepart_dict) > 0:
+            for detail in sparepart_dict.values():
+                detail.delete()
+
+        instance.save()
+
+        return instance
