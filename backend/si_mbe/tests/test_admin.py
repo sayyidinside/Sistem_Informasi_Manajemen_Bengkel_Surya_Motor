@@ -2733,12 +2733,8 @@ class BrandListTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up brand data
-        Brand.objects.create(
-            name='The Way Of King'
-        )
-        Brand.objects.create(
-            name='Elantris'
-        )
+        Brand.objects.create(name='The Way Of King')
+        Brand.objects.create(name='Elantris')
 
         return super().setUpTestData()
 
@@ -2809,5 +2805,63 @@ class BrandAddTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.brand_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data merek / brand tidak sesuai / tidak lengkap')
+
+
+class BrandUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Fresh Cut Grass')
+
+        cls.brand_update_url = reverse('brand_update', kwargs={'brand_id': cls.brand.brand_id})
+
+        return super().setUpTestData()
+
+    def test_successfully_update_brand(self) -> None:
+        """
+        Ensure admin can update brand successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.brand_update_url, {'name': 'FCG'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data merek / brand berhasil dirubah')
+        self.assertEqual(response.data['name'], 'FCG')
+
+    def test_nonlogin_user_failed_to_update_brand(self) -> None:
+        """
+        Ensure non-login user cannot update brand
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.brand_update_url, {'name': 'FCG'})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_brand(self) -> None:
+        """
+        Ensure non-admin user cannot update brand
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.brand_update_url, {'name': 'FCG'})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_update_nonexist_brand(self) -> None:
+        """
+        Ensure admin cannot update non-exist brand
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('brand_update', kwargs={'brand_id': 526523}),
+                                   {'name': 'FCG'})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data merek / brand tidak ditemukan')
+
+    def test_admin_failed_to_update_brand_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data brand with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.brand_update_url, {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data merek / brand tidak sesuai / tidak lengkap')

@@ -31,3 +31,7 @@ class ServiceNotFound(NotFound):
 
 class StorageNotFound(NotFound):
     default_detail = {'message': 'Data lokasi penyimpanan tidak ditemukan'}
+
+
+class BrandNotFound(NotFound):
+    default_detail = {'message': 'Data merek / brand tidak ditemukan'}
