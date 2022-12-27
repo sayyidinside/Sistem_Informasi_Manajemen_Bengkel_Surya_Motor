@@ -417,12 +417,13 @@ class Service(Base_transaction):
     )
     mechanic_id = models.ForeignKey(
         Mechanic,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
+        null=True,
         db_column='mechanic_id'
     )
     customer_id = models.ForeignKey(
         Customer,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         db_column='customer_id'
     )
@@ -447,7 +448,7 @@ class Service_action(models.Model):
 
     service_id = models.ForeignKey(
         Service,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         db_column='service_id'
     )
 
@@ -470,13 +471,13 @@ class Service_sparepart(models.Model):
 
     service_id = models.ForeignKey(
         Service,
-        on_delete=models.PROTECT,
+        on_delete=models.CASCADE,
         null=True,
         db_column='service_id'
     )
     sparepart_id = models.ForeignKey(
         Sparepart,
-        on_delete=models.PROTECT,
+        on_delete=models.SET_NULL,
         null=True,
         db_column='sparepart_id'
     )
