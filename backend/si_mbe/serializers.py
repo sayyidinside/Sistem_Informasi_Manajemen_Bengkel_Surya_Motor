@@ -3,7 +3,7 @@ from rest_framework import serializers
 from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
                            Restock_detail, Sales, Sales_detail, Service,
                            Service_action, Service_sparepart, Sparepart,
-                           Storage, Supplier, Mechanic)
+                           Storage, Supplier, Mechanic, Salesman)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -739,3 +739,11 @@ class MechanicSerializers(serializers.ModelSerializer):
     class Meta:
         model = Mechanic
         fields = ['mechanic_id', 'name', 'contact', 'address']
+
+
+class SalesmanSerializers(serializers.ModelSerializer):
+    supplier = serializers.ReadOnlyField(source='supplier_id.name')
+
+    class Meta:
+        model = Salesman
+        fields = ['salesman_id', 'name', 'contact', 'supplier']

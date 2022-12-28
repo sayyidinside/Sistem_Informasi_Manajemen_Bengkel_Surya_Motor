@@ -3623,3 +3623,61 @@ class MechanicDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('mechanic_delete', kwargs={'mechanic_id': 86591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data mekanik tidak ditemukan')
+
+
+class SalesmanListTestCase(SetTestCase):
+    salesman_url = reverse('salesman_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up supplier data
+        cls.supplier = Supplier.objects.create(
+            name='Institute',
+            address='Commonwealth Institute Of Technology',
+            contact='085340153504'
+        )
+
+        # setting up salesman data
+        cls.salesman = Salesman.objects.create(
+            name='The Courier',
+            contact='084052631053',
+            supplier_id=cls.supplier
+        )
+        Salesman.objects.create(
+            name='The Lone Wanderer',
+            contact='082351351010',
+            supplier_id=cls.supplier
+        )
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_salesman_list(self) -> None:
+        """
+        Ensure admin can get salesman list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.salesman_url)
+        print(response.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'][0]['name'], self.salesman.name)
+        self.assertEqual(response.data['results'][0]['contact'], self.salesman.contact)
+        self.assertEqual(response.data['results'][0]['supplier'], self.salesman.supplier_id.name)
+
+    def test_nonlogin_user_failed_to_access_salesman_list(self) -> None:
+        """
+        Ensure non-login user cannot access salesman list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.salesman_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_salesman_list(self) -> None:
+        """
+        Ensure non-admin user cannot access salesman list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.salesman_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

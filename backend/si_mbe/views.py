@@ -7,24 +7,25 @@ from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
 from si_mbe.exceptions import (AdminNotFound, BrandNotFound, CategoryNotFound,
-                               CustomerNotFound, RestockNotFound,
-                               SalesNotFound, ServiceNotFound,
+                               CustomerNotFound, MechanicNotFound,
+                               RestockNotFound, SalesNotFound, ServiceNotFound,
                                SparepartNotFound, StorageNotFound,
-                               SupplierNotFound, MechanicNotFound)
-from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
-                           Sales, Service, Sparepart, Storage, Supplier, Mechanic)
+                               SupplierNotFound)
+from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
+                           Restock, Sales, Service, Sparepart, Storage,
+                           Supplier, Salesman)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
 from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 AdminUpdateSerializers, BrandSerializers,
                                 CategorySerializers, CustomerSerializers,
-                                LogSerializers, ProfileSerializers,
-                                ProfileUpdateSerializers,
+                                LogSerializers, MechanicSerializers,
+                                ProfileSerializers, ProfileUpdateSerializers,
                                 RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
-                                SalesPostSerializers,
+                                SalesmanSerializers, SalesPostSerializers,
                                 SalesReportDetailSerializers,
                                 SalesReportSerializers, SalesSerializers,
                                 SearchSparepartSerializers,
@@ -32,7 +33,7 @@ from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 ServiceReportDetailSerializers,
                                 ServiceReportSerializers, ServiceSerializers,
                                 SparepartSerializers, StorageSerializers,
-                                SupplierSerializers, MechanicSerializers)
+                                SupplierSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -1123,3 +1124,10 @@ class MechanicDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data mekanik berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class SalesmanList(generics.ListAPIView):
+    queryset = Salesman.objects.all().order_by('salesman_id')
+    serializer_class = SalesmanSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]

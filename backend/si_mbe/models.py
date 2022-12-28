@@ -15,7 +15,7 @@ class Profile(models.Model):
     )
     name = models.CharField(max_length=30, default='')
     contact = models.CharField(max_length=13, default='')
-    address = models.CharField(max_length=30, default='')
+    address = models.CharField(max_length=50, default='')
 
     class Roles(models.TextChoices):
         PEMILIK = 'P', _('Pemilik')
@@ -243,7 +243,7 @@ class Supplier(models.Model):
         unique=True
     )
     name = models.CharField(max_length=20)
-    address = models.CharField(max_length=30)
+    address = models.CharField(max_length=50)
     contact = models.CharField(max_length=13)
 
     def __str__(self) -> str:
@@ -388,7 +388,7 @@ class Mechanic(models.Model):
     )
     name = models.CharField(max_length=30)
     contact = models.CharField(max_length=15)
-    address = models.CharField(max_length=30)
+    address = models.CharField(max_length=50)
 
     def __str__(self) -> str:
         return f'{self.name}'
