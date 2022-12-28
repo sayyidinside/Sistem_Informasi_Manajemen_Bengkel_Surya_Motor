@@ -3312,3 +3312,58 @@ class CustomerUpdateTestCase(SetTestCase):
         response = self.client.put(self.customer_update_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data pelanggan tidak sesuai / tidak lengkap')
+
+
+class CustomerDeleteTestCase(SetTestCase):
+    def setUp(self) -> None:
+        # Setting up storage data
+        self.customer = Customer.objects.create(
+            name='The Father',
+            contact='083515301351',
+            number_of_service=36,
+            total_payment=1056000
+        )
+
+        self.customer_delete_url = reverse(
+            'customer_delete',
+            kwargs={'customer_id': self.customer.customer_id}
+        )
+
+        return super().setUp()
+
+    def test_admin_successfully_delete_customer(self) -> None:
+        """
+        Ensure admin can delete customer successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.customer_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data pelanggan berhasil dihapus')
+        self.assertEqual(len(Customer.objects.all()), 0)
+
+    def test_nonlogin_user_failed_to_delete_customer(self) -> None:
+        """
+        Ensure non-login user cannot delete customer
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.customer_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_delete_customer(self) -> None:
+        """
+        Ensure non-admin user cannot delete customer
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(self.customer_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_delete_nonexist_customer(self) -> None:
+        """
+        Ensure admin cannot to delete non-exist customer
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(reverse('customer_delete', kwargs={'customer_id': 86591}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data pelanggan tidak ditemukan')

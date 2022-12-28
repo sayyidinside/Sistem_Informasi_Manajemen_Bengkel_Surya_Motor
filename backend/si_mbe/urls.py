@@ -45,7 +45,7 @@ urlpatterns = [
      path('admin/customer/', views.CustomerList.as_view(), name='customer_list'),
      path('admin/customer/add/', views.CustomerAdd.as_view(), name='customer_add'),
      path('admin/customer/edit/<int:customer_id>/', views.CustomerUpdate.as_view(), name='customer_update'),
-     # path('admin/customer/delete/<int:customer_id>/', views.CustomerDelete.as_view(), name='customer_delete'),
+     path('admin/customer/delete/<int:customer_id>/', views.CustomerDelete.as_view(), name='customer_delete'),
 
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
