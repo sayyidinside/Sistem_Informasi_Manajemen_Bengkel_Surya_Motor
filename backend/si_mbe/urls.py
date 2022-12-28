@@ -37,6 +37,7 @@ urlpatterns = [
      path('admin/brand/', views.BrandList.as_view(), name='brand_list'),
      path('admin/brand/add/', views.BrandAdd.as_view(), name='brand_add'),
      path('admin/brand/edit/<int:brand_id>/', views.BrandUpdate.as_view(), name='brand_update'),
+     path('admin/brand/delete/<int:brand_id>/', views.BrandDelete.as_view(), name='brand_delete'),
 
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
