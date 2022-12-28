@@ -12,7 +12,7 @@ from si_mbe.exceptions import (AdminNotFound, BrandNotFound, CategoryNotFound,
                                SparepartNotFound, StorageNotFound,
                                SupplierNotFound)
 from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
-                           Sales, Service, Sparepart, Storage, Supplier)
+                           Sales, Service, Sparepart, Storage, Supplier, Mechanic)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
@@ -32,7 +32,7 @@ from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 ServiceReportDetailSerializers,
                                 ServiceReportSerializers, ServiceSerializers,
                                 SparepartSerializers, StorageSerializers,
-                                SupplierSerializers)
+                                SupplierSerializers, MechanicSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -1045,3 +1045,10 @@ class CustomerDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data pelanggan berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class MechanicList(generics.ListAPIView):
+    queryset = Mechanic.objects.all().order_by('mechanic_id')
+    serializer_class = MechanicSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]

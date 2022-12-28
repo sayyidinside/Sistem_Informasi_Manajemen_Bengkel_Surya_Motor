@@ -3367,3 +3367,53 @@ class CustomerDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('customer_delete', kwargs={'customer_id': 86591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data pelanggan tidak ditemukan')
+
+
+class MechanicListTestCase(SetTestCase):
+    mechanic_url = reverse('mechanic_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='The Third Fleet',
+            contact='085132135051',
+            address='Jl Port Domali'
+        )
+        Mechanic.objects.create(
+            name='The Fifth Fleet',
+            contact='082351351010',
+            address='Jl Rexxentrum'
+        )
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_mechanic_list(self) -> None:
+        """
+        Ensure admin can get mechanic list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.mechanic_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'][0]['name'], self.mechanic.name)
+        self.assertEqual(response.data['results'][0]['contact'], self.mechanic.contact)
+        self.assertEqual(response.data['results'][0]['address'], self.mechanic.address)
+
+    def test_nonlogin_user_failed_to_access_mechanic_list(self) -> None:
+        """
+        Ensure non-login user cannot access mechanic list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.mechanic_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_mechanic_list(self) -> None:
+        """
+        Ensure non-admin user cannot access mechanic list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.mechanic_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
