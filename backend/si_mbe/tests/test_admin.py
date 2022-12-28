@@ -3417,3 +3417,69 @@ class MechanicListTestCase(SetTestCase):
         response = self.client.get(self.mechanic_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class MechanicAddTestCase(SetTestCase):
+    mechanic_add_url = reverse('mechanic_add')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up input data
+        cls.data = {
+            'name': 'Deacon',
+            'contact': '085132135051',
+            'address': 'Jl Railroad Boston'
+        }
+        cls.incomplete_data = {
+            'address': 'Jl Railroad Boston'
+        }
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_add_mechanic(self) -> None:
+        """
+        Ensure admin can add new mechanic successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.mechanic_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data mekanik berhasil ditambah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['address'], self.data['address'])
+
+    def test_nonlogin_user_failed_to_add_new_mechanic(self) -> None:
+        """
+        Ensure non-login user cannot add new mechanic
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.mechanic_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_add_new_mechanic(self) -> None:
+        """
+        Ensure non-admin user cannot add new mechanic
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.mechanic_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_add_mechanic_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot add mechanic with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.mechanic_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_add_mechanic_with_incomplete_data(self) -> None:
+        """
+        Ensure admin cannot add mechanic with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.mechanic_add_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')

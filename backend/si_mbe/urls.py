@@ -47,7 +47,7 @@ urlpatterns = [
      path('admin/customer/edit/<int:customer_id>/', views.CustomerUpdate.as_view(), name='customer_update'),
      path('admin/customer/delete/<int:customer_id>/', views.CustomerDelete.as_view(), name='customer_delete'),
      path('admin/mechanic/', views.MechanicList.as_view(), name='mechanic_list'),
-     # path('admin/mechanic/add/', views.MechanicAdd.as_view(), name='mechanic_add'),
+     path('admin/mechanic/add/', views.MechanicAdd.as_view(), name='mechanic_add'),
      # path('admin/mechanic/edit/<int:mechanic_id>/', views.MechanicUpdate.as_view(), name='mechanic_update'),
      # path('admin/mechanic/delete/<int:mechanic_id>/', views.MechanicDelete.as_view(), name='mechanic_delete'),
 
