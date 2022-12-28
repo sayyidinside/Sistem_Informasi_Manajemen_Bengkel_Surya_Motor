@@ -2953,3 +2953,45 @@ class CategoryListTestCase(SetTestCase):
         response = self.client.get(self.category_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class CategoryAddTestCase(SetTestCase):
+    category_add_url = reverse('category_add')
+
+    def test_admin_successfully_add_category(self) -> None:
+        """
+        Ensure admin can add new category successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.category_add_url, {'name': 'Lamp'})
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data kategori berhasil ditambah')
+        self.assertEqual(len(Category.objects.all()), 1)
+        self.assertEqual(response.data['name'], 'Lamp')
+
+    def test_nonlogin_user_failed_to_add_new_category(self) -> None:
+        """
+        Ensure non-login user cannot add new category
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.category_add_url, {'name': 'Lamp'})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_add_new_category(self) -> None:
+        """
+        Ensure non-admin user cannot add new category
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.category_add_url, {'name': 'Lamp'})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_add_category_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot add category with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.category_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data kategori tidak sesuai / tidak lengkap')

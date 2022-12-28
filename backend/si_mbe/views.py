@@ -894,3 +894,21 @@ class CategoryList(generics.ListAPIView):
     serializer_class = CategorySerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+
+class CategoryAdd(generics.CreateAPIView):
+    queryset = Category.objects.all()
+    serializer_class = CategorySerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        if len(request.data) < 1:
+            return Response({'message': 'Data kategori tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = serializer.data
+        data['message'] = 'Data kategori berhasil ditambah'
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
