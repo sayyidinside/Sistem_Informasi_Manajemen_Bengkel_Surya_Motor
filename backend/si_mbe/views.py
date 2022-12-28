@@ -6,34 +6,13 @@ from django.contrib.auth.models import User
 from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
-from si_mbe.exceptions import (AdminNotFound, BrandNotFound, CategoryNotFound,
-                               CustomerNotFound, MechanicNotFound,
-                               RestockNotFound, SalesNotFound, ServiceNotFound,
-                               SparepartNotFound, StorageNotFound,
-                               SupplierNotFound, SalesmanNotFound)
+from si_mbe import exceptions, serializers
 from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
                            Restock, Sales, Service, Sparepart, Storage,
                            Supplier, Salesman)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
-                                AdminUpdateSerializers, BrandSerializers,
-                                CategorySerializers, CustomerSerializers,
-                                LogSerializers, MechanicSerializers,
-                                ProfileSerializers, ProfileUpdateSerializers,
-                                RestockPostSerializers,
-                                RestockReportDetailSerializers,
-                                RestockReportSerializers, RestockSerializers,
-                                SalesmanSerializers, SalesPostSerializers,
-                                SalesReportDetailSerializers,
-                                SalesReportSerializers, SalesSerializers,
-                                SearchSparepartSerializers,
-                                ServicePostSerializers,
-                                ServiceReportDetailSerializers,
-                                ServiceReportSerializers, ServiceSerializers,
-                                SparepartSerializers, StorageSerializers,
-                                SupplierSerializers, SalesmanPostSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -44,7 +23,7 @@ class Home(generics.GenericAPIView):
 
 class SearchSparepart(generics.ListAPIView):
     queryset = Sparepart.objects.all().order_by('name')
-    serializer_class = SearchSparepartSerializers
+    serializer_class = serializers.SearchSparepartSerializers
     pagination_class = CustomPagination
 
     lookup_field = 'sparepart_id'
@@ -71,14 +50,14 @@ class AdminDashboard(generics.GenericAPIView):
 
 class SparepartDataList(generics.ListAPIView):
     queryset = Sparepart.objects.all().order_by('sparepart_id')
-    serializer_class = SearchSparepartSerializers
+    serializer_class = serializers.SearchSparepartSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class SparepartDataAdd(generics.CreateAPIView):
     queryset = Sparepart.objects.all()
-    serializer_class = SparepartSerializers
+    serializer_class = serializers.SparepartSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -100,7 +79,7 @@ class SparepartDataAdd(generics.CreateAPIView):
 
 class SparepartDataUpdate(generics.RetrieveUpdateAPIView):
     queryset = Sparepart.objects.all()
-    serializer_class = SparepartSerializers
+    serializer_class = serializers.SparepartSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'sparepart_id'
@@ -108,7 +87,7 @@ class SparepartDataUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SparepartNotFound()
+            exc = exceptions.SparepartNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -136,14 +115,14 @@ class SparepartDataUpdate(generics.RetrieveUpdateAPIView):
 
 class SparepartDataDelete(generics.DestroyAPIView):
     queryset = Sparepart.objects.all()
-    serializer_class = SparepartSerializers
+    serializer_class = serializers.SparepartSerializers
     permission_classes = [IsLogin, IsAdminRole]
     lookup_field = 'sparepart_id'
     lookup_url_kwarg = 'sparepart_id'
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SparepartNotFound()
+            exc = exceptions.SparepartNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -158,14 +137,14 @@ class SparepartDataDelete(generics.DestroyAPIView):
 
 class SalesList(generics.ListAPIView):
     queryset = Sales.objects.all().order_by('sales_id')
-    serializer_class = SalesSerializers
+    serializer_class = serializers.SalesSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class SalesAdd(generics.CreateAPIView):
     queryset = Sales.objects.all()
-    serializer_class = SalesPostSerializers
+    serializer_class = serializers.SalesPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -191,7 +170,7 @@ class SalesAdd(generics.CreateAPIView):
 
 class SalesUpdate(generics.RetrieveUpdateAPIView):
     queryset = Sales.objects.all()
-    serializer_class = SalesPostSerializers
+    serializer_class = serializers.SalesPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'sales_id'
@@ -199,7 +178,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SalesNotFound()
+            exc = exceptions.SalesNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -231,7 +210,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
 
 class SalesDelete(generics.DestroyAPIView):
     queryset = Sales.objects.all()
-    serializer_class = SalesPostSerializers
+    serializer_class = serializers.SalesPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'sales_id'
@@ -239,7 +218,7 @@ class SalesDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SalesNotFound()
+            exc = exceptions.SalesNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -254,14 +233,14 @@ class SalesDelete(generics.DestroyAPIView):
 
 class RestockList(generics.ListAPIView):
     queryset = Restock.objects.all().order_by('restock_id')
-    serializer_class = RestockSerializers
+    serializer_class = serializers.RestockSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class RestockAdd(generics.CreateAPIView):
     queryset = Restock.objects.all()
-    serializer_class = RestockPostSerializers
+    serializer_class = serializers.RestockPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -287,7 +266,7 @@ class RestockAdd(generics.CreateAPIView):
 
 class RestockUpdate(generics.RetrieveUpdateAPIView):
     queryset = Restock.objects.all()
-    serializer_class = RestockPostSerializers
+    serializer_class = serializers.RestockPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'restock_id'
@@ -295,7 +274,7 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = RestockNotFound()
+            exc = exceptions.RestockNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -327,7 +306,7 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
 
 class RestockDelete(generics.DestroyAPIView):
     queryset = Restock.objects.all()
-    serializer_class = RestockPostSerializers
+    serializer_class = serializers.RestockPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'restock_id'
@@ -335,7 +314,7 @@ class RestockDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = RestockNotFound()
+            exc = exceptions.RestockNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -350,14 +329,14 @@ class RestockDelete(generics.DestroyAPIView):
 
 class SupplierList(generics.ListAPIView):
     queryset = Supplier.objects.all().order_by('supplier_id')
-    serializer_class = SupplierSerializers
+    serializer_class = serializers.SupplierSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class SupplierAdd(generics.CreateAPIView):
     queryset = Supplier.objects.all()
-    serializer_class = SupplierSerializers
+    serializer_class = serializers.SupplierSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -375,7 +354,7 @@ class SupplierAdd(generics.CreateAPIView):
 
 class SupplierUpdate(generics.RetrieveUpdateAPIView):
     queryset = Supplier.objects.all()
-    serializer_class = SupplierSerializers
+    serializer_class = serializers.SupplierSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'supplier_id'
@@ -383,7 +362,7 @@ class SupplierUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SupplierNotFound()
+            exc = exceptions.SupplierNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -408,7 +387,7 @@ class SupplierUpdate(generics.RetrieveUpdateAPIView):
 
 class SupplierDelete(generics.DestroyAPIView):
     queryset = Supplier.objects.all()
-    serializer_class = SupplierSerializers
+    serializer_class = serializers.SupplierSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'supplier_id'
@@ -416,7 +395,7 @@ class SupplierDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SupplierNotFound()
+            exc = exceptions.SupplierNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -428,14 +407,14 @@ class SupplierDelete(generics.DestroyAPIView):
 
 class SalesReportList(generics.ListAPIView):
     queryset = Sales.objects.all().order_by('sales_id')
-    serializer_class = SalesReportSerializers
+    serializer_class = serializers.SalesReportSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
 
 
 class SalesReportDetail(generics.RetrieveAPIView):
     queryset = Sales.objects.all()
-    serializer_class = SalesReportDetailSerializers
+    serializer_class = serializers.SalesReportDetailSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     lookup_field = 'sales_id'
@@ -443,20 +422,20 @@ class SalesReportDetail(generics.RetrieveAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SalesNotFound()
+            exc = exceptions.SalesNotFound()
         return super().handle_exception(exc)
 
 
 class RestockReportList(generics.ListAPIView):
     queryset = Restock.objects.all().order_by('restock_id')
-    serializer_class = RestockReportSerializers
+    serializer_class = serializers.RestockReportSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
 
 
 class RestockReportDetail(generics.RetrieveAPIView):
     queryset = Restock.objects.all()
-    serializer_class = RestockReportDetailSerializers
+    serializer_class = serializers.RestockReportDetailSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     lookup_field = 'restock_id'
@@ -464,7 +443,7 @@ class RestockReportDetail(generics.RetrieveAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = RestockNotFound()
+            exc = exceptions.RestockNotFound()
         return super().handle_exception(exc)
 
 
@@ -474,7 +453,7 @@ class CustomPasswordChangeView(PasswordChangeView):
 
 class ProfileDetail(generics.RetrieveAPIView):
     queryset = Profile.objects.all()
-    serializer_class = ProfileSerializers
+    serializer_class = serializers.ProfileSerializers
     permission_classes = [IsLogin, IsRelatedUserOrAdmin]
 
     lookup_field = 'user_id'
@@ -483,7 +462,7 @@ class ProfileDetail(generics.RetrieveAPIView):
 
 class ProfileUpdate(generics.RetrieveUpdateAPIView):
     queryset = Profile.objects.all()
-    serializer_class = ProfileUpdateSerializers
+    serializer_class = serializers.ProfileUpdateSerializers
     permission_classes = [IsLogin, IsRelatedUserOrAdmin]
 
     lookup_field = 'user_id'
@@ -511,7 +490,7 @@ class ProfileUpdate(generics.RetrieveUpdateAPIView):
 
 class LogList(generics.ListAPIView):
     queryset = Logs.objects.all().order_by('log_id')
-    serializer_class = LogSerializers
+    serializer_class = serializers.LogSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
 
@@ -545,14 +524,14 @@ class OwnerDashboard(generics.GenericAPIView):
 
 class AdminList(generics.ListAPIView):
     queryset = User.objects.prefetch_related('profile').filter(is_active=True, profile__role='A').order_by('id')
-    serializer_class = AdminSerializers
+    serializer_class = serializers.AdminSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
 
 
 class AdminAdd(generics.CreateAPIView):
     queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
-    serializer_class = AdminPostSerializers
+    serializer_class = serializers.AdminPostSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     def create(self, request, *args, **kwargs):
@@ -571,12 +550,12 @@ class AdminAdd(generics.CreateAPIView):
 
 class AdminUpdate(generics.RetrieveUpdateAPIView):
     queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
-    serializer_class = AdminUpdateSerializers
+    serializer_class = serializers.AdminUpdateSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = AdminNotFound()
+            exc = exceptions.AdminNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -601,12 +580,12 @@ class AdminUpdate(generics.RetrieveUpdateAPIView):
 
 class AdminDelete(generics.DestroyAPIView):
     queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
-    serializer_class = AdminPostSerializers
+    serializer_class = serializers.AdminPostSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = AdminNotFound()
+            exc = exceptions.AdminNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -621,14 +600,14 @@ class AdminDelete(generics.DestroyAPIView):
 
 class ServiceReportList(generics.ListAPIView):
     queryset = Service.objects.all().order_by('service_id')
-    serializer_class = ServiceReportSerializers
+    serializer_class = serializers.ServiceReportSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
 
 
 class ServiceReportDetail(generics.RetrieveAPIView):
     queryset = Service.objects.all()
-    serializer_class = ServiceReportDetailSerializers
+    serializer_class = serializers.ServiceReportDetailSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     lookup_field = 'service_id'
@@ -636,13 +615,13 @@ class ServiceReportDetail(generics.RetrieveAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = ServiceNotFound()
+            exc = exceptions.ServiceNotFound()
         return super().handle_exception(exc)
 
 
 class ServiceList(generics.ListAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set').order_by('service_id')
-    serializer_class = ServiceSerializers
+    serializer_class = serializers.ServiceSerializers
     permission_classes = [IsLogin, IsAdminRole]
     pagination_class = CustomPagination
     pagination_class.page_size = 100
@@ -650,7 +629,7 @@ class ServiceList(generics.ListAPIView):
 
 class ServiceAdd(generics.CreateAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
-    serializer_class = ServicePostSerializers
+    serializer_class = serializers.ServicePostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -671,7 +650,7 @@ class ServiceAdd(generics.CreateAPIView):
 
 class ServiceUpdate(generics.RetrieveUpdateAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
-    serializer_class = ServicePostSerializers
+    serializer_class = serializers.ServicePostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'service_id'
@@ -679,7 +658,7 @@ class ServiceUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = ServiceNotFound()
+            exc = exceptions.ServiceNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -715,7 +694,7 @@ class ServiceUpdate(generics.RetrieveUpdateAPIView):
 
 class ServiceDelete(generics.DestroyAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
-    serializer_class = ServicePostSerializers
+    serializer_class = serializers.ServicePostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'service_id'
@@ -723,7 +702,7 @@ class ServiceDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = ServiceNotFound()
+            exc = exceptions.ServiceNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -738,14 +717,14 @@ class ServiceDelete(generics.DestroyAPIView):
 
 class StorageList(generics.ListAPIView):
     queryset = Storage.objects.all().order_by('storage_id')
-    serializer_class = StorageSerializers
+    serializer_class = serializers.StorageSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class StorageAdd(generics.CreateAPIView):
     queryset = Storage.objects.all()
-    serializer_class = StorageSerializers
+    serializer_class = serializers.StorageSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -763,7 +742,7 @@ class StorageAdd(generics.CreateAPIView):
 
 class StorageUpdate(generics.RetrieveUpdateAPIView):
     queryset = Storage.objects.all()
-    serializer_class = StorageSerializers
+    serializer_class = serializers.StorageSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'storage_id'
@@ -771,7 +750,7 @@ class StorageUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = StorageNotFound()
+            exc = exceptions.StorageNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -796,7 +775,7 @@ class StorageUpdate(generics.RetrieveUpdateAPIView):
 
 class StorageDelete(generics.DestroyAPIView):
     queryset = Storage.objects.all()
-    serializer_class = StorageSerializers
+    serializer_class = serializers.StorageSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'storage_id'
@@ -804,7 +783,7 @@ class StorageDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = StorageNotFound()
+            exc = exceptions.StorageNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -816,14 +795,14 @@ class StorageDelete(generics.DestroyAPIView):
 
 class BrandList(generics.ListAPIView):
     queryset = Brand.objects.all().order_by('brand_id')
-    serializer_class = BrandSerializers
+    serializer_class = serializers.BrandSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class BrandAdd(generics.CreateAPIView):
     queryset = Brand.objects.all()
-    serializer_class = BrandSerializers
+    serializer_class = serializers.BrandSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -841,7 +820,7 @@ class BrandAdd(generics.CreateAPIView):
 
 class BrandUpdate(generics.RetrieveUpdateAPIView):
     queryset = Brand.objects.all()
-    serializer_class = BrandSerializers
+    serializer_class = serializers.BrandSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'brand_id'
@@ -849,7 +828,7 @@ class BrandUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = BrandNotFound()
+            exc = exceptions.BrandNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -874,7 +853,7 @@ class BrandUpdate(generics.RetrieveUpdateAPIView):
 
 class BrandDelete(generics.DestroyAPIView):
     queryset = Brand.objects.all()
-    serializer_class = BrandSerializers
+    serializer_class = serializers.BrandSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'brand_id'
@@ -882,7 +861,7 @@ class BrandDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = BrandNotFound()
+            exc = exceptions.BrandNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -894,14 +873,14 @@ class BrandDelete(generics.DestroyAPIView):
 
 class CategoryList(generics.ListAPIView):
     queryset = Category.objects.all().order_by('category_id')
-    serializer_class = CategorySerializers
+    serializer_class = serializers.CategorySerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class CategoryAdd(generics.CreateAPIView):
     queryset = Category.objects.all()
-    serializer_class = CategorySerializers
+    serializer_class = serializers.CategorySerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -919,7 +898,7 @@ class CategoryAdd(generics.CreateAPIView):
 
 class CategoryUpdate(generics.RetrieveUpdateAPIView):
     queryset = Category.objects.all()
-    serializer_class = CategorySerializers
+    serializer_class = serializers.CategorySerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'category_id'
@@ -927,7 +906,7 @@ class CategoryUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = CategoryNotFound()
+            exc = exceptions.CategoryNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -952,7 +931,7 @@ class CategoryUpdate(generics.RetrieveUpdateAPIView):
 
 class CategoryDelete(generics.DestroyAPIView):
     queryset = Category.objects.all()
-    serializer_class = CategorySerializers
+    serializer_class = serializers.CategorySerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'category_id'
@@ -960,7 +939,7 @@ class CategoryDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = CategoryNotFound()
+            exc = exceptions.CategoryNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -972,14 +951,14 @@ class CategoryDelete(generics.DestroyAPIView):
 
 class CustomerList(generics.ListAPIView):
     queryset = Customer.objects.all().order_by('customer_id')
-    serializer_class = CustomerSerializers
+    serializer_class = serializers.CustomerSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class CustomerAdd(generics.CreateAPIView):
     queryset = Customer.objects.all()
-    serializer_class = CustomerSerializers
+    serializer_class = serializers.CustomerSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -997,7 +976,7 @@ class CustomerAdd(generics.CreateAPIView):
 
 class CustomerUpdate(generics.RetrieveUpdateAPIView):
     queryset = Customer.objects.all()
-    serializer_class = CustomerSerializers
+    serializer_class = serializers.CustomerSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'customer_id'
@@ -1005,7 +984,7 @@ class CustomerUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = CustomerNotFound()
+            exc = exceptions.CustomerNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -1030,7 +1009,7 @@ class CustomerUpdate(generics.RetrieveUpdateAPIView):
 
 class CustomerDelete(generics.DestroyAPIView):
     queryset = Customer.objects.all()
-    serializer_class = CustomerSerializers
+    serializer_class = serializers.CustomerSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'customer_id'
@@ -1038,7 +1017,7 @@ class CustomerDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = CustomerNotFound()
+            exc = exceptions.CustomerNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -1050,14 +1029,14 @@ class CustomerDelete(generics.DestroyAPIView):
 
 class MechanicList(generics.ListAPIView):
     queryset = Mechanic.objects.all().order_by('mechanic_id')
-    serializer_class = MechanicSerializers
+    serializer_class = serializers.MechanicSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class MechanicAdd(generics.CreateAPIView):
     queryset = Mechanic.objects.all()
-    serializer_class = MechanicSerializers
+    serializer_class = serializers.MechanicSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -1075,7 +1054,7 @@ class MechanicAdd(generics.CreateAPIView):
 
 class MechanicUpdate(generics.RetrieveUpdateAPIView):
     queryset = Mechanic.objects.all()
-    serializer_class = MechanicSerializers
+    serializer_class = serializers.MechanicSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'mechanic_id'
@@ -1083,7 +1062,7 @@ class MechanicUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = MechanicNotFound()
+            exc = exceptions.MechanicNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -1108,7 +1087,7 @@ class MechanicUpdate(generics.RetrieveUpdateAPIView):
 
 class MechanicDelete(generics.DestroyAPIView):
     queryset = Mechanic.objects.all()
-    serializer_class = MechanicSerializers
+    serializer_class = serializers.MechanicSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'mechanic_id'
@@ -1116,7 +1095,7 @@ class MechanicDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = MechanicNotFound()
+            exc = exceptions.MechanicNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
@@ -1128,14 +1107,14 @@ class MechanicDelete(generics.DestroyAPIView):
 
 class SalesmanList(generics.ListAPIView):
     queryset = Salesman.objects.select_related('supplier_id').order_by('salesman_id')
-    serializer_class = SalesmanSerializers
+    serializer_class = serializers.SalesmanSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
 
 
 class SalesmanAdd(generics.CreateAPIView):
     queryset = Salesman.objects.select_related('supplier_id')
-    serializer_class = SalesmanPostSerializers
+    serializer_class = serializers.SalesmanPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -1153,7 +1132,7 @@ class SalesmanAdd(generics.CreateAPIView):
 
 class SalesmanUpdate(generics.RetrieveUpdateAPIView):
     queryset = Salesman.objects.select_related('supplier_id')
-    serializer_class = SalesmanPostSerializers
+    serializer_class = serializers.SalesmanPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'salesman_id'
@@ -1161,7 +1140,7 @@ class SalesmanUpdate(generics.RetrieveUpdateAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SalesmanNotFound()
+            exc = exceptions.SalesmanNotFound()
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
@@ -1186,7 +1165,7 @@ class SalesmanUpdate(generics.RetrieveUpdateAPIView):
 
 class SalesmanDelete(generics.DestroyAPIView):
     queryset = Salesman.objects.select_related('supplier_id')
-    serializer_class = SalesmanPostSerializers
+    serializer_class = serializers.SalesmanPostSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'salesman_id'
@@ -1194,7 +1173,7 @@ class SalesmanDelete(generics.DestroyAPIView):
 
     def handle_exception(self, exc):
         if isinstance(exc, Http404):
-            exc = SalesmanNotFound()
+            exc = exceptions.SalesmanNotFound()
         return super().handle_exception(exc)
 
     def destroy(self, request, *args, **kwargs):
