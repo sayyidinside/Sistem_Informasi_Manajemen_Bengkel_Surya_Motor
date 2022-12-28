@@ -6,19 +6,20 @@ from django.contrib.auth.models import User
 from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
-from si_mbe.exceptions import (AdminNotFound, BrandNotFound, RestockNotFound,
-                               SalesNotFound, ServiceNotFound,
+from si_mbe.exceptions import (AdminNotFound, BrandNotFound, CategoryNotFound,
+                               RestockNotFound, SalesNotFound, ServiceNotFound,
                                SparepartNotFound, StorageNotFound,
-                               SupplierNotFound, CategoryNotFound)
-from si_mbe.models import (Brand, Logs, Profile, Restock, Sales, Service,
-                           Sparepart, Storage, Supplier, Category)
+                               SupplierNotFound)
+from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
+                           Sales, Service, Sparepart, Storage, Supplier)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
 from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 AdminUpdateSerializers, BrandSerializers,
-                                CategorySerializers, LogSerializers,
-                                ProfileSerializers, ProfileUpdateSerializers,
+                                CategorySerializers, CustomerSerializers,
+                                LogSerializers, ProfileSerializers,
+                                ProfileUpdateSerializers,
                                 RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
@@ -965,3 +966,10 @@ class CategoryDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data kategori berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class CustomerList(generics.ListAPIView):
+    queryset = Customer.objects.all().order_by('customer_id')
+    serializer_class = CustomerSerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]

@@ -3100,3 +3100,55 @@ class CategoryDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('category_delete', kwargs={'category_id': 86591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data kategori tidak ditemukan')
+
+
+class CustomerListTestCase(SetTestCase):
+    customer_url = reverse('customer_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # setticustomer data
+        cls.storage = Customer.objects.create(
+            name='Preston Garvey',
+            contact='085701530830',
+            number_of_service=11,
+            total_payment=450000
+        )
+        Customer.objects.create(
+            name='Robert MacCready',
+            contact='085163511040',
+            number_of_service=3,
+            total_payment=51000
+        )
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_customer_list(self) -> None:
+        """
+        Ensure admin can get customer list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.customer_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'][0]['name'], self.storage.name)
+        self.assertEqual(response.data['results'][0]['contact'], self.storage.contact)
+        self.assertEqual(int(response.data['results'][0]['total_payment']), self.storage.total_payment)
+
+    def test_nonlogin_user_failed_to_access_customer_list(self) -> None:
+        """
+        Ensure non-login user cannot access customer list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.customer_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_customer_list(self) -> None:
+        """
+        Ensure non-admin user cannot access customer list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.customer_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

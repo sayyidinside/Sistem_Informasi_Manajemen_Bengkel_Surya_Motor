@@ -42,6 +42,10 @@ urlpatterns = [
      path('admin/category/add/', views.CategoryAdd.as_view(), name='category_add'),
      path('admin/category/edit/<int:category_id>/', views.CategoryUpdate.as_view(), name='category_update'),
      path('admin/category/delete/<int:category_id>/', views.CategoryDelete.as_view(), name='category_delete'),
+     path('admin/customer/', views.CustomerList.as_view(), name='customer_list'),
+     # path('admin/customer/add/', views.CustomerAdd.as_view(), name='customer_add'),
+     # path('admin/customer/edit/<int:customer_id>/', views.CustomerUpdate.as_view(), name='customer_update'),
+     # path('admin/customer/delete/<int:customer_id>/', views.CustomerDelete.as_view(), name='customer_delete'),
 
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
