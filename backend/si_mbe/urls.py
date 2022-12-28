@@ -51,7 +51,7 @@ urlpatterns = [
      path('admin/mechanic/edit/<int:mechanic_id>/', views.MechanicUpdate.as_view(), name='mechanic_update'),
      path('admin/mechanic/delete/<int:mechanic_id>/', views.MechanicDelete.as_view(), name='mechanic_delete'),
      path('admin/salesman/', views.SalesmanList.as_view(), name='salesman_list'),
-     # path('admin/salesman/add/', views.SalesmanAdd.as_view(), name='salesman_add'),
+     path('admin/salesman/add/', views.SalesmanAdd.as_view(), name='salesman_add'),
      # path('admin/salesman/edit/<int:salesman_id>/', views.SalesmanUpdate.as_view(), name='salesman_update'),
      # path('admin/salesman/delete/<int:salesman_id>/', views.SalesmanDelete.as_view(), name='salesman_delete'),
 

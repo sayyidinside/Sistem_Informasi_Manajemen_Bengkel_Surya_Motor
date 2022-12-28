@@ -33,7 +33,7 @@ from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 ServiceReportDetailSerializers,
                                 ServiceReportSerializers, ServiceSerializers,
                                 SparepartSerializers, StorageSerializers,
-                                SupplierSerializers)
+                                SupplierSerializers, SalesmanPostSerializers)
 from si_mbe.utility import perform_log
 
 
@@ -1127,7 +1127,25 @@ class MechanicDelete(generics.DestroyAPIView):
 
 
 class SalesmanList(generics.ListAPIView):
-    queryset = Salesman.objects.all().order_by('salesman_id')
+    queryset = Salesman.objects.select_related('supplier_id').order_by('salesman_id')
     serializer_class = SalesmanSerializers
     pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+
+class SalesmanAdd(generics.CreateAPIView):
+    queryset = Salesman.objects.select_related('supplier_id')
+    serializer_class = SalesmanPostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    def create(self, request, *args, **kwargs):
+        if len(request.data) < 3:
+            return Response({'message': 'Data salesman tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = serializer.data
+        data['message'] = 'Data salesman berhasil ditambah'
+        return Response(data, status=status.HTTP_201_CREATED, headers=headers)

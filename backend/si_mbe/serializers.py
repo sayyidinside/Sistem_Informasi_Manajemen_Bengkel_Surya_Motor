@@ -747,3 +747,9 @@ class SalesmanSerializers(serializers.ModelSerializer):
     class Meta:
         model = Salesman
         fields = ['salesman_id', 'name', 'contact', 'supplier']
+
+
+class SalesmanPostSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Salesman
+        fields = ['salesman_id', 'name', 'contact', 'supplier_id']
