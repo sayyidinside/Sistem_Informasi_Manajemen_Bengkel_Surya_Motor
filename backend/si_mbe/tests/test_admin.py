@@ -3152,3 +3152,72 @@ class CustomerListTestCase(SetTestCase):
         response = self.client.get(self.customer_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class CustomerAddTestCase(SetTestCase):
+    customer_add_url = reverse('customer_add')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        cls.data = {
+            'name': 'Piper Wright',
+            'contact':  '085701530830',
+            'number_of_service': 27,
+            'total_payment': 952000
+        }
+        cls.incomplete_data = {
+            'contact':  '085687028044',
+            'number_of_service': 16,
+            'total_payment': 395000
+        }
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_add_customer(self) -> None:
+        """
+        Ensure admin can add new customer successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.customer_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data pelanggan berhasil ditambah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['number_of_service'], self.data['number_of_service'])
+        self.assertEqual(int(response.data['total_payment']), self.data['total_payment'])
+
+    def test_nonlogin_user_failed_to_add_new_customer(self) -> None:
+        """
+        Ensure non-login user cannot add new customer
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.customer_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_add_new_customer(self) -> None:
+        """
+        Ensure non-admin user cannot add new customer
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.customer_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_add_customer_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot add customer with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.customer_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data pelanggan tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_add_customer_with_incomplete_data(self) -> None:
+        """
+        Ensure admin cannot add customer with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.customer_add_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data pelanggan tidak sesuai / tidak lengkap')
