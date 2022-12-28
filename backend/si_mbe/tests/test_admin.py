@@ -3483,3 +3483,89 @@ class MechanicAddTestCase(SetTestCase):
         response = self.client.post(self.mechanic_add_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
+
+
+class MechanicUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting customer data
+        cls.mechanic = Mechanic.objects.create(
+            name='The Crick',
+            contact='083260466406',
+            address='Jl Roshan'
+        )
+
+        cls.mechanic_update_url = reverse(
+            'mechanic_update',
+            kwargs={'mechanic_id': cls.mechanic.mechanic_id}
+        )
+
+        # Setting up input data
+        cls.data = {
+            'name': 'Essek',
+            'contact': '086084501500',
+            'address': 'Jl Roshan'
+        }
+        cls.incomplete_data = {
+            'address': 'Jl Railroad Boston'
+        }
+
+        return super().setUpTestData()
+
+    def test_successfully_update_mechanic(self) -> None:
+        """
+        Ensure admin can update mechanic successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.mechanic_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data mekanik berhasil dirubah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['address'], self.data['address'])
+
+    def test_nonlogin_user_failed_to_update_mechanic(self) -> None:
+        """
+        Ensure non-login user cannot update mechanic
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.mechanic_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_mechanic(self) -> None:
+        """
+        Ensure non-admin user cannot update mechanic
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.mechanic_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_update_nonexist_mechanic(self) -> None:
+        """
+        Ensure admin cannot update non-exist mechanic
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('mechanic_update', kwargs={'mechanic_id': 526523}),
+                                   self.data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak ditemukan')
+
+    def test_admin_failed_to_update_mechanic_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data mechanic with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.mechanic_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_update_mechanic_with_incomplete_data(self) -> None:
+        """
+        Ensure admin cannot update data mechanic with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.mechanic_update_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
