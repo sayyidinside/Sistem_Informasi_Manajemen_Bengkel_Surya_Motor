@@ -39,3 +39,7 @@ class BrandNotFound(NotFound):
 
 class CategoryNotFound(NotFound):
     default_detail = {'message': 'Data kategori tidak ditemukan'}
+
+
+class CustomerNotFound(NotFound):
+    default_detail = {'message': 'Data pelanggan tidak ditemukan'}
