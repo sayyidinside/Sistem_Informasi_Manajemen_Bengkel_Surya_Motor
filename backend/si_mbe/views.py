@@ -1182,3 +1182,23 @@ class SalesmanUpdate(generics.RetrieveUpdateAPIView):
             instance._prefetched_objects_cache = {}
 
         return Response(data)
+
+
+class SalesmanDelete(generics.DestroyAPIView):
+    queryset = Salesman.objects.select_related('supplier_id')
+    serializer_class = SalesmanPostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    lookup_field = 'salesman_id'
+    lookup_url_kwarg = 'salesman_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = SalesmanNotFound()
+        return super().handle_exception(exc)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        self.perform_destroy(instance)
+        message = {'message': 'Data salesman berhasil dihapus'}
+        return Response(message, status=status.HTTP_204_NO_CONTENT)
