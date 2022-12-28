@@ -41,6 +41,7 @@ urlpatterns = [
      path('admin/category/', views.CategoryList.as_view(), name='category_list'),
      path('admin/category/add/', views.CategoryAdd.as_view(), name='category_add'),
      path('admin/category/edit/<int:category_id>/', views.CategoryUpdate.as_view(), name='category_update'),
+     path('admin/category/delete/<int:category_id>/', views.CategoryDelete.as_view(), name='category_delete'),
 
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
