@@ -2995,3 +2995,61 @@ class CategoryAddTestCase(SetTestCase):
         response = self.client.post(self.category_add_url, {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data kategori tidak sesuai / tidak lengkap')
+
+
+class CategoryUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up category data
+        cls.category = Category.objects.create(name='Dawnguards')
+
+        cls.category_update_url = reverse('category_update', kwargs={'category_id': cls.category.category_id})
+
+        return super().setUpTestData()
+
+    def test_successfully_update_category(self) -> None:
+        """
+        Ensure admin can update category successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.category_update_url, {'name': 'Mistborn'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data kategori berhasil dirubah')
+        self.assertEqual(response.data['name'], 'Mistborn')
+
+    def test_nonlogin_user_failed_to_update_category(self) -> None:
+        """
+        Ensure non-login user cannot update category
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.category_update_url, {'name': 'Mistborn'})
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_category(self) -> None:
+        """
+        Ensure non-admin user cannot update category
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.category_update_url, {'name': 'Mistborn'})
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_update_nonexist_category(self) -> None:
+        """
+        Ensure admin cannot update non-exist category
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('category_update', kwargs={'category_id': 526523}),
+                                   {'name': 'Mistborn'})
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data kategori tidak ditemukan')
+
+    def test_admin_failed_to_update_category_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data category with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.category_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data kategori tidak sesuai / tidak lengkap')
