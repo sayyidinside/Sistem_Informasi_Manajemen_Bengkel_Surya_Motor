@@ -2,7 +2,7 @@ from django.contrib.auth.models import User
 from rest_framework import serializers
 from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail,
                            Sales, Sales_detail, Service, Service_action,
-                           Service_sparepart, Sparepart, Storage, Supplier)
+                           Service_sparepart, Sparepart, Storage, Supplier, Category)
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -720,3 +720,9 @@ class BrandSerializers(serializers.ModelSerializer):
     class Meta:
         model = Brand
         fields = ['brand_id', 'name']
+
+
+class CategorySerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ['category_id', 'name']

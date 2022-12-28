@@ -11,14 +11,14 @@ from si_mbe.exceptions import (AdminNotFound, BrandNotFound, RestockNotFound,
                                SparepartNotFound, StorageNotFound,
                                SupplierNotFound)
 from si_mbe.models import (Brand, Logs, Profile, Restock, Sales, Service,
-                           Sparepart, Storage, Supplier)
+                           Sparepart, Storage, Supplier, Category)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
 from si_mbe.serializers import (AdminPostSerializers, AdminSerializers,
                                 AdminUpdateSerializers, BrandSerializers,
-                                LogSerializers, ProfileSerializers,
-                                ProfileUpdateSerializers,
+                                CategorySerializers, LogSerializers,
+                                ProfileSerializers, ProfileUpdateSerializers,
                                 RestockPostSerializers,
                                 RestockReportDetailSerializers,
                                 RestockReportSerializers, RestockSerializers,
@@ -887,3 +887,10 @@ class BrandDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data merek / brand berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class CategoryList(generics.ListAPIView):
+    queryset = Category.objects.all().order_by('category_id')
+    serializer_class = CategorySerializers
+    pagination_class = CustomPagination
+    permission_classes = [IsLogin, IsAdminRole]

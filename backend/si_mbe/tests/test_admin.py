@@ -2912,3 +2912,44 @@ class BrandDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('brand_delete', kwargs={'brand_id': 86591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data merek / brand tidak ditemukan')
+
+
+class CategoryListTestCase(SetTestCase):
+    category_url = reverse('category_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up category data
+        Category.objects.create(name='Oil')
+        Category.objects.create(name='Bodypart')
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_category_list(self) -> None:
+        """
+        Ensure admin can get category list successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.category_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'][0]['name'], 'Oil')
+        self.assertEqual(response.data['results'][1]['name'], 'Bodypart')
+
+    def test_nonlogin_user_failed_to_access_category_list(self) -> None:
+        """
+        Ensure non-login user cannot access category list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.category_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_category_list(self) -> None:
+        """
+        Ensure non-admin user cannot access category list
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.category_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
