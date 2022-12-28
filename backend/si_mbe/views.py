@@ -10,7 +10,7 @@ from si_mbe.exceptions import (AdminNotFound, BrandNotFound, CategoryNotFound,
                                CustomerNotFound, MechanicNotFound,
                                RestockNotFound, SalesNotFound, ServiceNotFound,
                                SparepartNotFound, StorageNotFound,
-                               SupplierNotFound)
+                               SupplierNotFound, SalesmanNotFound)
 from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
                            Restock, Sales, Service, Sparepart, Storage,
                            Supplier, Salesman)
@@ -1149,3 +1149,36 @@ class SalesmanAdd(generics.CreateAPIView):
         data = serializer.data
         data['message'] = 'Data salesman berhasil ditambah'
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
+
+
+class SalesmanUpdate(generics.RetrieveUpdateAPIView):
+    queryset = Salesman.objects.select_related('supplier_id')
+    serializer_class = SalesmanPostSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    lookup_field = 'salesman_id'
+    lookup_url_kwarg = 'salesman_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = SalesmanNotFound()
+        return super().handle_exception(exc)
+
+    def update(self, request, *args, **kwargs):
+        if len(request.data) < 3:
+            return Response({'message': 'Data salesman tidak sesuai / tidak lengkap'},
+                            status=status.HTTP_400_BAD_REQUEST)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        self.perform_update(serializer)
+        data = serializer.data
+        data['message'] = 'Data salesman berhasil dirubah'
+
+        if getattr(instance, '_prefetched_objects_cache', None):
+            # If 'prefetch_related' has been applied to a queryset, we need to
+            # forcibly invalidate the prefetch cache on the instance.
+            instance._prefetched_objects_cache = {}
+
+        return Response(data)

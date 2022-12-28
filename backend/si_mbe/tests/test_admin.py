@@ -3488,7 +3488,7 @@ class MechanicAddTestCase(SetTestCase):
 class MechanicUpdateTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
-        # Setting customer data
+        # Setting mechanic data
         cls.mechanic = Mechanic.objects.create(
             name='The Crick',
             contact='083260466406',
@@ -3750,5 +3750,98 @@ class SalesmanAddTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.post(self.salesman_add_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data salesman tidak sesuai / tidak lengkap')
+
+
+class SalesmanUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting supplier data
+        cls.supplier = Supplier.objects.create(
+            name='Alpha Flight',
+            address='Canada',
+            contact='0850640564646'
+        )
+
+        # Setting salesman data
+        cls.salesman = Salesman.objects.create(
+            name='James Howlett',
+            contact='083260466406',
+            supplier_id=cls.supplier
+        )
+
+        cls.salesman_update_url = reverse(
+            'salesman_update',
+            kwargs={'salesman_id': cls.salesman.salesman_id}
+        )
+
+        # Setting up input data
+        cls.data = {
+            'name': 'Logan',
+            'contact': '085020260654',
+            'supplier_id': cls.supplier.supplier_id
+        }
+        cls.incomplete_data = {
+            'name': 'Logan'
+        }
+
+        return super().setUpTestData()
+
+    def test_successfully_update_salesman(self) -> None:
+        """
+        Ensure admin can update salesman successfully
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.salesman_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data salesman berhasil dirubah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['supplier_id'], self.data['supplier_id'])
+
+    def test_nonlogin_user_failed_to_update_salesman(self) -> None:
+        """
+        Ensure non-login user cannot update salesman
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.salesman_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_update_salesman(self) -> None:
+        """
+        Ensure non-admin user cannot update salesman
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.salesman_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_update_nonexist_salesman(self) -> None:
+        """
+        Ensure admin cannot update non-exist salesman
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(reverse('salesman_update', kwargs={'salesman_id': 526523}),
+                                   self.data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data salesman tidak ditemukan')
+
+    def test_admin_failed_to_update_salesman_with_empty_data(self) -> None:
+        """
+        Ensure admin cannot update data salesman with empty data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.salesman_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data salesman tidak sesuai / tidak lengkap')
+
+    def test_admin_failed_to_update_salesman_with_incomplete_data(self) -> None:
+        """
+        Ensure admin cannot update data salesman with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.salesman_update_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data salesman tidak sesuai / tidak lengkap')

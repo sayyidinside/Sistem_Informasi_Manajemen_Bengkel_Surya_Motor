@@ -47,3 +47,7 @@ class CustomerNotFound(NotFound):
 
 class MechanicNotFound(NotFound):
     default_detail = {'message': 'Data mekanik tidak ditemukan'}
+
+
+class SalesmanNotFound(NotFound):
+    default_detail = {'message': 'Data salesman tidak ditemukan'}
