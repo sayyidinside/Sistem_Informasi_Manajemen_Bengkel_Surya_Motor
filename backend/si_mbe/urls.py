@@ -49,7 +49,7 @@ urlpatterns = [
      path('admin/mechanic/', views.MechanicList.as_view(), name='mechanic_list'),
      path('admin/mechanic/add/', views.MechanicAdd.as_view(), name='mechanic_add'),
      path('admin/mechanic/edit/<int:mechanic_id>/', views.MechanicUpdate.as_view(), name='mechanic_update'),
-     # path('admin/mechanic/delete/<int:mechanic_id>/', views.MechanicDelete.as_view(), name='mechanic_delete'),
+     path('admin/mechanic/delete/<int:mechanic_id>/', views.MechanicDelete.as_view(), name='mechanic_delete'),
 
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
