@@ -154,10 +154,14 @@ class SalesManagementSerializers(serializers.ModelSerializer):
 
 class RestockDetailSerializers(serializers.ModelSerializer):
     sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
+    total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Restock_detail
-        fields = ['restock_detail_id', 'sparepart', 'individual_price', 'quantity']
+        fields = ['restock_detail_id', 'sparepart', 'individual_price', 'quantity', 'total_price']
+
+    def get_total_price(self, obj):
+        return int(obj.quantity * obj.individual_price)
 
 
 class RestockSerializers(serializers.ModelSerializer):
@@ -167,6 +171,7 @@ class RestockSerializers(serializers.ModelSerializer):
     salesman = serializers.ReadOnlyField(source='salesman_id.name')
     salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
     content = RestockDetailSerializers(many=True, source='restock_detail_set')
+    total_restock_cost = serializers.SerializerMethodField()
 
     class Meta:
         model = Restock
@@ -178,10 +183,18 @@ class RestockSerializers(serializers.ModelSerializer):
             'supplier_contact',
             'salesman',
             'salesman_contact',
+            'total_restock_cost',
             'is_paid_off',
             'deposit',
             'content'
         ]
+
+    def get_total_restock_cost(self, obj):
+        restock_serializers = RestockDetailSerializers(obj.restock_detail_set, many=True)
+        total = 0
+        for restock in restock_serializers.data:
+            total += int(restock['individual_price']) * restock['quantity']
+        return total
 
 
 class RestockDetailManagementSerializers(serializers.ModelSerializer):
@@ -320,6 +333,7 @@ class RestockReportSerializers(serializers.ModelSerializer):
     supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact')
     salesman = serializers.ReadOnlyField(source='salesman_id.name')
     salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
+    total_restock_cost = serializers.SerializerMethodField()
 
     class Meta:
         model = Restock
@@ -329,6 +343,7 @@ class RestockReportSerializers(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'no_faktur',
+            'total_restock_cost',
             'is_paid_off',
             'deposit',
             'due_date',
@@ -337,6 +352,13 @@ class RestockReportSerializers(serializers.ModelSerializer):
             'salesman',
             'salesman_contact',
         ]
+
+    def get_total_restock_cost(self, obj):
+        restock_serializers = RestockDetailSerializers(obj.restock_detail_set, many=True)
+        total = 0
+        for restock in restock_serializers.data:
+            total += int(restock['individual_price']) * restock['quantity']
+        return total
 
 
 class RestockReportDetailSerializers(serializers.ModelSerializer):
@@ -349,6 +371,7 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
     salesman = serializers.ReadOnlyField(source='salesman_id.name')
     salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
     content = RestockDetailSerializers(many=True, source='restock_detail_set')
+    total_restock_cost = serializers.SerializerMethodField()
 
     class Meta:
         model = Restock
@@ -358,6 +381,7 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
             'created_at',
             'updated_at',
             'no_faktur',
+            'total_restock_cost',
             'is_paid_off',
             'deposit',
             'due_date',
@@ -367,6 +391,13 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
             'salesman_contact',
             'content',
         ]
+
+    def get_total_restock_cost(self, obj):
+        restock_serializers = RestockDetailSerializers(obj.restock_detail_set, many=True)
+        total = 0
+        for restock in restock_serializers.data:
+            total += int(restock['individual_price']) * restock['quantity']
+        return total
 
 
 class ProfileSerializers(serializers.ModelSerializer):
@@ -796,3 +827,21 @@ class SalesmanManagementSerializers(serializers.ModelSerializer):
     class Meta:
         model = Salesman
         fields = ['salesman_id', 'name', 'contact', 'supplier_id']
+
+
+class RestockDueSerializers(serializers.ModelSerializer):
+    # created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    supplier = serializers.ReadOnlyField(source='supplier_id.name')
+    remaining_payment = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Restock
+        fields = ['restock_id', 'no_faktur', 'supplier', 'remaining_payment', 'due_date']
+
+    def get_remaining_payment(self, obj):
+        restock_serializer = RestockDetailSerializers(obj.restock_detail_set, many=True)
+        total_price = 0
+        for sparepart in restock_serializer.data:
+            total_price += sparepart['individual_price']
+        remaining_payment = total_price - restock_serializer['individual_price']
+        return remaining_payment

@@ -362,6 +362,7 @@ class RestockReportTestCase(APITestCase):
                 'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'no_faktur': self.restocks[0].no_faktur,
+                'total_restock_cost': 0,
                 'is_paid_off': False,
                 'deposit': str(self.restocks[0].deposit),
                 'due_date': self.restocks[0].due_date.strftime('%d-%m-%Y'),
@@ -376,6 +377,7 @@ class RestockReportTestCase(APITestCase):
                 'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
                 'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
                 'no_faktur': self.restocks[1].no_faktur,
+                'total_restock_cost': 0,
                 'is_paid_off': False,
                 'deposit': str(self.restocks[1].deposit),
                 'due_date': self.restocks[1].due_date.strftime('%d-%m-%Y'),
@@ -508,6 +510,7 @@ class RestockReportDetailTestCase(APITestCase):
                 'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
                 'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
                 'no_faktur': self.restock.no_faktur,
+                'total_restock_cost': 1395000000,
                 'is_paid_off': False,
                 'deposit': str(self.restock.deposit),
                 'due_date': self.restock.due_date.strftime('%d-%m-%Y'),
@@ -521,18 +524,21 @@ class RestockReportDetailTestCase(APITestCase):
                         'sparepart': self.spareparts[2].name,
                         'individual_price':'5000000',
                         'quantity': 200,
+                        'total_price': 1000000000
                     },
                     {
                         'restock_detail_id': self.restock_detail_2.restock_detail_id,
                         'sparepart': self.spareparts[0].name,
                         'individual_price':'400000',
                         'quantity': 500,
+                        'total_price': 200000000
                     },
                     {
                         'restock_detail_id': self.restock_detail_3.restock_detail_id,
                         'sparepart': self.spareparts[1].name,
                         'individual_price':'650000',
                         'quantity': 300,
+                        'total_price': 195000000
                     }
                 ]
             }

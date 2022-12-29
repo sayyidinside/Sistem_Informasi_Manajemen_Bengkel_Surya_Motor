@@ -27,12 +27,114 @@ class SetTestCase(APITestCase):
 class AdminDashboardTestCase(SetTestCase):
     admin_dashboard_url = reverse('admin_dashboard')
 
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up sparepart data
+        cls.sparepart = []
+        for i in range(11):
+            cls.sparepart.append(
+                Sparepart.objects.create(
+                    name=f'Something {i}',
+                    partnumber=f'HFh992-{i}',
+                    quantity=50,
+                    motor_type='Yamaha Nmax',
+                    sparepart_type='24Q-22',
+                    price=5400000,
+                    workshop_price=5300000,
+                    install_price=5500000,
+                )
+            )
+
+        # Setting up sales data
+        cls.sales = Sales.objects.create(
+            deposit=10000
+        )
+
+        # Setting up sales_detail data
+        Sales_detail.objects.create(
+            sales_id=cls.sales,
+            sparepart_id=cls.sparepart[0],
+            quantity=10
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales,
+            sparepart_id=cls.sparepart[4],
+            quantity=5
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales,
+            sparepart_id=cls.sparepart[3],
+            quantity=23
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales,
+            sparepart_id=cls.sparepart[1],
+            quantity=1
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales,
+            sparepart_id=cls.sparepart[5],
+            quantity=60
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales,
+            sparepart_id=cls.sparepart[2],
+            quantity=26
+        )
+
+        cls.restock = []
+        # Setting up restock data
+        for i in range(9):
+            cls.restock.append(
+                Restock.objects.create(
+                    no_faktur=f'HF2-{i}',
+                    due_date=date.today() + timedelta(days=i),
+                    deposit=10000
+                )
+            )
+
+        for i in range(9):
+            Restock_detail.objects.create(
+                restock_id=cls.restock[i],
+                sparepart_id=cls.sparepart[i],
+                individual_price=int(f'{i}20000'),
+                quantity=11+i
+            )
+
+        # Setting up service_sparepart
+        Service_sparepart.objects.create(
+            sparepart_id=cls.sparepart[0],
+            quantity=12
+        )
+        Service_sparepart.objects.create(
+            sparepart_id=cls.sparepart[3],
+            quantity=31
+        )
+        Service_sparepart.objects.create(
+            sparepart_id=cls.sparepart[1],
+            quantity=28
+        )
+        Service_sparepart.objects.create(
+            sparepart_id=cls.sparepart[2],
+            quantity=8
+        )
+        Service_sparepart.objects.create(
+            sparepart_id=cls.sparepart[5],
+            quantity=13
+        )
+        Service_sparepart.objects.create(
+            sparepart_id=cls.sparepart[6],
+            quantity=21
+        )
+        return super().setUpTestData()
+
     def test_admin_successfully_accessed_admin_dashboard(self) -> None:
         """
         Ensure admin can access admin dashboard
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.admin_dashboard_url)
+        # print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
     def test_nonlogin_user_failed_to_access_admin_dashboard(self) -> None:
@@ -1049,6 +1151,7 @@ class RestockListTestCase(SetTestCase):
                 'supplier_contact': self.supplier.contact,
                 'salesman': self.salesman.name,
                 'salesman_contact': self.salesman.contact,
+                'total_restock_cost': 9100000,
                 'is_paid_off': False,
                 'deposit': str(self.restocks[0].deposit),
                 'content': [
@@ -1057,6 +1160,7 @@ class RestockListTestCase(SetTestCase):
                         'sparepart': self.spareparts[3].name,
                         'individual_price':'4550000',
                         'quantity': 2,
+                        'total_price': 9100000
                     }
                 ]
             },
@@ -1068,6 +1172,7 @@ class RestockListTestCase(SetTestCase):
                 'supplier_contact': self.supplier.contact,
                 'salesman': self.salesman.name,
                 'salesman_contact': self.salesman.contact,
+                'total_restock_cost': 36400000,
                 'is_paid_off': False,
                 'deposit': str(self.restocks[1].deposit),
                 'content': [
@@ -1076,12 +1181,14 @@ class RestockListTestCase(SetTestCase):
                         'sparepart': self.spareparts[0].name,
                         'individual_price':'4550000',
                         'quantity': 5,
+                        'total_price': 22750000
                     },
                     {
                         'restock_detail_id': self.restock_detail_3.restock_detail_id,
                         'sparepart': self.spareparts[1].name,
                         'individual_price':'4550000',
                         'quantity': 3,
+                        'total_price': 13650000
                     }
                 ]
             }
