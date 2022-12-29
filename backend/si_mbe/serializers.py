@@ -375,27 +375,30 @@ class ProfileSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Profile
-        fields = ['name', 'email', 'contact', 'role']
+        fields = ['name', 'email', 'contact', 'address', 'role']
 
 
 class ProfileUpdateSerializers(serializers.ModelSerializer):
+    username = serializers.CharField(source='user_id.username')
     email = serializers.EmailField(source='user_id.email')
 
     class Meta:
         model = Profile
-        fields = ['name', 'email', 'contact']
+        fields = ['name', 'contact', 'address', 'email', 'username']
 
     def update(self, instance, validated_data):
         # get email and assigning to user instance
-        email = validated_data.pop('user_id')
+        user_data = validated_data.pop('user_id')
 
         user = instance.user_id
-        user.email = email.get('email', user.email)
+        user.email = user_data.get('email', user.email)
+        user.username = user_data.get('username', user.username)
         user.save()
 
         # Assigning to profile instance
         instance.name = validated_data.get('name', instance.name)
         instance.contact = validated_data.get('contact', instance.contact)
+        instance.address = validated_data.get('address', instance.address)
         instance.save()
 
         return instance

@@ -349,7 +349,8 @@ class ProfileDetailTestCase(APITestCase):
             user_id=cls.user,
             role='A',
             name='Richard Rider',
-            contact='081256456948'
+            contact='081256456948',
+            address='Earth'
         )
 
         cls.nonadmin_user = User.objects.create_user(
@@ -361,7 +362,8 @@ class ProfileDetailTestCase(APITestCase):
             user_id=cls.nonadmin_user,
             role='P',
             name='Ultron',
-            contact='011011000111'
+            contact='011011000111',
+            address='Earth'
         )
 
         return super().setUpTestData()
@@ -377,6 +379,7 @@ class ProfileDetailTestCase(APITestCase):
             'name': self.user.profile.name,
             'email': self.user.email,
             'contact': self.user.profile.contact,
+            'address': self.user.profile.address,
             'role': self.user.profile.get_role_display()
         })
 
@@ -408,6 +411,7 @@ class ProfileDetailTestCase(APITestCase):
             'name': self.nonadmin_user.profile.name,
             'email': self.nonadmin_user.email,
             'contact': self.nonadmin_user.profile.contact,
+            'address': self.user.profile.address,
             'role': self.nonadmin_user.profile.get_role_display()
         })
 
@@ -445,9 +449,22 @@ class ProfileUpdateTestCase(APITestCase):
 
         # Setting up input data
         cls.data = {
+            'username': 'richardrider',
             'name': 'Sam Alexander',
             'email': 'kidnova@gmail.com',
             'contact': '085263486045',
+            'address': 'Xandar, Andromeda'
+        }
+        cls.other_data = {
+            'username': 'steveditko',
+            'name': 'Steve Ditko',
+            'email': 'ditko@marvel.com',
+            'contact': '088164064604',
+            'address': 'New York, America'
+        }
+        cls.incomplete_data = {
+            'username': 'selfwarlock',
+            'email': 'newmutant@xavier.com'
         }
 
         return super().setUpTestData()
@@ -466,8 +483,10 @@ class ProfileUpdateTestCase(APITestCase):
         self.assertEqual(response.data['message'], 'Profile berhasil dirubah')
         self.assertEqual(response.data, {
             'name': self.data['name'],
-            'email': self.data['email'],
             'contact': self.data['contact'],
+            'address': self.data['address'],
+            'email': self.data['email'],
+            'username': self.data['username'],
             'message': 'Profile berhasil dirubah'
         })
 
@@ -509,15 +528,14 @@ class ProfileUpdateTestCase(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data profile tidak sesuai / tidak lengkap')
 
-    def test_user_failed_to_update_profile_with_partial_data(self) -> None:
+    def test_user_failed_to_update_profile_incomplete_data(self) -> None:
         """
-        Ensure user cannot update profile with partial data / input
+        Ensure user cannot update profile incomplete data / input
         """
-        self.partial_data = {'name': 'Self Warlock'}
         self.client.force_authenticate(user=self.user)
         response = self.client.put(
             reverse('profile_update', kwargs={'user_id': self.user.pk}),
-            self.partial_data,
+            self.incomplete_data,
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
@@ -530,14 +548,16 @@ class ProfileUpdateTestCase(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.put(
             reverse('profile_update', kwargs={'user_id': self.nonadmin_user.pk}),
-            self.data,
+            self.other_data,
             format='json'
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Profile berhasil dirubah')
         self.assertEqual(response.data, {
-            'name': self.data['name'],
-            'email': self.data['email'],
-            'contact': self.data['contact'],
+            'name': self.other_data['name'],
+            'contact': self.other_data['contact'],
+            'address': self.other_data['address'],
+            'email': self.other_data['email'],
+            'username': self.other_data['username'],
             'message': 'Profile berhasil dirubah'
         })
