@@ -95,6 +95,7 @@ class SalesReportListTestCase(APITestCase):
                 'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'customer': self.sales_1.customer_id.name,
                 'contact': self.sales_1.customer_id.contact,
+                'total_price_sales': 0,
                 'is_paid_off': False,
                 'deposit': str(self.sales_1.deposit)
             },
@@ -105,6 +106,7 @@ class SalesReportListTestCase(APITestCase):
                 'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
                 'customer': self.sales_2.customer_id.name,
                 'contact': self.sales_2.customer_id.contact,
+                'total_price_sales': 0,
                 'is_paid_off': True,
                 'deposit': str(self.sales_2.deposit)
             }
@@ -213,6 +215,7 @@ class SalesReportDetail(APITestCase):
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.sales_report_detail_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data, {
                 'sales_id': self.sales.sales_id,
                 'admin': 'Richard Rider',
@@ -220,6 +223,7 @@ class SalesReportDetail(APITestCase):
                 'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
                 'customer': self.sales.customer_id.name,
                 'contact': self.sales.customer_id.contact,
+                'total_price_sales': 241000000,
                 'is_paid_off': False,
                 'deposit': str(self.sales.deposit),
                 'content': [
@@ -227,19 +231,22 @@ class SalesReportDetail(APITestCase):
                         'sales_detail_id': self.sales_details_1.sales_detail_id,
                         'sparepart': self.spareparts[2].name,
                         'quantity': 15,
-                        'is_workshop': False
+                        'is_workshop': False,
+                        'total_price': 81000000
                     },
                     {
                         'sales_detail_id': self.sales_details_2.sales_detail_id,
                         'sparepart': self.spareparts[0].name,
                         'quantity': 10,
-                        'is_workshop': False
+                        'is_workshop': False,
+                        'total_price': 54000000
                     },
                     {
                         'sales_detail_id': self.sales_details_3.sales_detail_id,
                         'sparepart': self.spareparts[1].name,
                         'quantity': 20,
-                        'is_workshop': True
+                        'is_workshop': True,
+                        'total_price': 106000000
                     }
                 ]
             }

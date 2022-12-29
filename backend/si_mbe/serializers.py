@@ -58,16 +58,23 @@ class SparepartSerializers(serializers.ModelSerializer):
 
 class SalesDetailSerializers(serializers.ModelSerializer):
     sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
+    total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Sales_detail
-        fields = ['sales_detail_id', 'sparepart', 'quantity', 'is_workshop']
+        fields = ['sales_detail_id', 'sparepart', 'quantity', 'is_workshop', 'total_price']
+
+    def get_total_price(self, obj):
+        if obj.is_workshop:
+            return int(obj.quantity * obj.sparepart_id.workshop_price)
+        return int(obj.quantity * obj.sparepart_id.price)
 
 
 class SalesSerializers(serializers.ModelSerializer):
     content = SalesDetailSerializers(many=True, source='sales_detail_set')
     customer = serializers.ReadOnlyField(source='customer_id.name')
     contact = serializers.ReadOnlyField(source='customer_id.contact')
+    total_price_sales = serializers.SerializerMethodField()
 
     class Meta:
         model = Sales
@@ -75,10 +82,18 @@ class SalesSerializers(serializers.ModelSerializer):
             'sales_id',
             'customer',
             'contact',
+            'total_price_sales',
             'is_paid_off',
             'deposit',
             'content'
         ]
+
+    def get_total_price_sales(self, obj):
+        sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
+        total_price = 0
+        for sales in sales_serializer.data:
+            total_price += sales['total_price']
+        return total_price
 
 
 class SalesDetailManagementSerializers(serializers.ModelSerializer):
@@ -286,6 +301,7 @@ class SalesReportSerializers(serializers.ModelSerializer):
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     customer = serializers.ReadOnlyField(source='customer_id.name')
     contact = serializers.ReadOnlyField(source='customer_id.contact')
+    total_price_sales = serializers.SerializerMethodField()
 
     class Meta:
         model = Sales
@@ -296,9 +312,17 @@ class SalesReportSerializers(serializers.ModelSerializer):
             'updated_at',
             'customer',
             'contact',
+            'total_price_sales',
             'is_paid_off',
             'deposit',
         ]
+
+    def get_total_price_sales(self, obj):
+        sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
+        total_price = 0
+        for sales in sales_serializer.data:
+            total_price += sales['total_price']
+        return total_price
 
 
 class SalesReportDetailSerializers(serializers.ModelSerializer):
@@ -308,6 +332,7 @@ class SalesReportDetailSerializers(serializers.ModelSerializer):
     customer = serializers.ReadOnlyField(source='customer_id.name')
     contact = serializers.ReadOnlyField(source='customer_id.contact')
     content = SalesDetailSerializers(many=True, source='sales_detail_set')
+    total_price_sales = serializers.SerializerMethodField()
 
     class Meta:
         model = Sales
@@ -318,10 +343,18 @@ class SalesReportDetailSerializers(serializers.ModelSerializer):
             'updated_at',
             'customer',
             'contact',
+            'total_price_sales',
             'is_paid_off',
             'deposit',
             'content',
         ]
+
+    def get_total_price_sales(self, obj):
+        sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
+        total_price = 0
+        for sales in sales_serializer.data:
+            total_price += sales['total_price']
+        return total_price
 
 
 class RestockReportSerializers(serializers.ModelSerializer):

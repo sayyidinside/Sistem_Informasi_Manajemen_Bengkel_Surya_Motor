@@ -611,7 +611,7 @@ class SalesListTestCase(SetTestCase):
         )
         cls.sales_details_2 = Sales_detail.objects.create(
             quantity=5,
-            is_workshop=False,
+            is_workshop=True,
             sales_id=cls.sales[1],
             sparepart_id=cls.spareparts[0]
         )
@@ -637,6 +637,7 @@ class SalesListTestCase(SetTestCase):
                 'sales_id': self.sales[0].sales_id,
                 'customer': self.sales[0].customer_id.name,
                 'contact': self.sales[0].customer_id.contact,
+                'total_price_sales': 10800000,
                 'is_paid_off': False,
                 'deposit': str(self.sales[0].deposit),
                 'content': [
@@ -645,6 +646,7 @@ class SalesListTestCase(SetTestCase):
                         'sparepart': self.spareparts[3].name,
                         'quantity': 2,
                         'is_workshop': False,
+                        'total_price': 10800000
                     }
                 ]
             },
@@ -652,6 +654,7 @@ class SalesListTestCase(SetTestCase):
                 'sales_id': self.sales[1].sales_id,
                 'customer': self.sales[1].customer_id.name,
                 'contact': self.sales[1].customer_id.contact,
+                'total_price_sales': 42700000,
                 'is_paid_off': False,
                 'deposit': str(self.sales[1].deposit),
                 'content': [
@@ -659,13 +662,15 @@ class SalesListTestCase(SetTestCase):
                         'sales_detail_id': self.sales_details_2.sales_detail_id,
                         'sparepart': self.spareparts[0].name,
                         'quantity': 5,
-                        'is_workshop': False,
+                        'is_workshop': True,
+                        'total_price': 26500000
                     },
                     {
                         'sales_detail_id': self.sales_details_3.sales_detail_id,
                         'sparepart': self.spareparts[1].name,
                         'quantity': 3,
                         'is_workshop': False,
+                        'total_price': 16200000
                     }
                 ]
             }
