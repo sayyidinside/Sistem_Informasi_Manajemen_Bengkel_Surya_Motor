@@ -1006,6 +1006,13 @@ class ServiceReportTestCase(SetTestCase):
         cls.created_at = cls.service.created_at + timedelta(hours=7)
         cls.updated_at = cls.service.updated_at + timedelta(hours=7)
 
+        # Setting up service_action and service_sparepart
+        Service_action.objects.create(
+            name='Angkat Motor',
+            cost='120000',
+            service_id=cls.service
+        )
+
         return super().setUpTestData()
 
     def test_owner_successfully_access_service_report_list(self) -> None:
@@ -1026,6 +1033,7 @@ class ServiceReportTestCase(SetTestCase):
                 'mechanic': self.service.mechanic_id.name,
                 'customer': self.service.customer_id.name,
                 'customer_contact': self.service.customer_id.contact,
+                'total_price_of_service': 120000,
                 'is_paid_off': self.service.is_paid_off,
                 'deposit': str(self.service.deposit),
                 'discount': str(self.service.discount)
@@ -1166,6 +1174,7 @@ class ServiceReportDetailTestCase(SetTestCase):
             'mechanic': self.service.mechanic_id.name,
             'customer': self.service.customer_id.name,
             'customer_contact': self.service.customer_id.contact,
+            'total_price_of_service': 930000,
             'is_paid_off': self.service.is_paid_off,
             'deposit': str(self.service.deposit),
             'discount': str(self.service.discount),
@@ -1190,7 +1199,9 @@ class ServiceReportDetailTestCase(SetTestCase):
                 {
                     'service_sparepart_id': self.service_sparepart.service_sparepart_id,
                     'sparepart': self.service_sparepart.sparepart_id.name,
-                    'quantity': self.service_sparepart.quantity
+                    'quantity': self.service_sparepart.quantity,
+                    'total_price':
+                    int(self.service_sparepart.sparepart_id.install_price * self.service_sparepart.quantity)
                 }
             ]
         })

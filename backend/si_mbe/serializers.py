@@ -486,6 +486,7 @@ class ServiceReportSerializers(serializers.ModelSerializer):
     mechanic = serializers.ReadOnlyField(source='mechanic_id.name')
     customer = serializers.ReadOnlyField(source='customer_id.name')
     customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
+    total_price_of_service = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
@@ -498,10 +499,21 @@ class ServiceReportSerializers(serializers.ModelSerializer):
             'mechanic',
             'customer',
             'customer_contact',
+            'total_price_of_service',
             'is_paid_off',
             'deposit',
             'discount'
         ]
+
+    def get_total_price_of_service(self, obj):
+        sparepart_serializer = ServiceSparepartSerializers(obj.service_sparepart_set, many=True)
+        action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
+        total_price = 0
+        for sparepart in sparepart_serializer.data:
+            total_price += sparepart['total_price']
+        for action in action_serializer.data:
+            total_price += int(action['cost'])
+        return total_price
 
 
 class ServiceActionSerializers(serializers.ModelSerializer):
@@ -514,10 +526,14 @@ class ServiceActionSerializers(serializers.ModelSerializer):
 
 class ServiceSparepartSerializers(serializers.ModelSerializer):
     sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
+    total_price = serializers.SerializerMethodField()
 
     class Meta:
         model = Service_sparepart
-        fields = ['service_sparepart_id', 'sparepart', 'quantity']
+        fields = ['service_sparepart_id', 'sparepart', 'quantity', 'total_price']
+
+    def get_total_price(self, obj):
+        return int(obj.quantity * obj.sparepart_id.install_price)
 
 
 class ServiceReportDetailSerializers(serializers.ModelSerializer):
@@ -529,6 +545,7 @@ class ServiceReportDetailSerializers(serializers.ModelSerializer):
     customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
     service_actions = ServiceActionSerializers(many=True, source='service_action_set')
     service_spareparts = ServiceSparepartSerializers(many=True, source='service_sparepart_set')
+    total_price_of_service = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
@@ -541,12 +558,23 @@ class ServiceReportDetailSerializers(serializers.ModelSerializer):
             'mechanic',
             'customer',
             'customer_contact',
+            'total_price_of_service',
             'is_paid_off',
             'deposit',
             'discount',
             'service_actions',
-            'service_spareparts'
+            'service_spareparts',
         ]
+
+    def get_total_price_of_service(self, obj):
+        sparepart_serializer = ServiceSparepartSerializers(obj.service_sparepart_set, many=True)
+        action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
+        total_price = 0
+        for sparepart in sparepart_serializer.data:
+            total_price += sparepart['total_price']
+        for action in action_serializer.data:
+            total_price += int(action['cost'])
+        return total_price
 
 
 class ServiceSerializers(serializers.ModelSerializer):
@@ -556,6 +584,7 @@ class ServiceSerializers(serializers.ModelSerializer):
     customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
     service_actions = ServiceActionSerializers(many=True, source='service_action_set')
     service_spareparts = ServiceSparepartSerializers(many=True, source='service_sparepart_set')
+    total_price_of_service = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
@@ -566,12 +595,23 @@ class ServiceSerializers(serializers.ModelSerializer):
             'mechanic',
             'customer',
             'customer_contact',
+            'total_price_of_service',
             'is_paid_off',
             'deposit',
             'discount',
             'service_actions',
             'service_spareparts'
         ]
+
+    def get_total_price_of_service(self, obj):
+        sparepart_serializer = ServiceSparepartSerializers(obj.service_sparepart_set, many=True)
+        action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
+        total_price = 0
+        for sparepart in sparepart_serializer.data:
+            total_price += sparepart['total_price']
+        for action in action_serializer.data:
+            total_price += int(action['cost'])
+        return total_price
 
 
 class ServiceActionPostSerializers(serializers.ModelSerializer):

@@ -1784,7 +1784,7 @@ class SupplierDeleteTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data supplier tidak ditemukan')
 
 
-class ServiceTestCase(SetTestCase):
+class ServiceListTestCase(SetTestCase):
     service_list_url = reverse('service_list')
 
     @classmethod
@@ -1933,6 +1933,7 @@ class ServiceTestCase(SetTestCase):
                 'mechanic': self.service_1.mechanic_id.name,
                 'customer': self.service_1.customer_id.name,
                 'customer_contact': self.service_1.customer_id.contact,
+                'total_price_of_service': 930000,
                 'is_paid_off': self.service_1.is_paid_off,
                 'deposit': str(self.service_1.deposit),
                 'discount': str(self.service_1.discount),
@@ -1957,7 +1958,9 @@ class ServiceTestCase(SetTestCase):
                     {
                         'service_sparepart_id': self.service_sparepart_1.service_sparepart_id,
                         'sparepart': self.service_sparepart_1.sparepart_id.name,
-                        'quantity': self.service_sparepart_1.quantity
+                        'quantity': self.service_sparepart_1.quantity,
+                        'total_price':
+                        int(self.service_sparepart_1.sparepart_id.install_price * self.service_sparepart_1.quantity)
                     }
                 ]
             },
@@ -1968,6 +1971,7 @@ class ServiceTestCase(SetTestCase):
                 'mechanic': self.service_2.mechanic_id.name,
                 'customer': self.service_2.customer_id.name,
                 'customer_contact': self.service_2.customer_id.contact,
+                'total_price_of_service': 730000,
                 'is_paid_off': self.service_2.is_paid_off,
                 'deposit': str(self.service_2.deposit),
                 'discount': str(self.service_2.discount),
@@ -1976,12 +1980,16 @@ class ServiceTestCase(SetTestCase):
                     {
                         'service_sparepart_id': self.service_sparepart_2.service_sparepart_id,
                         'sparepart': self.service_sparepart_2.sparepart_id.name,
-                        'quantity': self.service_sparepart_2.quantity
+                        'quantity': self.service_sparepart_2.quantity,
+                        'total_price':
+                        int(self.service_sparepart_2.sparepart_id.install_price * self.service_sparepart_2.quantity)
                     },
                     {
                         'service_sparepart_id': self.service_sparepart_3.service_sparepart_id,
                         'sparepart': self.service_sparepart_3.sparepart_id.name,
-                        'quantity': self.service_sparepart_3.quantity
+                        'quantity': self.service_sparepart_3.quantity,
+                        'total_price':
+                        int(self.service_sparepart_3.sparepart_id.install_price * self.service_sparepart_3.quantity)
                     }
                 ]
             }
@@ -2006,7 +2014,7 @@ class ServiceTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
 
-class ServiceAdd(SetTestCase):
+class ServiceAddTestCase(SetTestCase):
     service_add_url = reverse('service_add')
 
     @classmethod
@@ -2155,7 +2163,7 @@ class ServiceAdd(SetTestCase):
         self.assertEqual(response.data['message'], 'Data servis tidak sesuai / tidak lengkap')
 
 
-class ServiceUpdate(SetTestCase):
+class ServiceUpdateTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up mechanic data
