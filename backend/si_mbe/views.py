@@ -144,7 +144,7 @@ class SalesList(generics.ListAPIView):
 
 class SalesAdd(generics.CreateAPIView):
     queryset = Sales.objects.all()
-    serializer_class = serializers.SalesPostSerializers
+    serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -170,7 +170,7 @@ class SalesAdd(generics.CreateAPIView):
 
 class SalesUpdate(generics.RetrieveUpdateAPIView):
     queryset = Sales.objects.all()
-    serializer_class = serializers.SalesPostSerializers
+    serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'sales_id'
@@ -210,7 +210,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
 
 class SalesDelete(generics.DestroyAPIView):
     queryset = Sales.objects.all()
-    serializer_class = serializers.SalesPostSerializers
+    serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'sales_id'
@@ -240,7 +240,7 @@ class RestockList(generics.ListAPIView):
 
 class RestockAdd(generics.CreateAPIView):
     queryset = Restock.objects.all()
-    serializer_class = serializers.RestockPostSerializers
+    serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -266,7 +266,7 @@ class RestockAdd(generics.CreateAPIView):
 
 class RestockUpdate(generics.RetrieveUpdateAPIView):
     queryset = Restock.objects.all()
-    serializer_class = serializers.RestockPostSerializers
+    serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'restock_id'
@@ -306,7 +306,7 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
 
 class RestockDelete(generics.DestroyAPIView):
     queryset = Restock.objects.all()
-    serializer_class = serializers.RestockPostSerializers
+    serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'restock_id'
@@ -531,7 +531,7 @@ class AdminList(generics.ListAPIView):
 
 class AdminAdd(generics.CreateAPIView):
     queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
-    serializer_class = serializers.AdminPostSerializers
+    serializer_class = serializers.AdminManagementSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     def create(self, request, *args, **kwargs):
@@ -580,7 +580,7 @@ class AdminUpdate(generics.RetrieveUpdateAPIView):
 
 class AdminDelete(generics.DestroyAPIView):
     queryset = User.objects.prefetch_related('profile').filter(profile__role='A', is_active=True)
-    serializer_class = serializers.AdminPostSerializers
+    serializer_class = serializers.AdminManagementSerializers
     permission_classes = [IsLogin, IsOwnerRole]
 
     def handle_exception(self, exc):
@@ -629,7 +629,7 @@ class ServiceList(generics.ListAPIView):
 
 class ServiceAdd(generics.CreateAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
-    serializer_class = serializers.ServicePostSerializers
+    serializer_class = serializers.ServiceManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -650,7 +650,7 @@ class ServiceAdd(generics.CreateAPIView):
 
 class ServiceUpdate(generics.RetrieveUpdateAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
-    serializer_class = serializers.ServicePostSerializers
+    serializer_class = serializers.ServiceManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'service_id'
@@ -694,7 +694,7 @@ class ServiceUpdate(generics.RetrieveUpdateAPIView):
 
 class ServiceDelete(generics.DestroyAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
-    serializer_class = serializers.ServicePostSerializers
+    serializer_class = serializers.ServiceManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'service_id'
@@ -1114,7 +1114,7 @@ class SalesmanList(generics.ListAPIView):
 
 class SalesmanAdd(generics.CreateAPIView):
     queryset = Salesman.objects.select_related('supplier_id')
-    serializer_class = serializers.SalesmanPostSerializers
+    serializer_class = serializers.SalesmanManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -1132,7 +1132,7 @@ class SalesmanAdd(generics.CreateAPIView):
 
 class SalesmanUpdate(generics.RetrieveUpdateAPIView):
     queryset = Salesman.objects.select_related('supplier_id')
-    serializer_class = serializers.SalesmanPostSerializers
+    serializer_class = serializers.SalesmanManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'salesman_id'
@@ -1165,7 +1165,7 @@ class SalesmanUpdate(generics.RetrieveUpdateAPIView):
 
 class SalesmanDelete(generics.DestroyAPIView):
     queryset = Salesman.objects.select_related('supplier_id')
-    serializer_class = serializers.SalesmanPostSerializers
+    serializer_class = serializers.SalesmanManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'salesman_id'

@@ -81,7 +81,7 @@ class SalesSerializers(serializers.ModelSerializer):
         ]
 
 
-class SalesDetailPostSerializers(serializers.ModelSerializer):
+class SalesDetailManagementSerializers(serializers.ModelSerializer):
     sales_detail_id = serializers.IntegerField(required=False)
 
     class Meta:
@@ -89,8 +89,8 @@ class SalesDetailPostSerializers(serializers.ModelSerializer):
         fields = ['sales_detail_id', 'sparepart_id', 'quantity', 'is_workshop']
 
 
-class SalesPostSerializers(serializers.ModelSerializer):
-    content = SalesDetailPostSerializers(many=True, source='sales_detail_set')
+class SalesManagementSerializers(serializers.ModelSerializer):
+    content = SalesDetailManagementSerializers(many=True, source='sales_detail_set')
 
     class Meta:
         model = Sales
@@ -184,7 +184,7 @@ class RestockSerializers(serializers.ModelSerializer):
         ]
 
 
-class RestockDetailPostSerializers(serializers.ModelSerializer):
+class RestockDetailManagementSerializers(serializers.ModelSerializer):
     restock_detail_id = serializers.IntegerField(required=False)
 
     class Meta:
@@ -192,9 +192,9 @@ class RestockDetailPostSerializers(serializers.ModelSerializer):
         fields = ['restock_detail_id', 'sparepart_id', 'individual_price', 'quantity']
 
 
-class RestockPostSerializers(serializers.ModelSerializer):
+class RestockManagementSerializers(serializers.ModelSerializer):
     due_date = serializers.DateField(format="%d-%m-%Y")
-    content = RestockDetailPostSerializers(many=True, source='restock_detail_set')
+    content = RestockDetailManagementSerializers(many=True, source='restock_detail_set')
 
     class Meta:
         model = Restock
@@ -420,7 +420,7 @@ class AdminSerializers(serializers.ModelSerializer):
         fields = ['name', 'email', 'username', 'contact']
 
 
-class AdminPostSerializers(serializers.ModelSerializer):
+class AdminManagementSerializers(serializers.ModelSerializer):
     name = serializers.CharField(source='profile.name')
     contact = serializers.CharField(source='profile.contact')
     address = serializers.CharField(source='profile.address')
@@ -614,7 +614,7 @@ class ServiceSerializers(serializers.ModelSerializer):
         return total_price
 
 
-class ServiceActionPostSerializers(serializers.ModelSerializer):
+class ServiceActionManagementSerializers(serializers.ModelSerializer):
     service_action_id = serializers.IntegerField(required=False)
     service_name = serializers.CharField(source='name')
 
@@ -623,7 +623,7 @@ class ServiceActionPostSerializers(serializers.ModelSerializer):
         fields = ['service_action_id', 'service_name', 'cost']
 
 
-class ServiceSparepartPostSerializers(serializers.ModelSerializer):
+class ServiceSparepartManagementSerializers(serializers.ModelSerializer):
     service_sparepart_id = serializers.IntegerField(required=False)
 
     class Meta:
@@ -631,9 +631,9 @@ class ServiceSparepartPostSerializers(serializers.ModelSerializer):
         fields = ['service_sparepart_id', 'sparepart_id', 'quantity']
 
 
-class ServicePostSerializers(serializers.ModelSerializer):
-    service_actions = ServiceActionPostSerializers(many=True, source='service_action_set')
-    service_spareparts = ServiceSparepartPostSerializers(many=True, source='service_sparepart_set')
+class ServiceManagementSerializers(serializers.ModelSerializer):
+    service_actions = ServiceActionManagementSerializers(many=True, source='service_action_set')
+    service_spareparts = ServiceSparepartManagementSerializers(many=True, source='service_sparepart_set')
 
     class Meta:
         model = Service
@@ -789,7 +789,7 @@ class SalesmanSerializers(serializers.ModelSerializer):
         fields = ['salesman_id', 'name', 'contact', 'supplier']
 
 
-class SalesmanPostSerializers(serializers.ModelSerializer):
+class SalesmanManagementSerializers(serializers.ModelSerializer):
     class Meta:
         model = Salesman
         fields = ['salesman_id', 'name', 'contact', 'supplier_id']
