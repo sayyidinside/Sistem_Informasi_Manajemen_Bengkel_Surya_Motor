@@ -1,3 +1,4 @@
+from calendar import monthrange
 from datetime import date, timedelta
 
 from django.contrib.auth.models import User
@@ -656,13 +657,109 @@ class OwnerDashboardTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up customer
-        cls.customer = Customer.objects.create(
+        cls.customer_1 = Customer.objects.create(
             name='Caduceus Clay',
             contact='085456105311'
         )
+        cls.customer_2 = Customer.objects.create(
+            name='Dick Grayson',
+            contact='085116666556'
+        )
 
-        Sales.objects.create(
-            customer_id=cls.customer
+        # Setting up sparepart
+        cls.sparepart = Sparepart.objects.create(
+            name='Holder',
+            partnumber='9HF-1',
+            quantity=80,
+            price=12000,
+            install_price=14500,
+            workshop_price=11000,
+            motor_type='Yamaha',
+            sparepart_type='Additions',
+        )
+
+        # Setting up sales data
+        cls.sales_1 = Sales.objects.create(
+            customer_id=cls.customer_1
+        )
+        cls.sales_2 = Sales.objects.create(
+            customer_id=cls.customer_2
+        )
+
+        Sales_detail.objects.create(
+            sales_id=cls.sales_1,
+            quantity=8,
+            sparepart_id=cls.sparepart
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales_2,
+            quantity=23,
+            sparepart_id=cls.sparepart,
+            is_workshop=True
+        )
+
+        # Setting up service data
+        cls.service_1 = Service.objects.create(
+            police_number='B 2983 A',
+            discount=5000,
+            motor_type='Honda',
+            customer_id=cls.customer_1
+        )
+        cls.service_2 = Service.objects.create(
+            police_number='B 2983 A',
+            discount=8500,
+            motor_type='Honda',
+            customer_id=cls.customer_2
+        )
+
+        Service_action.objects.create(
+            service_id=cls.service_1,
+            name='Cuci Motor',
+            cost=50000
+        )
+        Service_sparepart.objects.create(
+            service_id=cls.service_1,
+            quantity=2,
+            sparepart_id=cls.sparepart
+        )
+
+        Service_action.objects.create(
+            service_id=cls.service_2,
+            name='Pompa',
+            cost=35000
+        )
+        Service_sparepart.objects.create(
+            service_id=cls.service_2,
+            quantity=10,
+            sparepart_id=cls.sparepart
+        )
+
+        # Setting up restock / expenditure data
+        cls.restock_1 = Restock.objects.create(
+            no_faktur='GHFG-313',
+            due_date=date(2023, 1, 4)
+        )
+        cls.restock_2 = Restock.objects.create(
+            no_faktur='GHFG-313',
+            due_date=date(2023, 1, 8)
+        )
+
+        Restock_detail.objects.create(
+            restock_id=cls.restock_1,
+            quantity=256,
+            individual_price=17000,
+            sparepart_id=cls.sparepart
+        )
+        Restock_detail.objects.create(
+            restock_id=cls.restock_1,
+            quantity=137,
+            individual_price=9500
+        )
+        Restock_detail.objects.create(
+            restock_id=cls.restock_2,
+            quantity=312,
+            individual_price=11500,
+            sparepart_id=cls.sparepart
         )
 
         return super().setUpTestData()
@@ -674,7 +771,16 @@ class OwnerDashboardTestCase(SetTestCase):
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.owner_dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['sales_today'], 1)
+        self.assertEqual(
+            len(response.data['revenue_in_month']),
+            monthrange(year=date.today().year, month=date.today().month)[1]
+        )
+        self.assertEqual(response.data['total_revenue_today'], 594500)
+        self.assertEqual(response.data['sales_revenue_today'], 349000)
+        self.assertEqual(response.data['service_revenue_today'], 245500)
+        self.assertEqual(response.data['sales_count_today'], 2)
+        self.assertEqual(response.data['service_count_today'], 2)
+        self.assertEqual(response.data['expenditure_today'], 9241500)
 
     def test_nonlogin_user_failed_to_access_owner_dashboard(self) -> None:
         """
@@ -1046,7 +1152,7 @@ class ServiceReportTestCase(SetTestCase):
                 'mechanic': self.service.mechanic_id.name,
                 'customer': self.service.customer_id.name,
                 'customer_contact': self.service.customer_id.contact,
-                'total_price_of_service': 120000,
+                'total_price_of_service': 100000,
                 'is_paid_off': self.service.is_paid_off,
                 'deposit': str(self.service.deposit),
                 'discount': str(self.service.discount)
@@ -1187,7 +1293,7 @@ class ServiceReportDetailTestCase(SetTestCase):
             'mechanic': self.service.mechanic_id.name,
             'customer': self.service.customer_id.name,
             'customer_contact': self.service.customer_id.contact,
-            'total_price_of_service': 930000,
+            'total_price_of_service': 910000,
             'is_paid_off': self.service.is_paid_off,
             'deposit': str(self.service.deposit),
             'discount': str(self.service.discount),

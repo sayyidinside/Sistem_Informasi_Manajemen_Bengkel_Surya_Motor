@@ -537,25 +537,85 @@ class OwnerDashboard(generics.GenericAPIView):
     permission_classes = [IsLogin, IsOwnerRole]
 
     def get(self, request, *args, **kwargs):
-        # Getting number of day form current month
-        self.number_of_day = monthrange(date.today().year, date.today().month)[1]
+        # Getting url params of year and month if doesn't exist use today value
+        self.year = int(request.query_params.get('year', date.today().year))
+        self.month = int(request.query_params.get('month', date.today().month))
 
-        # Create dict to store number of sales per day in current month
-        self.sales_in_month = {}
+        # Getting number of day form current month
+        self.number_of_day = monthrange(year=self.year, month=self.month)[1]
+
+        # Getting total revenue per day in particular a month
+        self.revenue_in_month = {}
+
+        # Getting sparepart revenue for today
+        self.sales_revenue_today = 0
+
+        # Getting service revenue for today
+        self.service_revenue_today = 0
+
+        # Getting total revenue for today
+        self.total_revenue_today = 0
+
+        # Getting revenue from sales
+        self.queryset = Sales.objects.prefetch_related('sales_detail_set')
+        self.serializer_class = serializers.SalesRevenueSerializers
+        sales_queryset = self.filter_queryset(self.get_queryset())
+        sales = self.get_serializer(sales_queryset, many=True)
+        sales_list = sorted(sales.data, key=lambda k: k['created_at'], reverse=True)
+
+        # Getting revenue from service
+        self.queryset = Service.objects.prefetch_related('service_sparepart_set', 'service_action_set')
+        self.serializer_class = serializers.ServiceRevenueSerializers
+        service_queryset = self.filter_queryset(self.get_queryset())
+        service = self.get_serializer(service_queryset, many=True)
+        service_list = sorted(service.data, key=lambda k: k['created_at'], reverse=True)
+
+        # Make dict of revenue per day in particular month as exp {day: revenue_total}
         for i, object in enumerate(range(self.number_of_day), 1):
-            self.sales_in_month[i] = len(Sales.objects.filter(created_at__date=date(
-                                        year=date.today().year,
-                                        month=date.today().month,
-                                        day=i
-                                    )))
+            self.revenue_in_month[i] = 0
+            for sales in sales_list:
+                if sales['created_at'] == date(self.year, self.month, i).strftime('%d-%m-%Y'):
+                    self.revenue_in_month[i] += sales['revenue']
+                    if date(self.year, self.month, i).strftime('%d-%m-%Y') == date.today().strftime('%d-%m-%Y'):
+                        self.sales_revenue_today += sales['revenue']
+                        self.total_revenue_today += sales['revenue']
+            for service in service_list:
+                if service['created_at'] == date(self.year, self.month, i).strftime('%d-%m-%Y'):
+                    self.revenue_in_month[i] += service['revenue']
+                    if date(self.year, self.month, i).strftime('%d-%m-%Y') == date.today().strftime('%d-%m-%Y'):
+                        self.service_revenue_today += service['revenue']
+                        self.total_revenue_today += service['revenue']
 
         # Getting number of sales from today
-        self.count_sales = len(Sales.objects.filter(created_at__date=date.today()))
+        self.count_sales = Sales.objects.filter(created_at__date=date.today()).count()
+
+        # Getting number of service from today
+        self.count_service = Service.objects.filter(created_at__date=date.today()).count()
+
+        # Getting expenditure total from today
+        self.expenditure_today = 0
+
+        self.queryset = Restock.objects.prefetch_related('restock_detail_set')
+        self.serializer_class = serializers.RestockExpenditureSerializers
+
+        restock_queryset = self.filter_queryset(self.get_queryset())
+        restock = self.get_serializer(restock_queryset, many=True)
+        restock_list = sorted(restock.data, key=lambda k: k['created_at'], reverse=True)
+
+        for restock in restock_list:
+            if restock['created_at'] == date.today().strftime('%d-%m-%Y'):
+                self.expenditure_today += restock['expenditure']
+
         return Response(
             {
                 'message': 'Berhasil Mengkases Pemilik Dashboard',
-                'sales_today': self.count_sales,
-                'sales_in_mont': self.sales_in_month
+                'revenue_in_month': self.revenue_in_month,
+                'sales_revenue_today': self.sales_revenue_today,
+                'service_revenue_today': self.service_revenue_today,
+                'total_revenue_today': self.total_revenue_today,
+                'sales_count_today': self.count_sales,
+                'service_count_today': self.count_service,
+                'expenditure_today': self.expenditure_today
             },
             status=status.HTTP_200_OK)
 

@@ -581,7 +581,7 @@ class ServiceReportSerializers(serializers.ModelSerializer):
             total_price += sparepart['total_price']
         for action in action_serializer.data:
             total_price += int(action['cost'])
-        return total_price
+        return total_price - int(obj.discount)
 
 
 class ServiceActionSerializers(serializers.ModelSerializer):
@@ -642,7 +642,7 @@ class ServiceReportDetailSerializers(serializers.ModelSerializer):
             total_price += sparepart['total_price']
         for action in action_serializer.data:
             total_price += int(action['cost'])
-        return total_price
+        return total_price - int(obj.discount)
 
 
 class ServiceSerializers(serializers.ModelSerializer):
@@ -679,7 +679,7 @@ class ServiceSerializers(serializers.ModelSerializer):
             total_price += sparepart['total_price']
         for action in action_serializer.data:
             total_price += int(action['cost'])
-        return total_price
+        return total_price - int(obj.discount)
 
 
 class ServiceActionManagementSerializers(serializers.ModelSerializer):
@@ -945,3 +945,54 @@ class SparepartMostUsedSerializers(serializers.ModelSerializer):
             if int(detail['created_at'].split('-')[1]) == date.today().month:
                 total_used += detail['quantity']
         return total_used
+
+
+class SalesRevenueSerializers(serializers.ModelSerializer):
+    revenue = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%d-%m-%Y')
+
+    class Meta:
+        model = Sales
+        fields = ['sales_id', 'revenue', 'created_at']
+
+    def get_revenue(self, obj):
+        sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
+        revenue = 0
+        for sales in sales_serializer.data:
+            revenue += sales['total_price']
+        return revenue
+
+
+class ServiceRevenueSerializers(serializers.ModelSerializer):
+    revenue = serializers.SerializerMethodField()
+    created_at = serializers.DateTimeField(format='%d-%m-%Y')
+
+    class Meta:
+        model = Service
+        fields = ['service_id', 'revenue', 'created_at']
+
+    def get_revenue(self, obj):
+        sparepart_serializer = ServiceSparepartSerializers(obj.service_sparepart_set, many=True)
+        action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
+        revenue = 0
+        for sparepart in sparepart_serializer.data:
+            revenue += sparepart['total_price']
+        for action in action_serializer.data:
+            revenue += int(action['cost'])
+        return revenue - int(obj.discount)
+
+
+class RestockExpenditureSerializers(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format='%d-%m-%Y')
+    expenditure = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Restock
+        fields = ['restock_id', 'expenditure', 'created_at']
+
+    def get_expenditure(self, obj):
+        restock_serializers = RestockDetailSerializers(obj.restock_detail_set, many=True)
+        expenditure = 0
+        for restock in restock_serializers.data:
+            expenditure += int(restock['individual_price']) * restock['quantity']
+        return expenditure
