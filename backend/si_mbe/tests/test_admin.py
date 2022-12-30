@@ -29,6 +29,9 @@ class AdminDashboardTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
+        # Setting up brand data
+        cls.brand = Brand.objects.create(name='Marquet')
+
         # Setting up sparepart data
         cls.sparepart = []
         for i in range(11):
@@ -42,6 +45,8 @@ class AdminDashboardTestCase(SetTestCase):
                     price=5400000,
                     workshop_price=5300000,
                     install_price=5500000,
+                    limit=int(f'{i}1'),
+                    brand_id=cls.brand
                 )
             )
 
@@ -92,6 +97,12 @@ class AdminDashboardTestCase(SetTestCase):
                     deposit=10000
                 )
             )
+        Restock.objects.create(
+            no_faktur=f'HF2-{i}',
+            due_date=date.today() + timedelta(days=i),
+            deposit=10000,
+            is_paid_off=True
+        )
 
         for i in range(9):
             Restock_detail.objects.create(
@@ -101,28 +112,41 @@ class AdminDashboardTestCase(SetTestCase):
                 quantity=11+i
             )
 
+        # Setting up service
+        cls.service = Service.objects.create(
+            police_number='B 23 A',
+            motor_type='C',
+            discount=0
+        )
+
         # Setting up service_sparepart
         Service_sparepart.objects.create(
+            service_id=cls.service,
             sparepart_id=cls.sparepart[0],
             quantity=12
         )
         Service_sparepart.objects.create(
+            service_id=cls.service,
             sparepart_id=cls.sparepart[3],
             quantity=31
         )
         Service_sparepart.objects.create(
+            service_id=cls.service,
             sparepart_id=cls.sparepart[1],
             quantity=28
         )
         Service_sparepart.objects.create(
+            service_id=cls.service,
             sparepart_id=cls.sparepart[2],
             quantity=8
         )
         Service_sparepart.objects.create(
+            service_id=cls.service,
             sparepart_id=cls.sparepart[5],
             quantity=13
         )
         Service_sparepart.objects.create(
+            service_id=cls.service,
             sparepart_id=cls.sparepart[6],
             quantity=21
         )
@@ -134,8 +158,11 @@ class AdminDashboardTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.admin_dashboard_url)
-        # print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data['sparepart_on_limit']), 6)
+        self.assertEqual(len(response.data['restock_due']), 8)
+        self.assertEqual(len(response.data['most_sold']), 10)
+        self.assertEqual(len(response.data['most_used']), 10)
 
     def test_nonlogin_user_failed_to_access_admin_dashboard(self) -> None:
         """

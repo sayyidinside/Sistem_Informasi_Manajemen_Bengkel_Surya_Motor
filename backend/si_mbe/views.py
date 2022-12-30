@@ -1,15 +1,16 @@
 from calendar import monthrange
-from datetime import date
+from datetime import date, timedelta
 
 from dj_rest_auth.views import PasswordChangeView
 from django.contrib.auth.models import User
+from django.db.models import Q, F
 from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
 from si_mbe import exceptions, serializers
 from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
-                           Restock, Sales, Service, Sparepart, Storage,
-                           Supplier, Salesman)
+                           Restock, Sales, Salesman, Service, Sparepart,
+                           Storage, Supplier)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
@@ -42,10 +43,47 @@ class SearchSparepart(generics.ListAPIView):
 
 
 class AdminDashboard(generics.GenericAPIView):
+    queryset = Restock.objects.prefetch_related('restock_detail_set').filter(
+        Q(due_date__range=(date.today(), date.today() + timedelta(days=7))) &
+        Q(is_paid_off=False)
+        ).order_by('due_date')
     permission_classes = [IsLogin, IsAdminRole]
+    serializer_class = serializers.RestockDueSerializers
 
     def get(self, request, *args, **kwargs):
-        return Response({'message': 'Berhasil mengkases admin dashboard'}, status=status.HTTP_200_OK)
+        # Getting restock due data
+        restock_due_queryset = self.filter_queryset(self.get_queryset())
+        restock_due = self.get_serializer(restock_due_queryset, many=True)
+
+        # Getting sparepart on limit data
+        self.queryset = Sparepart.objects.select_related('brand_id').filter(
+            Q(quantity__lte=F('limit'))
+        ).order_by('quantity')
+        self.serializer_class = serializers.SparepartOnLimitSerializers
+        sparepart_on_limit_queryset = self.filter_queryset(self.get_queryset())
+        sparepart_on_limit = self.get_serializer(sparepart_on_limit_queryset, many=True)
+
+        # Getting 10 most sold sparepart in a month
+        self.queryset = Sparepart.objects.prefetch_related('sales_detail_set', 'service_sparepart_set')
+        self.serializer_class = serializers.SparepartMostSoldSerializers
+        most_sold_queryset = self.filter_queryset(self.get_queryset())
+        most_sold = self.get_serializer(most_sold_queryset, many=True)
+        most_sold = sorted(most_sold.data, key=lambda k: k['total_sold'], reverse=True)
+
+        # Getting 10 most used sparepart from services in a month
+        self.serializer_class = serializers.SparepartMostUsedSerializers
+        most_used_queryset = self.filter_queryset(self.get_queryset())
+        most_used = self.get_serializer(most_used_queryset, many=True)
+        most_used = sorted(most_used.data, key=lambda k: k['total_used'], reverse=True)
+
+        return Response({
+            'sparepart_on_limit': sparepart_on_limit.data,
+            'restock_due': restock_due.data,
+            'most_sold': most_sold[:10],
+            'most_used': most_used[:10]
+            },
+            status=status.HTTP_200_OK
+        )
 
 
 class SparepartDataList(generics.ListAPIView):

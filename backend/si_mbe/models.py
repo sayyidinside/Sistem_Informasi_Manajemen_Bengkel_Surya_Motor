@@ -346,6 +346,7 @@ class Sparepart(models.Model):
     name = models.CharField(max_length=30, db_index=True)
     partnumber = models.CharField(max_length=20, default='')
     quantity = models.PositiveSmallIntegerField()
+    limit = models.PositiveSmallIntegerField(default=10)
     motor_type = models.CharField(max_length=20, default='')
     sparepart_type = models.CharField(max_length=20)
     image = models.ImageField(null=True, blank=True, upload_to=sparepart_image_filename)

@@ -1,3 +1,4 @@
+from datetime import date
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
@@ -863,18 +864,84 @@ class SalesmanManagementSerializers(serializers.ModelSerializer):
 
 
 class RestockDueSerializers(serializers.ModelSerializer):
-    # created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     supplier = serializers.ReadOnlyField(source='supplier_id.name')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     remaining_payment = serializers.SerializerMethodField()
 
     class Meta:
         model = Restock
-        fields = ['restock_id', 'no_faktur', 'supplier', 'remaining_payment', 'due_date']
+        fields = [
+            'restock_id',
+            'no_faktur',
+            'created_at',
+            'supplier',
+            'remaining_payment',
+            'due_date'
+        ]
 
     def get_remaining_payment(self, obj):
-        restock_serializer = RestockDetailSerializers(obj.restock_detail_set, many=True)
-        total_price = 0
-        for sparepart in restock_serializer.data:
-            total_price += sparepart['individual_price']
-        remaining_payment = total_price - restock_serializer['individual_price']
+        restock_serializers = RestockDetailSerializers(obj.restock_detail_set, many=True)
+        total = 0
+        for restock in restock_serializers.data:
+            total += int(restock['individual_price']) * restock['quantity']
+        remaining_payment = total - int(obj.deposit)
         return remaining_payment
+
+
+class SparepartOnLimitSerializers(serializers.ModelSerializer):
+    brand = serializers.ReadOnlyField(source='brand_id.name')
+    stock = serializers.ReadOnlyField(source='quantity')
+
+    class Meta:
+        model = Sparepart
+        fields = ['sparepart_id', 'partnumber', 'name', 'brand', 'stock']
+
+
+class SalesDetailWithDateSerializers(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+
+    class Meta:
+        model = Sales_detail
+        fields = '__all__'
+
+
+class SparepartMostSoldSerializers(serializers.ModelSerializer):
+    brand = serializers.ReadOnlyField(source='brand_id.name')
+    total_sold = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Sparepart
+        fields = ['sparepart_id', 'partnumber', 'name', 'brand', 'total_sold']
+
+    def get_total_sold(self, obj):
+        sales_detail = SalesDetailWithDateSerializers(obj.sales_detail_set, many=True)
+        total_sold = 0
+        for detail in sales_detail.data:
+            if int(detail['created_at'].split('-')[1]) == date.today().month:
+                total_sold += detail['quantity']
+        return total_sold
+
+
+class ServiceSparepartWithDateSerializers(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+
+    class Meta:
+        model = Service_sparepart
+        fields = '__all__'
+
+
+class SparepartMostUsedSerializers(serializers.ModelSerializer):
+    brand = serializers.ReadOnlyField(source='brand_id.name')
+    total_used = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Sparepart
+        fields = ['sparepart_id', 'partnumber', 'name', 'brand', 'total_used']
+
+    def get_total_used(self, obj):
+        services_detail = ServiceSparepartWithDateSerializers(obj.service_sparepart_set, many=True)
+        total_used = 0
+        for detail in services_detail.data:
+            if int(detail['created_at'].split('-')[1]) == date.today().month:
+                total_used += detail['quantity']
+        return total_used
