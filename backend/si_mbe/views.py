@@ -181,7 +181,7 @@ class SalesList(generics.ListAPIView):
 
 
 class SalesAdd(generics.CreateAPIView):
-    queryset = Sales.objects.all()
+    queryset = Sales.objects.all().order_by('sales_id')
     serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -205,9 +205,21 @@ class SalesAdd(generics.CreateAPIView):
 
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
+    def perform_create(self, serializer):
+        # Save the new Sales instance to the database
+        instance = serializer.save()
+
+        # Subtracting spareapart quantity with new sales detail data
+        for sales_detail in instance.sales_detail_set.all():
+            # Get the Sparepart instance associated with the Sales_detail instance
+            sparepart = sales_detail.sparepart_id
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity -= sales_detail.quantity
+            sparepart.save()
+
 
 class SalesUpdate(generics.RetrieveUpdateAPIView):
-    queryset = Sales.objects.all()
+    queryset = Sales.objects.all().order_by('sales_id')
     serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -245,9 +257,44 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
 
         return Response(data)
 
+    def perform_update(self, serializer):
+        # Get the old Sales instance and its associated Sales_detail instances
+        old_instance = self.get_object()
+        old_sales_details = old_instance.sales_detail_set.all().order_by('sales_detail_id')
+
+        # Getting list of dict from old data, for post save calculaltion
+        old_data_list = []
+        for old_data in old_sales_details:
+            old_data_list.append(
+                {
+                    'sales_detail_id': old_data.sales_detail_id,
+                    'quantity': old_data.quantity,
+                    'sparepart_id': old_data.sparepart_id
+                }
+            )
+
+        # Update the Sales instance in the database
+        instance = serializer.save()
+
+        # Adding (plus) Sparepart quantity with old sales detail data
+        for old_data in old_data_list:
+            # Get the Sparepart instance associated with the old Sales_detail instance
+            sparepart = old_data['sparepart_id']
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity += old_data['quantity']
+            sparepart.save()
+
+        # Subtracting spareapart quantity with new sales detail data
+        for sales_detail in instance.sales_detail_set.all():
+            # Get the Sparepart instance associated with the new Sales_detail instance
+            sparepart = sales_detail.sparepart_id
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity -= sales_detail.quantity
+            sparepart.save()
+
 
 class SalesDelete(generics.DestroyAPIView):
-    queryset = Sales.objects.all()
+    queryset = Sales.objects.all().order_by('sales_id')
     serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -267,6 +314,33 @@ class SalesDelete(generics.DestroyAPIView):
         perform_log(request=request, operation='R', table='Sales')
 
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+    def perform_destroy(self, instance):
+        # Get the old Sales instance and its associated Sales_detail instances
+        old_instance = self.get_object()
+        old_sales_details = old_instance.sales_detail_set.all().order_by('sales_detail_id')
+
+        # Getting list of dict from old data, for post save calculaltion
+        old_data_list = []
+        for old_data in old_sales_details:
+            old_data_list.append(
+                {
+                    'sales_detail_id': old_data.sales_detail_id,
+                    'quantity': old_data.quantity,
+                    'sparepart_id': old_data.sparepart_id
+                }
+            )
+
+        # Deleting instance in database
+        instance.delete()
+
+        # Adding (plus) Sparepart quantity with old sales detail data
+        for old_data in old_data_list:
+            # Get the Sparepart instance associated with the old Sales_detail instance
+            sparepart = old_data['sparepart_id']
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity += old_data['quantity']
+            sparepart.save()
 
 
 class RestockList(generics.ListAPIView):

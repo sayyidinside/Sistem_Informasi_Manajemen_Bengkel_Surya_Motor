@@ -752,7 +752,7 @@ class SalesAddTestCase(SetTestCase):
                 category_id=cls.category
             )
 
-        cls.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
 
         # Setting up customer data
         cls.customer = Customer.objects.create(
@@ -796,6 +796,10 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[1].sparepart_id)
         self.assertEqual(response.data['content'][0]['quantity'], 1)
         self.assertEqual(response.data['content'][0]['is_workshop'], False)
+        # ensure sparepart quantity will be subtracted by detail's quantity
+        # after sales successfully added
+        self.assertEqual(self.spareparts[0].quantity, 20)
+        self.assertEqual(self.spareparts[1].quantity, 49)
 
     def test_nonlogin_user_failed_to_add_sales(self) -> None:
         """
@@ -863,7 +867,7 @@ class SalesUpdateTestCase(SetTestCase):
                 category_id=cls.category
             )
 
-        cls.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
 
         # Setting up customer data
         cls.customer = Customer.objects.create(
@@ -884,13 +888,13 @@ class SalesUpdateTestCase(SetTestCase):
 
         # Setting up sales detail data and getting their id
         self.sales_detail_1 = Sales_detail.objects.create(
-            quantity=1,
+            quantity=2,
             is_workshop=False,
             sales_id=self.sales,
             sparepart_id=self.spareparts[2]
         )
         self.sales_detail_2 = Sales_detail.objects.create(
-            quantity=31,
+            quantity=35,
             is_workshop=True,
             sales_id=self.sales,
             sparepart_id=self.spareparts[0]
@@ -905,7 +909,7 @@ class SalesUpdateTestCase(SetTestCase):
                 {
                     'sales_detail_id': self.sales_detail_1.sales_detail_id,
                     'sparepart_id': self.spareparts[2].sparepart_id,
-                    'quantity': 2,
+                    'quantity': 5,
                     'is_workshop': False,
                 },
                 {
@@ -932,11 +936,16 @@ class SalesUpdateTestCase(SetTestCase):
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(len(response.data['content']), 2)
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[2].sparepart_id)
-        self.assertEqual(response.data['content'][0]['quantity'], 2)
+        self.assertEqual(response.data['content'][0]['quantity'], 5)
         self.assertEqual(response.data['content'][0]['is_workshop'], False)
         self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[0].sparepart_id)
         self.assertEqual(response.data['content'][1]['quantity'], 30)
         self.assertEqual(response.data['content'][1]['is_workshop'], True)
+
+        # ensure sparepart quantity will be subtracted by detail's quantity
+        # after sales successfully updated
+        self.assertEqual(self.spareparts[0].quantity, 55)
+        self.assertEqual(self.spareparts[2].quantity, 49)
 
     def test_nonlogin_failed_to_update_sales(self) -> None:
         """
@@ -1014,7 +1023,7 @@ class SalesDeleteTestCase(SetTestCase):
                 storage_id=cls.storage
             )
 
-        cls.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
 
         # Setting up customer data
         cls.customer = Customer.objects.create(
@@ -1036,7 +1045,7 @@ class SalesDeleteTestCase(SetTestCase):
 
         # Setting up sales detail data
         Sales_detail.objects.create(
-            quantity=1,
+            quantity=3,
             is_workshop=False,
             sales_id=self.sales,
             sparepart_id=self.spareparts[2]
@@ -1060,6 +1069,11 @@ class SalesDeleteTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data penjualan berhasil dihapus')
         self.assertEqual(len(Sales.objects.all()), 0)
         self.assertEqual(len(Sales_detail.objects.all()), 0)
+
+        # ensure sparepart quantity will be subtracted by detail's quantity
+        # after sales successfully updated
+        self.assertEqual(self.spareparts[0].quantity, 121)
+        self.assertEqual(self.spareparts[2].quantity, 75)
 
     def test_nonlogin_user_failed_to_delete_sales(self) -> None:
         """
