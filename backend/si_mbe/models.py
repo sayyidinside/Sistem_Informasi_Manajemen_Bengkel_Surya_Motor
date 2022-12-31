@@ -345,7 +345,7 @@ class Sparepart(models.Model):
     )
     name = models.CharField(max_length=30, db_index=True)
     partnumber = models.CharField(max_length=20, default='')
-    quantity = models.PositiveSmallIntegerField()
+    quantity = models.SmallIntegerField()
     limit = models.PositiveSmallIntegerField(default=10)
     motor_type = models.CharField(max_length=20, default='')
     sparepart_type = models.CharField(max_length=20)

@@ -351,7 +351,7 @@ class RestockList(generics.ListAPIView):
 
 
 class RestockAdd(generics.CreateAPIView):
-    queryset = Restock.objects.all()
+    queryset = Restock.objects.all().order_by('restock_id')
     serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -375,9 +375,21 @@ class RestockAdd(generics.CreateAPIView):
 
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
+    def perform_create(self, serializer):
+        # Save the new Restock instance to the database
+        instance = serializer.save()
+
+        # Subtracting spareapart quantity with new restock detail data
+        for restock_detail in instance.restock_detail_set.all():
+            # Get the Sparepart instance associated with the Restock_detail instance
+            sparepart = restock_detail.sparepart_id
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity += restock_detail.quantity
+            sparepart.save()
+
 
 class RestockUpdate(generics.RetrieveUpdateAPIView):
-    queryset = Restock.objects.all()
+    queryset = Restock.objects.all().order_by('restock_id')
     serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -415,9 +427,44 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
 
         return Response(data)
 
+    def perform_update(self, serializer):
+        # Get the old Restock instance and its associated Restock_detail instances
+        old_instance = self.get_object()
+        old_restock_details = old_instance.restock_detail_set.all().order_by('restock_detail_id')
+
+        # Getting list of dict from old data, for post save calculaltion
+        old_data_list = []
+        for old_data in old_restock_details:
+            old_data_list.append(
+                {
+                    'restock_detail_id': old_data.restock_detail_id,
+                    'quantity': old_data.quantity,
+                    'sparepart_id': old_data.sparepart_id
+                }
+            )
+
+        # Update the Sales instance in the database
+        instance = serializer.save()
+
+        # Subtracting Sparepart quantity with old restock detail data
+        for old_data in old_data_list:
+            # Get the Sparepart instance associated with the old Restock_detail instance
+            sparepart = old_data['sparepart_id']
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity -= old_data['quantity']
+            sparepart.save()
+
+        # Adding (+) spareapart quantity with new restock detail data
+        for sales_detail in instance.restock_detail_set.all():
+            # Get the Sparepart instance associated with the new Restock_detail instance
+            sparepart = sales_detail.sparepart_id
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity += sales_detail.quantity
+            sparepart.save()
+
 
 class RestockDelete(generics.DestroyAPIView):
-    queryset = Restock.objects.all()
+    queryset = Restock.objects.all().order_by('restock_id')
     serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -437,6 +484,33 @@ class RestockDelete(generics.DestroyAPIView):
         perform_log(request=request, operation='R', table='Restock')
 
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+    def perform_destroy(self, instance):
+        # Get the old Restock instance and its associated Restock_detail instances
+        old_instance = self.get_object()
+        old_restock_details = old_instance.restock_detail_set.all().order_by('restock_detail_id')
+
+        # Getting list of dict from old data, for post save calculaltion
+        old_data_list = []
+        for old_data in old_restock_details:
+            old_data_list.append(
+                {
+                    'restock_detail_id': old_data.restock_detail_id,
+                    'quantity': old_data.quantity,
+                    'sparepart_id': old_data.sparepart_id
+                }
+            )
+
+        # Deleting instance in database
+        instance.delete()
+
+        # Adding (plus) Sparepart quantity with old restock detail data
+        for old_data in old_data_list:
+            # Get the Sparepart instance associated with the old Restock_detail instance
+            sparepart = old_data['sparepart_id']
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity -= old_data['quantity']
+            sparepart.save()
 
 
 class SupplierList(generics.ListAPIView):

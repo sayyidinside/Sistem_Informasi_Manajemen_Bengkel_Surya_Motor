@@ -796,6 +796,7 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[1].sparepart_id)
         self.assertEqual(response.data['content'][0]['quantity'], 1)
         self.assertEqual(response.data['content'][0]['is_workshop'], False)
+
         # ensure sparepart quantity will be subtracted by detail's quantity
         # after sales successfully added
         self.assertEqual(self.spareparts[0].quantity, 20)
@@ -1070,8 +1071,8 @@ class SalesDeleteTestCase(SetTestCase):
         self.assertEqual(len(Sales.objects.all()), 0)
         self.assertEqual(len(Sales_detail.objects.all()), 0)
 
-        # ensure sparepart quantity will be subtracted by detail's quantity
-        # after sales successfully updated
+        # ensure sparepart quantity will be added by detail's quantity
+        # after sales successfully deleted
         self.assertEqual(self.spareparts[0].quantity, 121)
         self.assertEqual(self.spareparts[2].quantity, 75)
 
@@ -1303,7 +1304,7 @@ class RestockAddTestCase(SetTestCase):
                 storage_id=cls.storage
             )
 
-        cls.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
 
         # Creating data that gonna be use as input
         cls.data = {
@@ -1350,6 +1351,11 @@ class RestockAddTestCase(SetTestCase):
         self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
         self.assertEqual(response.data['content'][1]['individual_price'], '3500000')
         self.assertEqual(response.data['content'][1]['quantity'], 60)
+
+        # ensure sparepart quantity will be added (+) by detail's quantity
+        # after restock successfully added
+        self.assertEqual(self.spareparts[0].quantity, 200)
+        self.assertEqual(self.spareparts[1].quantity, 110)
 
     def test_nonlogin_user_failed_to_add_restock(self) -> None:
         """
@@ -1422,7 +1428,7 @@ class RestockUpdateTestCase(SetTestCase):
             Sparepart.objects.create(
                 name=f'Potion of Haste +{i}',
                 partnumber=f'0Y3AD-FY{i}',
-                quantity=50,
+                quantity=100,
                 motor_type='Adventurer',
                 sparepart_type='Buff',
                 price=5400000,
@@ -1431,7 +1437,7 @@ class RestockUpdateTestCase(SetTestCase):
                 brand_id=None
             )
 
-        cls.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
 
         return super().setUpTestData()
 
@@ -1475,13 +1481,13 @@ class RestockUpdateTestCase(SetTestCase):
                     'restock_detail_id': self.restock_detail_1.restock_detail_id,
                     'sparepart_id': self.spareparts[0].sparepart_id,
                     'individual_price':4550000,
-                    'quantity': 200,
+                    'quantity': 170,
                 },
                 {
                     'restock_detail_id': self.restock_detail_2.restock_detail_id,
                     'sparepart_id': self.spareparts[1].sparepart_id,
                     'individual_price':450000,
-                    'quantity': 50,
+                    'quantity': 65,
                 }
             ]
         }
@@ -1506,11 +1512,16 @@ class RestockUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['content'][0]['restock_detail_id'], self.restock_detail_1.restock_detail_id)
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
         self.assertEqual(response.data['content'][0]['individual_price'], '4550000')
-        self.assertEqual(response.data['content'][0]['quantity'], 200)
+        self.assertEqual(response.data['content'][0]['quantity'], 170)
         self.assertEqual(response.data['content'][1]['restock_detail_id'], self.restock_detail_2.restock_detail_id)
         self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
         self.assertEqual(response.data['content'][1]['individual_price'], '450000')
-        self.assertEqual(response.data['content'][1]['quantity'], 50)
+        self.assertEqual(response.data['content'][1]['quantity'], 65)
+
+        # ensure sparepart quantity will be added (+) by detail's quantity
+        # after restock successfully updated
+        self.assertEqual(self.spareparts[0].quantity, 70)
+        self.assertEqual(self.spareparts[1].quantity, 115)
 
     def test_nonlogin_failed_to_update_restock(self) -> None:
         """
@@ -1593,7 +1604,7 @@ class RestockDeleteTestCase(SetTestCase):
             Sparepart.objects.create(
                 name=f'Ultimate Nulifier {i}',
                 partnumber=f'J8OI0-h8{i}',
-                quantity=int(f'7{i}'),
+                quantity=int(f'37{i}'),
                 motor_type='Inventions',
                 sparepart_type='Device',
                 price=105000,
@@ -1604,7 +1615,7 @@ class RestockDeleteTestCase(SetTestCase):
                 storage_id=cls.storage
             )
 
-        cls.spareparts = Sparepart.objects.all()
+        cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
 
         return super().setUpTestData()
 
@@ -1647,6 +1658,11 @@ class RestockDeleteTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data pengadaan berhasil dihapus')
         self.assertEqual(len(Restock.objects.all()), 0)
         self.assertEqual(len(Restock_detail.objects.all()), 0)
+
+        # ensure sparepart quantity will be subtracted by detail's quantity
+        # after restock successfully delete
+        self.assertEqual(self.spareparts[0].quantity, 170)
+        self.assertEqual(self.spareparts[1].quantity, 321)
 
     def test_nonlogin_user_failed_to_delete_restock(self) -> None:
         """
