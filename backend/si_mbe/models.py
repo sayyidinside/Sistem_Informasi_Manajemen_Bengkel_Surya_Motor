@@ -2,6 +2,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from uuid import uuid4
+from si_mbe.validators import validate_image_size
 
 # Create your models here.
 
@@ -349,7 +350,12 @@ class Sparepart(models.Model):
     limit = models.PositiveSmallIntegerField(default=10)
     motor_type = models.CharField(max_length=20, default='')
     sparepart_type = models.CharField(max_length=20)
-    image = models.ImageField(null=True, blank=True, upload_to=sparepart_image_filename)
+    image = models.ImageField(
+        null=True,
+        blank=True,
+        upload_to=sparepart_image_filename,
+        validators=[validate_image_size]
+    )
     price = models.DecimalField(max_digits=15, decimal_places=0)
     workshop_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)
     install_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)

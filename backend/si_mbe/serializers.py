@@ -5,6 +5,8 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
                            Restock_detail, Sales, Sales_detail, Service,
                            Service_action, Service_sparepart, Sparepart,
                            Storage, Supplier, Mechanic, Salesman)
+from si_mbe.validators import validate_image_size
+from django.core.validators import FileExtensionValidator
 
 
 class SearchSparepartSerializers(serializers.ModelSerializer):
@@ -52,7 +54,13 @@ class SparepartListSerializers(serializers.ModelSerializer):
 
 
 class SparepartSerializers(serializers.ModelSerializer):
-    image = serializers.ImageField(required=False, allow_empty_file=True, use_url=True)
+    image = serializers.ImageField(
+        required=False,
+        allow_empty_file=True,
+        use_url=True,
+        validators=[validate_image_size,
+                    FileExtensionValidator(['jpg', 'jpeg', 'png'])]
+    )
 
     class Meta:
         model = Sparepart
