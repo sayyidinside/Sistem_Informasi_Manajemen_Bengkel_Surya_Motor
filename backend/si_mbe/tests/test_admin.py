@@ -2295,6 +2295,10 @@ class ServiceAddTestCase(SetTestCase):
         self.assertEqual(response.data['service_spareparts'][0]['quantity'],
                          self.data['service_spareparts'][0]['quantity'])
 
+        # ensure sparepart quantity will be subtracted by service_sparepart's quantity
+        # after service successfully added
+        self.assertEqual(Sparepart.objects.all()[0].quantity, 48)
+
     def test_nonlogin_user_failed_to_add_service(self) -> None:
         """
         Ensure non-login cannot add new service data with it's content
@@ -2371,6 +2375,19 @@ class ServiceUpdateTestCase(SetTestCase):
             category_id=cls.category,
             storage_id=cls.storage
         )
+        cls.sparepart_2 = Sparepart.objects.create(
+            name='Chorcoal Cupcake 2',
+            partnumber='JFLJ23-Aj',
+            quantity=100,
+            motor_type='Human',
+            sparepart_type='Spices',
+            price=105000,
+            workshop_price=100000,
+            install_price=110000,
+            brand_id=cls.brand,
+            category_id=cls.category,
+            storage_id=cls.storage
+        )
 
         return super().setUpTestData()
 
@@ -2402,9 +2419,14 @@ class ServiceUpdateTestCase(SetTestCase):
 
         # Setting up service sparepart
         self.service_sparepart = Service_sparepart.objects.create(
-            quantity=2,
+            quantity=5,
             service_id=self.service,
             sparepart_id=self.sparepart
+        )
+        self.service_sparepart_2 = Service_sparepart.objects.create(
+            quantity=13,
+            service_id=self.service,
+            sparepart_id=self.sparepart_2
         )
 
         self.data = {
@@ -2431,7 +2453,12 @@ class ServiceUpdateTestCase(SetTestCase):
                 {
                     'service_sparepart_id': self.service_sparepart.service_sparepart_id,
                     'sparepart_id': self.sparepart.sparepart_id,
-                    'quantity': 2
+                    'quantity': 3
+                },
+                {
+                    'service_sparepart_id': self.service_sparepart_2.service_sparepart_id,
+                    'sparepart_id': self.sparepart_2.sparepart_id,
+                    'quantity': 10
                 }
             ]
         }
@@ -2452,7 +2479,7 @@ class ServiceUpdateTestCase(SetTestCase):
                 {
                     'service_sparepart_id': self.service_sparepart.service_sparepart_id,
                     'sparepart_id': self.sparepart.sparepart_id,
-                    'quantity': 2
+                    'quantity': 3
                 }
             ]
         }
@@ -2501,6 +2528,11 @@ class ServiceUpdateTestCase(SetTestCase):
 
         self.assertEqual(response.data['service_spareparts'][0]['quantity'],
                          self.data['service_spareparts'][0]['quantity'])
+
+        # ensure sparepart quantity will be subtracted by service_sparepart's quantity
+        # after service successfully updated
+        self.assertEqual(Sparepart.objects.all().order_by('sparepart_id')[0].quantity, 52)
+        self.assertEqual(Sparepart.objects.all().order_by('sparepart_id')[1].quantity, 103)
 
     def test_nonlogin_failed_to_update_service(self) -> None:
         """
@@ -2565,6 +2597,18 @@ class ServiceDeleteTestCase(SetTestCase):
             contact='082541684051',
         )
 
+        # Setting up sparepart data
+        cls.sparepart = Sparepart.objects.create(
+            name='Check Point Scroll',
+            partnumber='JFLJ23-Aj',
+            quantity=50,
+            motor_type='Mage',
+            sparepart_type='Magical Scroll',
+            price=105000,
+            workshop_price=100000,
+            install_price=110000,
+        )
+
         return super().setUpTestData()
 
     def setUp(self) -> None:
@@ -2590,9 +2634,9 @@ class ServiceDeleteTestCase(SetTestCase):
 
         # Setting up service sparepart
         Service_sparepart.objects.create(
-            quantity=2,
+            quantity=13,
             service_id=self.service,
-            sparepart_id=None
+            sparepart_id=self.sparepart
         )
 
         return super().setUp()
@@ -2608,6 +2652,10 @@ class ServiceDeleteTestCase(SetTestCase):
         self.assertEqual(len(Service.objects.all()), 0)
         self.assertEqual(len(Service_action.objects.all()), 0)
         self.assertEqual(len(Service_sparepart.objects.all()), 0)
+
+        # ensure sparepart quantity will be added (+) by service_sparepart's quantity
+        # after service successfully deleted
+        self.assertEqual(Sparepart.objects.all().order_by('sparepart_id')[0].quantity, 63)
 
     def test_nonlogin_user_failed_to_delete_service(self) -> None:
         """

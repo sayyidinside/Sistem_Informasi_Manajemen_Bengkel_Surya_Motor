@@ -281,6 +281,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
             # Get the Sparepart instance associated with the old Sales_detail instance
             sparepart = old_data['sparepart_id']
             # Update the quantity field of the Sparepart instance
+
             sparepart.quantity += old_data['quantity']
             sparepart.save()
 
@@ -288,6 +289,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
         for sales_detail in instance.sales_detail_set.all():
             # Get the Sparepart instance associated with the new Sales_detail instance
             sparepart = sales_detail.sparepart_id
+
             # Update the quantity field of the Sparepart instance
             sparepart.quantity -= sales_detail.quantity
             sparepart.save()
@@ -874,7 +876,10 @@ class ServiceList(generics.ListAPIView):
 
 
 class ServiceAdd(generics.CreateAPIView):
-    queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
+    queryset = Service.objects.prefetch_related(
+        'service_action_set', 'service_sparepart_set'
+    ).order_by('service_id')
+
     serializer_class = serializers.ServiceManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -893,9 +898,23 @@ class ServiceAdd(generics.CreateAPIView):
 
         return Response(data, status=status.HTTP_201_CREATED, headers=headers)
 
+    def perform_create(self, serializer):
+        # Save the new Service instance to the database
+        instance = serializer.save()
+
+        # Subtracting spareapart quantity with new service_sparepart data
+        for service_sparepart in instance.service_sparepart_set.all():
+            # Get the Sparepart instance associated with the Service_sparepart instance
+            sparepart = service_sparepart.sparepart_id
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity -= service_sparepart.quantity
+            sparepart.save()
+
 
 class ServiceUpdate(generics.RetrieveUpdateAPIView):
-    queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
+    queryset = Service.objects.prefetch_related(
+        'service_action_set', 'service_sparepart_set'
+    ).order_by('service_id')
     serializer_class = serializers.ServiceManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -937,6 +956,46 @@ class ServiceUpdate(generics.RetrieveUpdateAPIView):
 
         return Response(data)
 
+    def perform_update(self, serializer):
+        # Get the old Service instance and its associated Service_sparepart instances
+        old_instance = self.get_object()
+        old_service_spareparts = old_instance.service_sparepart_set.all()
+
+        # Save intance to database
+        instance = serializer.save()
+
+        # looping trought new service sparepart data to adjust sparepart quantity
+        for service_sparepart in instance.service_sparepart_set.all():
+            # Get the Sparepart instance associated with the Service_sparepart instance
+            sparepart = service_sparepart.sparepart_id
+
+            # Find the old Service_sparepart instance with the same sparepart_id
+            old_service_sparepart = next(
+                (ss for ss in old_service_spareparts if ss.sparepart_id == sparepart),
+                None
+            )
+
+            # Update the quantity field of the Sparepart instance:
+            # 1. If an old Service_action instance was found, increase the quantity field of
+            # the Sparepart instance by the old quantity value
+            if old_service_sparepart:
+                sparepart.quantity += old_service_sparepart.quantity
+
+            # 2. Decrease the quantity field of the Sparepart instance by the new quantity value
+            sparepart.quantity -= service_sparepart.quantity
+            sparepart.save()
+
+        # Loop over all the old Service_sparepart instances
+        for old_service_sparepart in old_service_spareparts:
+            # Check if the old Service_sparepart instance is not present in the
+            # new data / updated instance
+            if old_service_sparepart not in instance.service_sparepart_set.all():
+                sparepart = old_service_sparepart.sparepart_id
+                # increase the quantity field of the Sparepart instance by the old
+                # quantity value
+                sparepart.quantity += old_service_sparepart.quantity
+                sparepart.save()
+
 
 class ServiceDelete(generics.DestroyAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
@@ -959,6 +1018,33 @@ class ServiceDelete(generics.DestroyAPIView):
         perform_log(request=request, operation='R', table='Service')
 
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+    def perform_destroy(self, instance):
+        # Get the old Sales instance and its associated service_sparepart instances
+        old_instance = self.get_object()
+        old_service_spareparts = old_instance.service_sparepart_set.all().order_by('service_sparepart_id')
+
+        # Getting list of dict from old data, for post save calculaltion
+        old_data_list = []
+        for old_data in old_service_spareparts:
+            old_data_list.append(
+                {
+                    'service_sparepart_id': old_data.service_sparepart_id,
+                    'quantity': old_data.quantity,
+                    'sparepart_id': old_data.sparepart_id
+                }
+            )
+
+        # Deleting instance in database
+        instance.delete()
+
+        # Adding (plus) Sparepart quantity with old service_sparepart data
+        for old_data in old_data_list:
+            # Get the Sparepart instance associated with the old service_sparepart instance
+            sparepart = old_data['sparepart_id']
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity += old_data['quantity']
+            sparepart.save()
 
 
 class StorageList(generics.ListAPIView):
