@@ -35,6 +35,22 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
         ]
 
 
+class SparepartListSerializers(serializers.ModelSerializer):
+    brand = serializers.ReadOnlyField(source='brand_id.name')
+    category = serializers.ReadOnlyField(source='category_id.name')
+
+    class Meta:
+        model = Sparepart
+        fields = [
+            'sparepart_id',
+            'partnumber',
+            'name',
+            'brand',
+            'category',
+            'quantity',
+        ]
+
+
 class SparepartSerializers(serializers.ModelSerializer):
     image = serializers.ImageField(required=False, allow_empty_file=True, use_url=True)
 

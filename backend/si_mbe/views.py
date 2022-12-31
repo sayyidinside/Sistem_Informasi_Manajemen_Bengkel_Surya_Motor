@@ -88,9 +88,20 @@ class AdminDashboard(generics.GenericAPIView):
 
 class SparepartDataList(generics.ListAPIView):
     queryset = Sparepart.objects.all().order_by('sparepart_id')
-    serializer_class = serializers.SearchSparepartSerializers
-    pagination_class = CustomPagination
+    serializer_class = serializers.SparepartListSerializers
     permission_classes = [IsLogin, IsAdminRole]
+
+    pagination_class = CustomPagination
+    pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'partnumber', 'brand_id__name', 'category_id__name']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.pagination_class.message = 'Sparepart yang dicari tidak ditemukan'
+            self.pagination_class.status = status.HTTP_200_OK
+        return super().get_paginated_response(data)
 
 
 class SparepartDataAdd(generics.CreateAPIView):

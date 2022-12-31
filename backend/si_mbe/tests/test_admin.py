@@ -232,48 +232,27 @@ class SparepartDataListTestCase(SetTestCase):
         self.assertEqual(response.data['results'], [
             {
                 'sparepart_id': self.sparepart[0].sparepart_id,
-                'image': None,
-                'name': self.sparepart[0].name,
                 'partnumber': self.sparepart[0].partnumber,
-                'quantity': self.sparepart[0].quantity,
-                'category': self.sparepart[0].category_id.name,
-                'motor_type': self.sparepart[0].motor_type,
-                'sparepart_type': self.sparepart[0].sparepart_type,
+                'name': self.sparepart[0].name,
                 'brand': self.sparepart[0].brand_id.name,
-                'price': str(self.sparepart[0].price),
-                'workshop_price': str(self.sparepart[0].workshop_price),
-                'install_price': str(self.sparepart[0].install_price),
-                'location': self.storage.code
+                'category': self.sparepart[0].category_id.name,
+                'quantity': self.sparepart[0].quantity,
             },
             {
                 'sparepart_id': self.sparepart[1].sparepart_id,
-                'image': None,
-                'name': self.sparepart[1].name,
                 'partnumber': self.sparepart[1].partnumber,
-                'quantity': self.sparepart[1].quantity,
-                'category': self.sparepart[1].category_id.name,
-                'motor_type': self.sparepart[1].motor_type,
-                'sparepart_type': self.sparepart[1].sparepart_type,
+                'name': self.sparepart[1].name,
                 'brand': self.sparepart[1].brand_id.name,
-                'price': str(self.sparepart[1].price),
-                'workshop_price': str(self.sparepart[1].workshop_price),
-                'install_price': str(self.sparepart[1].install_price),
-                'location': self.storage.code
+                'category': self.sparepart[1].category_id.name,
+                'quantity': self.sparepart[1].quantity,
             },
             {
                 'sparepart_id': self.sparepart[2].sparepart_id,
-                'image': None,
-                'name': self.sparepart[2].name,
                 'partnumber': self.sparepart[2].partnumber,
-                'quantity': self.sparepart[2].quantity,
-                'category': self.sparepart[2].category_id.name,
-                'motor_type': self.sparepart[2].motor_type,
-                'sparepart_type': self.sparepart[2].sparepart_type,
+                'name': self.sparepart[2].name,
                 'brand': self.sparepart[2].brand_id.name,
-                'price': str(self.sparepart[2].price),
-                'workshop_price': str(self.sparepart[2].workshop_price),
-                'install_price': str(self.sparepart[2].install_price),
-                'location': self.storage.code
+                'category': self.sparepart[2].category_id.name,
+                'quantity': self.sparepart[2].quantity,
             }
 
         ])
@@ -295,6 +274,35 @@ class SparepartDataListTestCase(SetTestCase):
         response = self.client.get(self.sparepart_data_list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_successfully_searching_sparepart_with_result(self) -> None:
+        """
+        Ensure admin who searching sparepart with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('sparepart_data_list') + f'?q={self.sparepart[1].name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'], [
+            {
+                'sparepart_id': self.sparepart[1].sparepart_id,
+                'partnumber': self.sparepart[1].partnumber,
+                'name': self.sparepart[1].name,
+                'brand': self.sparepart[1].brand_id.name,
+                'category': self.sparepart[1].category_id.name,
+                'quantity': self.sparepart[1].quantity,
+            }
+        ])
+
+    def test_successfully_searching_sparepart_without_result(self) -> None:
+        """
+        Ensure user who searching sparepart that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('sparepart_data_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')
 
 
 class SparepartDataAddTestCase(SetTestCase):
