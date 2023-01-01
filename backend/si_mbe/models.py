@@ -244,8 +244,10 @@ class Supplier(models.Model):
         unique=True
     )
     name = models.CharField(max_length=20)
-    address = models.CharField(max_length=50)
     contact = models.CharField(max_length=13)
+    rekening_number = models.CharField(max_length=20, default='')
+    rekening_name = models.CharField(max_length=30, default='')
+    rekening_bank = models.CharField(max_length=20, default='')
 
     def __str__(self) -> str:
         return f'{self.name} | {self.contact}'

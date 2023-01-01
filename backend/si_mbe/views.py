@@ -529,13 +529,24 @@ class RestockDelete(generics.DestroyAPIView):
 class SupplierList(generics.ListAPIView):
     queryset = Supplier.objects.all().order_by('supplier_id')
     serializer_class = serializers.SupplierSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+    pagination_class = CustomPagination
+    pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'rekening_bank', 'rekening_name']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.pagination_class.message = 'Supplier yang dicari tidak ditemukan'
+            self.pagination_class.status = status.HTTP_200_OK
+        return super().get_paginated_response(data)
 
 
 class SupplierAdd(generics.CreateAPIView):
     queryset = Supplier.objects.all()
-    serializer_class = serializers.SupplierSerializers
+    serializer_class = serializers.SupplierManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
@@ -553,7 +564,7 @@ class SupplierAdd(generics.CreateAPIView):
 
 class SupplierUpdate(generics.RetrieveUpdateAPIView):
     queryset = Supplier.objects.all()
-    serializer_class = serializers.SupplierSerializers
+    serializer_class = serializers.SupplierManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'supplier_id'
@@ -586,7 +597,7 @@ class SupplierUpdate(generics.RetrieveUpdateAPIView):
 
 class SupplierDelete(generics.DestroyAPIView):
     queryset = Supplier.objects.all()
-    serializer_class = serializers.SupplierSerializers
+    serializer_class = serializers.SupplierManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'supplier_id'

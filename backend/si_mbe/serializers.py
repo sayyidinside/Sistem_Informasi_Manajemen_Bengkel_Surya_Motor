@@ -317,7 +317,20 @@ class RestockManagementSerializers(serializers.ModelSerializer):
 class SupplierSerializers(serializers.ModelSerializer):
     class Meta:
         model = Supplier
-        fields = ['supplier_id', 'name', 'address', 'contact']
+        fields = ['supplier_id', 'name', 'contact']
+
+
+class SupplierManagementSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Supplier
+        fields = [
+            'supplier_id',
+            'name',
+            'contact',
+            'rekening_number',
+            'rekening_name',
+            'rekening_bank'
+        ]
 
 
 class SalesReportSerializers(serializers.ModelSerializer):

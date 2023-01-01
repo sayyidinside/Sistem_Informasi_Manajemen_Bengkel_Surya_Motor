@@ -1120,8 +1120,10 @@ class RestockListTestCase(SetTestCase):
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='Arasaka',
-            address='Night City',
-            contact='084894564563'
+            contact='084894564563',
+            rekening_number='98186046800001',
+            rekening_name='Saburo Arasaka',
+            rekening_bank='Bank Night City'
         )
 
         # Setting up salesman data
@@ -1276,8 +1278,10 @@ class RestockAddTestCase(SetTestCase):
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='Parker Industries',
-            address='New York st.long walk',
             contact='084526301053',
+            rekening_number='98186046800001',
+            rekening_name='Peter Parker',
+            rekening_bank='Bank DMG'
         )
 
         # Setting up salesman data
@@ -1411,8 +1415,10 @@ class RestockUpdateTestCase(SetTestCase):
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='Invulnerable Vagrant',
-            address='Zadash market disctrict',
             contact='084526301053',
+            rekening_number='8468464056156',
+            rekening_name='Pumat Sol',
+            rekening_bank='Bank Zadash'
         )
 
         # Setting up salesman data
@@ -1587,8 +1593,10 @@ class RestockDeleteTestCase(SetTestCase):
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name="Future Fondations",
-            address='New York Street',
             contact='084526301053',
+            rekening_number='8468464056156',
+            rekening_name='Susan Storm',
+            rekening_bank='Bank Baxter'
         )
 
         # Setting up salesman data
@@ -1706,19 +1714,16 @@ class SupplierListTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up supplier
-        cls.supplier_1 = Supplier.objects.create(
+        cls.supplier = Supplier.objects.create(
             name='Alpha Flight',
-            address='Canada',
             contact='088464105635',
         )
-        cls.supplier_2 = Supplier.objects.create(
+        Supplier.objects.create(
             name='New Warriors',
-            address='America',
             contact='084108910563',
         )
-        cls.supplier_3 = Supplier.objects.create(
+        Supplier.objects.create(
             name='Quite Council',
-            address='Krakoa',
             contact='089661056345',
         )
 
@@ -1732,8 +1737,11 @@ class SupplierListTestCase(SetTestCase):
         response = self.client.get(self.supplier_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 3)
+        self.assertEqual(response.data['results'][0]['name'], 'Alpha Flight')
+        self.assertEqual(response.data['results'][0]['contact'], '088464105635')
+        self.assertEqual(response.data['results'][1]['name'], 'New Warriors')
+        self.assertEqual(response.data['results'][1]['contact'], '084108910563')
         self.assertEqual(response.data['results'][2]['name'], 'Quite Council')
-        self.assertEqual(response.data['results'][2]['address'], 'Krakoa')
         self.assertEqual(response.data['results'][2]['contact'], '089661056345')
 
     def test_nonlogin_user_failed_to_access_supplier_list(self) -> None:
@@ -1754,6 +1762,32 @@ class SupplierListTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
+    def test_admin_successfully_searching_supplier_with_result(self) -> None:
+        """
+        Ensure admin who searching supplier with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('supplier_list') + f'?q={self.supplier.name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'], [
+            {
+                'supplier_id': self.supplier.supplier_id,
+                'name': self.supplier.name,
+                'contact': self.supplier.contact,
+            }
+        ])
+
+    def test_admin_successfully_searching_supplier_without_result(self) -> None:
+        """
+        Ensure admin search supplier that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('supplier_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Supplier yang dicari tidak ditemukan')
+
 
 class SupplierAddTestCase(SetTestCase):
     supplier_add_url = reverse('supplier_add')
@@ -1763,8 +1797,10 @@ class SupplierAddTestCase(SetTestCase):
         # Creating data that gonna be use as input
         cls.data = {
             'name': 'Mighty Nein',
-            'address': 'Wildemount',
-            'contact': '084110864563'
+            'contact': '084110864563',
+            'rekening_number': '468408644866',
+            'rekening_name': 'Fellowship',
+            'rekening_bank': 'Bank Power Metal'
         }
 
         return super().setUpTestData()
@@ -1778,8 +1814,10 @@ class SupplierAddTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['message'], 'Data supplier berhasil ditambah')
         self.assertEqual(response.data['name'], self.data['name'])
-        self.assertEqual(response.data['address'], self.data['address'])
         self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['rekening_number'], self.data['rekening_number'])
+        self.assertEqual(response.data['rekening_name'], self.data['rekening_name'])
+        self.assertEqual(response.data['rekening_bank'], self.data['rekening_bank'])
 
     def test_nonlogin_user_failed_to_add_new_supplier(self) -> None:
         """
@@ -1825,8 +1863,10 @@ class SupplierUpdateTestCase(SetTestCase):
         # Creating data that gonna be use as input
         cls.data = {
             'name': 'Yukumo Village',
-            'address': 'Misty Peaks',
             'contact': '081526210523',
+            'rekening_number': '5408654681531',
+            'rekening_name': 'Charge Blade User',
+            'rekening_bank': 'Bank Astera'
         }
 
         return super().setUpTestData()
@@ -1835,8 +1875,10 @@ class SupplierUpdateTestCase(SetTestCase):
         # Setting up supplier
         self.supplier = Supplier.objects.create(
             name='Yukumo',
-            address='Misty Peaks',
             contact='084108910563',
+            rekening_number='540006445154',
+            rekening_name='Dual Blade User',
+            rekening_bank='Bank Seliana'
         )
 
         self.supplier_update_url = reverse('supplier_update', kwargs={'supplier_id': self.supplier.supplier_id})
@@ -1852,8 +1894,10 @@ class SupplierUpdateTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Data supplier berhasil dirubah')
         self.assertEqual(response.data['name'], self.data['name'])
-        self.assertEqual(response.data['address'], self.data['address'])
         self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['rekening_number'], self.data['rekening_number'])
+        self.assertEqual(response.data['rekening_name'], self.data['rekening_name'])
+        self.assertEqual(response.data['rekening_bank'], self.data['rekening_bank'])
 
     def test_nonlogin_user_failed_to_update_supplier(self) -> None:
         """
@@ -1909,13 +1953,17 @@ class SupplierDeleteTestCase(SetTestCase):
         # Setting up supplier
         cls.supplier_1 = Supplier.objects.create(
             name='Overwatch',
-            address='Brooklyn',
             contact='088464105635',
+            rekening_number='98186046800001',
+            rekening_name='Jack Morrison',
+            rekening_bank='Bank Blackwatch'
         )
         cls.supplier_2 = Supplier.objects.create(
             name='Null Sector',
-            address='London',
             contact='084108910563',
+            rekening_number='8648646804601',
+            rekening_name='Ramattra',
+            rekening_bank='Bank Nemesis'
         )
 
         # Getting newly added supplier it's supplier_id then set it to kwargs in reverse url
@@ -3916,8 +3964,10 @@ class SalesmanListTestCase(SetTestCase):
         # Setting up supplier data
         cls.supplier = Supplier.objects.create(
             name='Institute',
-            address='Commonwealth Institute Of Technology',
-            contact='085340153504'
+            contact='085340153504',
+            rekening_number='8468464056156',
+            rekening_name='Father',
+            rekening_bank='Bank Commonwealth'
         )
 
         # setting up salesman data
@@ -3972,8 +4022,10 @@ class SalesmanAddTestCase(SetTestCase):
     def setUpTestData(cls) -> None:
         cls.supplier = Supplier.objects.create(
             name='Institute',
-            address='Commonwealth Institute Of Technology',
-            contact='085340153504'
+            contact='085340153504',
+            rekening_number='8468464056156',
+            rekening_name='Father',
+            rekening_bank='Bank Commonwealth'
         )
 
         # Setting up input data
@@ -4043,8 +4095,10 @@ class SalesmanUpdateTestCase(SetTestCase):
         # Setting supplier data
         cls.supplier = Supplier.objects.create(
             name='Alpha Flight',
-            address='Canada',
-            contact='0850640564646'
+            contact='0850640564646',
+            rekening_number='5466044654101',
+            rekening_name='Logan',
+            rekening_bank='Bank Of Canada'
         )
 
         # Setting salesman data
@@ -4136,8 +4190,10 @@ class SalesmanDeleteTestCase(SetTestCase):
         # Setting supplier data
         cls.supplier = Supplier.objects.create(
             name='Paige',
-            address='Elf Island',
-            contact='083151051560'
+            contact='083151051560',
+            rekening_number='4466846011015',
+            rekening_name='Clamentine',
+            rekening_bank='Bank SalvaierWood'
         )
 
         return super().setUpTestData()

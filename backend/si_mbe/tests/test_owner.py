@@ -305,8 +305,10 @@ class RestockReportTestCase(APITestCase):
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='Galactus',
-            address='Planet Taa',
             contact='084894564563',
+            rekening_number='8468464056156',
+            rekening_name='Galan',
+            rekening_bank='Bank Taa'
         )
 
         # Setting up salesman
@@ -437,8 +439,10 @@ class RestockReportDetailTestCase(APITestCase):
         # Setting up supplier
         cls.supplier = Supplier.objects.create(
             name='narkina 5',
-            address='Planet Narkina, Outer Rim',
-            contact='084894564563'
+            contact='084894564563',
+            rekening_number='846668686404001',
+            rekening_name='Kino Loy',
+            rekening_bank='Bank Empire'
         )
 
         # Setting up salesman data
