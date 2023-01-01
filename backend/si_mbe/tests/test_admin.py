@@ -294,9 +294,9 @@ class SparepartDataListTestCase(SetTestCase):
             }
         ])
 
-    def test_successfully_searching_sparepart_without_result(self) -> None:
+    def test_admin_successfully_searching_sparepart_without_result(self) -> None:
         """
-        Ensure user who searching sparepart that doesn't exist get empty result
+        Ensure admin search sparepart that doesn't exist get empty result
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(reverse('sparepart_data_list') + '?q=random shit')
@@ -3153,7 +3153,7 @@ class CategoryListTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up category data
-        Category.objects.create(name='Oil')
+        cls.category = Category.objects.create(name='Oil')
         Category.objects.create(name='Bodypart')
 
         return super().setUpTestData()
@@ -3186,6 +3186,31 @@ class CategoryListTestCase(SetTestCase):
         response = self.client.get(self.category_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_successfully_searching_category_with_result(self) -> None:
+        """
+        Ensure admin who searching category with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('category_list') + f'?q={self.category.name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'], [
+            {
+                'category_id': self.category.category_id,
+                'name': 'Oil',
+            }
+        ])
+
+    def test_admin_successfully_searching_category_without_result(self) -> None:
+        """
+        Ensure admin search category that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('category_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Kategori sparepart yang dicari tidak ditemukan')
 
 
 class CategoryAddTestCase(SetTestCase):
