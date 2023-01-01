@@ -891,13 +891,13 @@ class SalesmanSerializers(serializers.ModelSerializer):
 
     class Meta:
         model = Salesman
-        fields = ['salesman_id', 'name', 'contact', 'supplier']
+        fields = ['salesman_id', 'name', 'contact', 'supplier', 'responsibility']
 
 
 class SalesmanManagementSerializers(serializers.ModelSerializer):
     class Meta:
         model = Salesman
-        fields = ['salesman_id', 'name', 'contact', 'supplier_id']
+        fields = ['salesman_id', 'name', 'contact', 'supplier_id', 'responsibility']
 
 
 class RestockDueSerializers(serializers.ModelSerializer):

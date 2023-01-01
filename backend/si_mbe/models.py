@@ -265,6 +265,7 @@ class Salesman(models.Model):
 
     name = models.CharField(max_length=20)
     contact = models.CharField(max_length=13)
+    responsibility = models.CharField(max_length=20, default='')
 
     supplier_id = models.ForeignKey(
         Supplier,

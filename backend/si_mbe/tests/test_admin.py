@@ -3974,11 +3974,13 @@ class SalesmanListTestCase(SetTestCase):
         cls.salesman = Salesman.objects.create(
             name='The Courier',
             contact='084052631053',
+            responsibility='Package',
             supplier_id=cls.supplier
         )
         Salesman.objects.create(
             name='The Lone Wanderer',
             contact='082351351010',
+            responsibility='Vault',
             supplier_id=cls.supplier
         )
 
@@ -3995,6 +3997,7 @@ class SalesmanListTestCase(SetTestCase):
         self.assertEqual(response.data['results'][0]['name'], self.salesman.name)
         self.assertEqual(response.data['results'][0]['contact'], self.salesman.contact)
         self.assertEqual(response.data['results'][0]['supplier'], self.salesman.supplier_id.name)
+        self.assertEqual(response.data['results'][0]['responsibility'], self.salesman.responsibility)
 
     def test_nonlogin_user_failed_to_access_salesman_list(self) -> None:
         """
@@ -4014,6 +4017,34 @@ class SalesmanListTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
+    def test_admin_successfully_searching_salesman_with_result(self) -> None:
+        """
+        Ensure admin who searching salesman with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('salesman_list') + f'?q={self.salesman.name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'], [
+            {
+                'salesman_id': self.salesman.salesman_id,
+                'name': self.salesman.name,
+                'contact': self.salesman.contact,
+                'supplier': self.salesman.supplier_id.name,
+                'responsibility': self.salesman.responsibility
+            }
+        ])
+
+    def test_admin_successfully_searching_salesman_without_result(self) -> None:
+        """
+        Ensure admin search salesman that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('salesman_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Salesman yang dicari tidak ditemukan')
+
 
 class SalesmanAddTestCase(SetTestCase):
     salesman_add_url = reverse('salesman_add')
@@ -4032,7 +4063,8 @@ class SalesmanAddTestCase(SetTestCase):
         cls.data = {
             'name': 'Allura Vasoren',
             'contact': '085132135051',
-            'supplier_id': cls.supplier.supplier_id
+            'supplier_id': cls.supplier.supplier_id,
+            'responsibility': 'Magical Threat'
         }
         cls.incomplete_data = {
             'address': 'Allura Vysoren'
@@ -4051,6 +4083,7 @@ class SalesmanAddTestCase(SetTestCase):
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['contact'], self.data['contact'])
         self.assertEqual(response.data['supplier_id'], self.data['supplier_id'])
+        self.assertEqual(response.data['responsibility'], self.data['responsibility'])
 
     def test_nonlogin_user_failed_to_add_new_salesman(self) -> None:
         """
@@ -4105,7 +4138,8 @@ class SalesmanUpdateTestCase(SetTestCase):
         cls.salesman = Salesman.objects.create(
             name='James Howlett',
             contact='083260466406',
-            supplier_id=cls.supplier
+            supplier_id=cls.supplier,
+            responsibility="Mutant's Problems"
         )
 
         cls.salesman_update_url = reverse(
@@ -4117,7 +4151,8 @@ class SalesmanUpdateTestCase(SetTestCase):
         cls.data = {
             'name': 'Logan',
             'contact': '085020260654',
-            'supplier_id': cls.supplier.supplier_id
+            'supplier_id': cls.supplier.supplier_id,
+            'responsibility': "Avenger's Problems"
         }
         cls.incomplete_data = {
             'name': 'Logan'
@@ -4136,6 +4171,7 @@ class SalesmanUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['contact'], self.data['contact'])
         self.assertEqual(response.data['supplier_id'], self.data['supplier_id'])
+        self.assertEqual(response.data['responsibility'], self.data['responsibility'])
 
     def test_nonlogin_user_failed_to_update_salesman(self) -> None:
         """
@@ -4203,7 +4239,8 @@ class SalesmanDeleteTestCase(SetTestCase):
         self.salesman = Salesman.objects.create(
             name='Clamentine',
             contact='086054056640',
-            supplier_id=self.supplier
+            supplier_id=self.supplier,
+            responsibility='Babysitting Idiots'
         )
 
         self.salesman_delete_url = reverse(
