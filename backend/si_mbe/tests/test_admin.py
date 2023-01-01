@@ -2966,7 +2966,7 @@ class BrandListTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up brand data
-        Brand.objects.create(name='The Way Of King')
+        cls.brand = Brand.objects.create(name='The Way Of King')
         Brand.objects.create(name='Elantris')
 
         return super().setUpTestData()
@@ -2999,6 +2999,31 @@ class BrandListTestCase(SetTestCase):
         response = self.client.get(self.brand_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_successfully_searching_brand_with_result(self) -> None:
+        """
+        Ensure admin who searching brand with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('brand_list') + f'?q={self.brand.name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'], [
+            {
+                'brand_id': self.brand.brand_id,
+                'name': 'The Way Of King',
+            }
+        ])
+
+    def test_admin_successfully_searching_brand_without_result(self) -> None:
+        """
+        Ensure admin search brand that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('brand_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Brand / Merek sparepart yang dicari tidak ditemukan')
 
 
 class BrandAddTestCase(SetTestCase):

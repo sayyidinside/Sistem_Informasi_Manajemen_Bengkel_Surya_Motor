@@ -1139,8 +1139,19 @@ class StorageDelete(generics.DestroyAPIView):
 class BrandList(generics.ListAPIView):
     queryset = Brand.objects.all().order_by('brand_id')
     serializer_class = serializers.BrandSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+    pagination_class = CustomPagination
+    pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.pagination_class.message = 'Brand / Merek sparepart yang dicari tidak ditemukan'
+            self.pagination_class.status = status.HTTP_200_OK
+        return super().get_paginated_response(data)
 
 
 class BrandAdd(generics.CreateAPIView):
