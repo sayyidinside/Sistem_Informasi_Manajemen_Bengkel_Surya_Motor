@@ -875,9 +875,46 @@ class CategorySerializers(serializers.ModelSerializer):
 
 
 class CustomerSerializers(serializers.ModelSerializer):
+    number_of_service = serializers.SerializerMethodField()
+    total_payment = serializers.SerializerMethodField()
+
     class Meta:
         model = Customer
         fields = ['customer_id', 'name', 'contact', 'number_of_service', 'total_payment']
+
+    def get_number_of_service(self, obj):
+        # Getting service data related to the customer
+        services = ServiceSerializers(obj.service_set, many=True)
+
+        # Calculating number of service related to the customer, only current year
+        number_of_service = 0
+        for service in services.data:
+            if str(date.today().year) in service['created_at']:
+                number_of_service += 1
+
+        return number_of_service
+
+    def get_total_payment(self, obj):
+        # Getting services and sales data, that related to customer
+        services = ServiceSerializers(obj.service_set, many=True)
+        sales = SalesSerializers(obj.sales_set, many=True)
+
+        total_payment = 0
+
+        # Calculating total_payment by looping trought services and sales data, only current year
+        for service in services.data:
+            if str(date.today().year) in service['created_at']:
+                total_payment += service['total_price_of_service']
+        for sale in sales.data:
+            if str(date.today().year) in sale['created_at']:
+                total_payment += sale['total_price_sales']
+        return total_payment
+
+
+class CustomerManagementSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Customer
+        fields = '__all__'
 
 
 class MechanicSerializers(serializers.ModelSerializer):

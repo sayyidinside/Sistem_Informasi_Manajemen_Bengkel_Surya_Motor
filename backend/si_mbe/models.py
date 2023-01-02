@@ -79,12 +79,9 @@ class Customer(models.Model):
     )
     name = models.CharField(max_length=30)
     contact = models.CharField(max_length=15)
-    number_of_service = models.PositiveSmallIntegerField(default=0)
-    total_payment = models.DecimalField(max_digits=15, decimal_places=0, default=0)
 
     def __str__(self) -> str:
-        return f'{self.name} | Total payment = Rp {self.total_payment}| '\
-               f'Total service = {self.number_of_service}'
+        return f'{self.name}'
 
     class Meta:
         db_table = 'customer'

@@ -1326,19 +1326,30 @@ class CategoryDelete(generics.DestroyAPIView):
 
 
 class CustomerList(generics.ListAPIView):
-    queryset = Customer.objects.all().order_by('customer_id')
+    queryset = Customer.objects.prefetch_related('service_set', 'sales_set').order_by('customer_id')
     serializer_class = serializers.CustomerSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+    pagination_class = CustomPagination
+    pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'contact']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.pagination_class.message = 'Customer yang dicari tidak ditemukan'
+            self.pagination_class.status = status.HTTP_200_OK
+        return super().get_paginated_response(data)
 
 
 class CustomerAdd(generics.CreateAPIView):
-    queryset = Customer.objects.all()
-    serializer_class = serializers.CustomerSerializers
+    queryset = Customer.objects.prefetch_related('service_set', 'sales_set').order_by('customer_id')
+    serializer_class = serializers.CustomerManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 4:
+        if len(request.data) < 2:
             return Response({'message': 'Data pelanggan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(data=request.data)
@@ -1351,8 +1362,8 @@ class CustomerAdd(generics.CreateAPIView):
 
 
 class CustomerUpdate(generics.RetrieveUpdateAPIView):
-    queryset = Customer.objects.all()
-    serializer_class = serializers.CustomerSerializers
+    queryset = Customer.objects.prefetch_related('service_set', 'sales_set').order_by('customer_id')
+    serializer_class = serializers.CustomerManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'customer_id'
@@ -1364,7 +1375,7 @@ class CustomerUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 4:
+        if len(request.data) < 2:
             return Response({'message': 'Data pelanggan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         partial = kwargs.pop('partial', False)
@@ -1384,8 +1395,8 @@ class CustomerUpdate(generics.RetrieveUpdateAPIView):
 
 
 class CustomerDelete(generics.DestroyAPIView):
-    queryset = Customer.objects.all()
-    serializer_class = serializers.CustomerSerializers
+    queryset = Customer.objects.prefetch_related('service_set', 'sales_set').order_by('customer_id')
+    serializer_class = serializers.CustomerManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'customer_id'

@@ -3438,18 +3438,57 @@ class CustomerListTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
-        # setticustomer data
-        cls.storage = Customer.objects.create(
+        # setting customer data
+        cls.customer = Customer.objects.create(
             name='Preston Garvey',
             contact='085701530830',
-            number_of_service=11,
-            total_payment=450000
         )
-        Customer.objects.create(
+        cls.customer_2 = Customer.objects.create(
             name='Robert MacCready',
             contact='085163511040',
-            number_of_service=3,
-            total_payment=51000
+        )
+
+        # Setting up sparepart data
+        cls.sparepart = Sparepart.objects.create(
+            name='Grimoire',
+            partnumber='HGHA-189751',
+            quantity=150,
+            limit=50,
+            motor_type='Yamaha',
+            sparepart_type='Book',
+            price=155000,
+            workshop_price=150000,
+            install_price=165000
+        )
+
+        # Setting up service data for customer
+        cls.service = Service.objects.create(
+            police_number='B 1238 AS',
+            motor_type='Kymco C100',
+            discount=10000,
+            customer_id=cls.customer
+        )
+        Service_action.objects.create(
+            name='Angkat Kaki',
+            cost=150000,
+            service_id=cls.service
+        )
+        Service_sparepart.objects.create(
+            service_id=cls.service,
+            sparepart_id=cls.sparepart,
+            quantity=5,
+        )
+
+        cls.service_2 = Service.objects.create(
+            police_number='B 1236 DS',
+            motor_type='Kymco C100',
+            discount=2000,
+            customer_id=cls.customer_2
+        )
+        Service_action.objects.create(
+            name='Angkat Tangan',
+            cost=30000,
+            service_id=cls.service_2
         )
 
         return super().setUpTestData()
@@ -3460,11 +3499,17 @@ class CustomerListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.customer_url)
+        # print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 2)
-        self.assertEqual(response.data['results'][0]['name'], self.storage.name)
-        self.assertEqual(response.data['results'][0]['contact'], self.storage.contact)
-        self.assertEqual(int(response.data['results'][0]['total_payment']), self.storage.total_payment)
+        self.assertEqual(response.data['results'][0]['name'], self.customer.name)
+        self.assertEqual(response.data['results'][0]['contact'], self.customer.contact)
+        self.assertEqual(response.data['results'][0]['number_of_service'], 1)
+        self.assertEqual(response.data['results'][0]['total_payment'], 965000)
+        self.assertEqual(response.data['results'][1]['name'], self.customer_2.name)
+        self.assertEqual(response.data['results'][1]['contact'], self.customer_2.contact)
+        self.assertEqual(response.data['results'][1]['number_of_service'], 1)
+        self.assertEqual(response.data['results'][1]['total_payment'], 28000)
 
     def test_nonlogin_user_failed_to_access_customer_list(self) -> None:
         """
@@ -3484,6 +3529,34 @@ class CustomerListTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
+    def test_admin_successfully_searching_customer_with_result(self) -> None:
+        """
+        Ensure admin who searching customer with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('customer_list') + f'?q={self.customer.name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'], [
+            {
+                'customer_id': self.customer.customer_id,
+                'name': self.customer.name,
+                'contact': self.customer.contact,
+                'number_of_service': 1,
+                'total_payment': 965000
+            }
+        ])
+
+    def test_admin_successfully_searching_customer_without_result(self) -> None:
+        """
+        Ensure admin search customer that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('customer_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Customer yang dicari tidak ditemukan')
+
 
 class CustomerAddTestCase(SetTestCase):
     customer_add_url = reverse('customer_add')
@@ -3494,13 +3567,9 @@ class CustomerAddTestCase(SetTestCase):
         cls.data = {
             'name': 'Piper Wright',
             'contact':  '085701530830',
-            'number_of_service': 27,
-            'total_payment': 952000
         }
         cls.incomplete_data = {
             'contact':  '085687028044',
-            'number_of_service': 16,
-            'total_payment': 395000
         }
 
         return super().setUpTestData()
@@ -3515,8 +3584,6 @@ class CustomerAddTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data pelanggan berhasil ditambah')
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['contact'], self.data['contact'])
-        self.assertEqual(response.data['number_of_service'], self.data['number_of_service'])
-        self.assertEqual(int(response.data['total_payment']), self.data['total_payment'])
 
     def test_nonlogin_user_failed_to_add_new_customer(self) -> None:
         """
@@ -3562,10 +3629,9 @@ class CustomerUpdateTestCase(SetTestCase):
         cls.customer = Customer.objects.create(
            name='The Father',
            contact='083515301351',
-           number_of_service=36,
-           total_payment=1056000
         )
 
+        # Getting customer update url with customer_id
         cls.customer_update_url = reverse(
             'customer_update',
             kwargs={'customer_id': cls.customer.customer_id}
@@ -3575,12 +3641,9 @@ class CustomerUpdateTestCase(SetTestCase):
         cls.data = {
             'name': 'Shaun',
             'contact':  '085701530830',
-            'number_of_service': 27,
-            'total_payment': 952000
         }
         cls.incomplete_data = {
             'contact':  '085687028044',
-            'number_of_service': 16
         }
 
         return super().setUpTestData()
@@ -3595,8 +3658,6 @@ class CustomerUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data pelanggan berhasil dirubah')
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['contact'], self.data['contact'])
-        self.assertEqual(response.data['number_of_service'], self.data['number_of_service'])
-        self.assertEqual(int(response.data['total_payment']), self.data['total_payment'])
 
     def test_nonlogin_user_failed_to_update_customer(self) -> None:
         """
@@ -3650,9 +3711,11 @@ class CustomerDeleteTestCase(SetTestCase):
         # Setting up storage data
         self.customer = Customer.objects.create(
             name='The Father',
-            contact='083515301351',
-            number_of_service=36,
-            total_payment=1056000
+            contact='083515301351'
+        )
+        Customer.objects.create(
+            name='The Minuteman',
+            contact='68486048601'
         )
 
         self.customer_delete_url = reverse(
@@ -3670,7 +3733,7 @@ class CustomerDeleteTestCase(SetTestCase):
         response = self.client.delete(self.customer_delete_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data['message'], 'Data pelanggan berhasil dihapus')
-        self.assertEqual(len(Customer.objects.all()), 0)
+        self.assertEqual(Customer.objects.count(), 1)
 
     def test_nonlogin_user_failed_to_delete_customer(self) -> None:
         """
