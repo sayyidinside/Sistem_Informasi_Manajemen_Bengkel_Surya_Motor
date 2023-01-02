@@ -914,7 +914,7 @@ class CustomerSerializers(serializers.ModelSerializer):
 class CustomerManagementSerializers(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = '__all__'
+        fields = ['customer_id', 'name', 'contact']
 
 
 class MechanicSerializers(serializers.ModelSerializer):

@@ -1355,3 +1355,286 @@ class ServiceReportDetailTestCase(SetTestCase):
         response = self.client.get(reverse('service_report_detail', kwargs={'service_id': 930514}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')
+
+
+class MechanicListTestCase(SetTestCase):
+    mechanic_url = reverse('mechanic_list')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='The Third Fleet',
+            contact='085132135051',
+            address='Jl Port Domali'
+        )
+        Mechanic.objects.create(
+            name='The Fifth Fleet',
+            contact='082351351010',
+            address='Jl Rexxentrum'
+        )
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_access_mechanic_list(self) -> None:
+        """
+        Ensure owner can get mechanic list successfully
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.mechanic_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 2)
+        self.assertEqual(response.data['results'][0]['name'], self.mechanic.name)
+        self.assertEqual(response.data['results'][0]['contact'], self.mechanic.contact)
+        self.assertEqual(response.data['results'][0]['address'], self.mechanic.address)
+
+    def test_nonlogin_user_failed_to_access_mechanic_list(self) -> None:
+        """
+        Ensure non-login user cannot access mechanic list
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.mechanic_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_access_mechanic_list(self) -> None:
+        """
+        Ensure non-owner user cannot access mechanic list
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.mechanic_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_successfully_searching_mechanic_with_result(self) -> None:
+        """
+        Ensure owner who searching mechanic with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(reverse('mechanic_list') + f'?q={self.mechanic.name}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'], [
+            {
+                'mechanic_id': self.mechanic.mechanic_id,
+                'name': self.mechanic.name,
+                'contact': self.mechanic.contact,
+                'address': self.mechanic.address
+            }
+        ])
+
+    def test_owner_successfully_searching_mechanic_without_result(self) -> None:
+        """
+        Ensure owner search mechanic that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(reverse('mechanic_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Mekanik yang dicari tidak ditemukan')
+
+
+class MechanicAddTestCase(SetTestCase):
+    mechanic_add_url = reverse('mechanic_add')
+
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up input data
+        cls.data = {
+            'name': 'Deacon',
+            'contact': '085132135051',
+            'address': 'Jl Railroad Boston'
+        }
+        cls.incomplete_data = {
+            'address': 'Jl Railroad Boston'
+        }
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_add_mechanic(self) -> None:
+        """
+        Ensure admin can add new mechanic successfully
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.mechanic_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data mekanik berhasil ditambah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['address'], self.data['address'])
+
+    def test_nonlogin_user_failed_to_add_new_mechanic(self) -> None:
+        """
+        Ensure non-login user cannot add new mechanic
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.post(self.mechanic_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_add_new_mechanic(self) -> None:
+        """
+        Ensure non-admin user cannot add new mechanic
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.mechanic_add_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_failed_to_add_mechanic_with_empty_data(self) -> None:
+        """
+        Ensure owner cannot add mechanic with empty data / input
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.mechanic_add_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
+
+    def test_owner_failed_to_add_mechanic_with_incomplete_data(self) -> None:
+        """
+        Ensure owner cannot add mechanic with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.post(self.mechanic_add_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
+
+
+class MechanicUpdateTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='The Crick',
+            contact='083260466406',
+            address='Jl Roshan'
+        )
+
+        cls.mechanic_update_url = reverse(
+            'mechanic_update',
+            kwargs={'mechanic_id': cls.mechanic.mechanic_id}
+        )
+
+        # Setting up input data
+        cls.data = {
+            'name': 'Essek',
+            'contact': '086084501500',
+            'address': 'Jl Roshan'
+        }
+        cls.incomplete_data = {
+            'address': 'Jl Railroad Boston'
+        }
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_update_mechanic(self) -> None:
+        """
+        Ensure owner can update mechanic successfully
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.mechanic_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data mekanik berhasil dirubah')
+        self.assertEqual(response.data['name'], self.data['name'])
+        self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['address'], self.data['address'])
+
+    def test_nonlogin_user_failed_to_update_mechanic(self) -> None:
+        """
+        Ensure non-login user cannot update mechanic
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.put(self.mechanic_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_update_mechanic(self) -> None:
+        """
+        Ensure non-owner user cannot update mechanic
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.mechanic_update_url, self.data)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_owner_failed_to_update_nonexist_mechanic(self) -> None:
+        """
+        Ensure owner cannot update non-exist mechanic
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(reverse('mechanic_update', kwargs={'mechanic_id': 526523}),
+                                   self.data)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak ditemukan')
+
+    def test_owner_failed_to_update_mechanic_with_empty_data(self) -> None:
+        """
+        Ensure owner cannot update data mechanic with empty data / input
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.mechanic_update_url, {})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
+
+    def test_owner_failed_to_update_mechanic_with_incomplete_data(self) -> None:
+        """
+        Ensure owner cannot update data mechanic with incomplete data / input
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.put(self.mechanic_update_url, self.incomplete_data)
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak sesuai / tidak lengkap')
+
+
+class MechanicDeleteTestCase(SetTestCase):
+    def setUp(self) -> None:
+        # Setting up storage data
+        self.mechanic = Mechanic.objects.create(
+            name='Jonathan Hickman',
+            contact='086054056640',
+            address='Jl Marvel'
+        )
+
+        self.mechanic_delete_url = reverse(
+            'mechanic_delete',
+            kwargs={'mechanic_id': self.mechanic.mechanic_id}
+        )
+
+        return super().setUp()
+
+    def test_admin_successfully_delete_mechanic(self) -> None:
+        """
+        Ensure admin can delete mechanic successfully
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(self.mechanic_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertEqual(response.data['message'], 'Data mekanik berhasil dihapus')
+        self.assertEqual(len(Customer.objects.all()), 0)
+
+    def test_nonlogin_user_failed_to_delete_mechanic(self) -> None:
+        """
+        Ensure non-login user cannot delete mechanic
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.delete(self.mechanic_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_delete_mechanic(self) -> None:
+        """
+        Ensure non-owner user cannot delete mechanic
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(self.mechanic_delete_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_delete_nonexist_mechanic(self) -> None:
+        """
+        Ensure admin cannot to delete non-exist mechanic
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.delete(reverse('mechanic_delete', kwargs={'mechanic_id': 86591}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data mekanik tidak ditemukan')

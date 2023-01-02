@@ -1338,7 +1338,7 @@ class CustomerList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Customer yang dicari tidak ditemukan'
+            self.pagination_class.message = 'Pelanggan yang dicari tidak ditemukan'
             self.pagination_class.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
@@ -1417,14 +1417,25 @@ class CustomerDelete(generics.DestroyAPIView):
 class MechanicList(generics.ListAPIView):
     queryset = Mechanic.objects.all().order_by('mechanic_id')
     serializer_class = serializers.MechanicSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
     pagination_class = CustomPagination
-    permission_classes = [IsLogin, IsAdminRole]
+    pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['name', 'contact', 'address']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.pagination_class.message = 'Mekanik yang dicari tidak ditemukan'
+            self.pagination_class.status = status.HTTP_200_OK
+        return super().get_paginated_response(data)
 
 
 class MechanicAdd(generics.CreateAPIView):
     queryset = Mechanic.objects.all()
     serializer_class = serializers.MechanicSerializers
-    permission_classes = [IsLogin, IsAdminRole]
+    permission_classes = [IsLogin, IsOwnerRole]
 
     def create(self, request, *args, **kwargs):
         if len(request.data) < 3:
@@ -1442,7 +1453,7 @@ class MechanicAdd(generics.CreateAPIView):
 class MechanicUpdate(generics.RetrieveUpdateAPIView):
     queryset = Mechanic.objects.all()
     serializer_class = serializers.MechanicSerializers
-    permission_classes = [IsLogin, IsAdminRole]
+    permission_classes = [IsLogin, IsOwnerRole]
 
     lookup_field = 'mechanic_id'
     lookup_url_kwarg = 'mechanic_id'
@@ -1475,7 +1486,7 @@ class MechanicUpdate(generics.RetrieveUpdateAPIView):
 class MechanicDelete(generics.DestroyAPIView):
     queryset = Mechanic.objects.all()
     serializer_class = serializers.MechanicSerializers
-    permission_classes = [IsLogin, IsAdminRole]
+    permission_classes = [IsLogin, IsOwnerRole]
 
     lookup_field = 'mechanic_id'
     lookup_url_kwarg = 'mechanic_id'
