@@ -178,12 +178,6 @@ class Restock(Base_transaction):
         null=True,
         db_column='user_id'
     )
-    supplier_id = models.ForeignKey(
-        'Supplier',
-        on_delete=models.SET_NULL,
-        null=True,
-        db_column='supplier_id'
-    )
     salesman_id = models.ForeignKey(
         'Salesman',
         on_delete=models.SET_NULL,
@@ -346,7 +340,7 @@ class Sparepart(models.Model):
     )
     name = models.CharField(max_length=30, db_index=True)
     partnumber = models.CharField(max_length=20, default='')
-    quantity = models.SmallIntegerField()
+    quantity = models.SmallIntegerField(default=0, blank=True)
     limit = models.PositiveSmallIntegerField(default=10)
     motor_type = models.CharField(max_length=20, default='')
     sparepart_type = models.CharField(max_length=20)

@@ -34,11 +34,10 @@ class SearchSparepart(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Sparepart yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Sparepart yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         else:
-            self.pagination_class.message = 'Pencarian sparepart berhasil'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Pencarian sparepart berhasil'
         return super().get_paginated_response(data)
 
 
@@ -99,8 +98,8 @@ class SparepartDataList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Sparepart yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Sparepart yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
 
@@ -357,19 +356,30 @@ class SalesDelete(generics.DestroyAPIView):
 
 
 class RestockList(generics.ListAPIView):
-    queryset = Restock.objects.all().order_by('restock_id')
+    queryset = Restock.objects.prefetch_related('restock_detail_set').order_by('restock_id')
     serializer_class = serializers.RestockSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+    pagination_class = CustomPagination
+    pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['no_faktur', 'due_date', 'salesman_id__supplier_id__name', 'is_paid_off']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.paginator.message = 'Pengadaan / restock yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_404_NOT_FOUND
+        return super().get_paginated_response(data)
 
 
 class RestockAdd(generics.CreateAPIView):
-    queryset = Restock.objects.all().order_by('restock_id')
+    queryset = Restock.objects.prefetch_related('restock_detail_set').order_by('restock_id')
     serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 7:
+        if len(request.data) < 4:
             return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
@@ -402,7 +412,7 @@ class RestockAdd(generics.CreateAPIView):
 
 
 class RestockUpdate(generics.RetrieveUpdateAPIView):
-    queryset = Restock.objects.all().order_by('restock_id')
+    queryset = Restock.objects.prefetch_related('restock_detail_set').order_by('restock_id')
     serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -415,7 +425,7 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 7:
+        if len(request.data) < 4:
             return Response({'message': 'Data pengadaan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
@@ -441,43 +451,48 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
         return Response(data)
 
     def perform_update(self, serializer):
-        # Get the old Restock instance and its associated Restock_detail instances
+        # Get the old restock instance and its associated restock_detail instances
         old_instance = self.get_object()
-        old_restock_details = old_instance.restock_detail_set.all().order_by('restock_detail_id')
+        old_restock_details = old_instance.restock_detail_set.all()
 
-        # Getting list of dict from old data, for post save calculaltion
-        old_data_list = []
-        for old_data in old_restock_details:
-            old_data_list.append(
-                {
-                    'restock_detail_id': old_data.restock_detail_id,
-                    'quantity': old_data.quantity,
-                    'sparepart_id': old_data.sparepart_id
-                }
-            )
-
-        # Update the Sales instance in the database
+        # Save intance to database
         instance = serializer.save()
 
-        # Subtracting Sparepart quantity with old restock detail data
-        for old_data in old_data_list:
-            # Get the Sparepart instance associated with the old Restock_detail instance
-            sparepart = old_data['sparepart_id']
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity -= old_data['quantity']
+        # looping trought new restock sparepart data to adjust sparepart quantity
+        for restock_detail in instance.restock_detail_set.all():
+            # Get the Sparepart instance associated with the restock_detail instance
+            sparepart = restock_detail.sparepart_id
+
+            # Find the old restock_sparepart instance with the same sparepart_id
+            old_restock_detail = next(
+                (rd for rd in old_restock_details if rd.sparepart_id == sparepart),
+                None
+            )
+
+            # Update the quantity field of the Sparepart instance:
+            # 1. If an old restock_detail instance was found, increase the quantity field of
+            # the Sparepart instance by the old quantity value
+            if old_restock_detail:
+                sparepart.quantity -= old_restock_detail.quantity
+
+            # 2. Decrease the quantity field of the Sparepart instance by the new quantity value
+            sparepart.quantity += restock_detail.quantity
             sparepart.save()
 
-        # Adding (+) spareapart quantity with new restock detail data
-        for sales_detail in instance.restock_detail_set.all():
-            # Get the Sparepart instance associated with the new Restock_detail instance
-            sparepart = sales_detail.sparepart_id
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity += sales_detail.quantity
-            sparepart.save()
+        # Loop over all the old restock_detail instances, to find old but not present data in new data
+        for old_restock_detail in old_restock_details:
+            # Check if the old Service_sparepart instance is not present in the
+            # new data / updated instance
+            if old_restock_detail not in instance.restock_detail_set.all():
+                sparepart = old_restock_detail.sparepart_id
+                # increase the quantity field of the Sparepart instance by the old
+                # quantity value
+                sparepart.quantity -= old_restock_detail.quantity
+                sparepart.save()
 
 
 class RestockDelete(generics.DestroyAPIView):
-    queryset = Restock.objects.all().order_by('restock_id')
+    queryset = Restock.objects.prefetch_related('restock_detail_set').order_by('restock_id')
     serializer_class = serializers.RestockManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -539,8 +554,8 @@ class SupplierList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Supplier yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Supplier yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
 
@@ -1160,8 +1175,8 @@ class BrandList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Brand / Merek sparepart yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Brand / Merek sparepart yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
 
@@ -1249,8 +1264,8 @@ class CategoryList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Kategori sparepart yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Kategori sparepart yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
 
@@ -1338,8 +1353,8 @@ class CustomerList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Pelanggan yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Pelanggan yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
 
@@ -1427,8 +1442,8 @@ class MechanicList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Mekanik yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Mekanik yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
 
@@ -1516,8 +1531,8 @@ class SalesmanList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.pagination_class.message = 'Salesman yang dicari tidak ditemukan'
-            self.pagination_class.status = status.HTTP_200_OK
+            self.paginator.message = 'Salesman yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_200_OK
         return super().get_paginated_response(data)
 
 

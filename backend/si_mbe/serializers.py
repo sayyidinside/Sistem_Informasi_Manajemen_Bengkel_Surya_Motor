@@ -205,11 +205,8 @@ class RestockDetailSerializers(serializers.ModelSerializer):
 
 
 class RestockSerializers(serializers.ModelSerializer):
-    due_date = serializers.DateField(format="%d-%m-%Y")
-    supplier = serializers.ReadOnlyField(source='supplier_id.name')
-    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact')
-    salesman = serializers.ReadOnlyField(source='salesman_id.name')
-    salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
+    supplier = serializers.ReadOnlyField(source='salesman_id.supplier_id.name')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     content = RestockDetailSerializers(many=True, source='restock_detail_set')
     total_restock_cost = serializers.SerializerMethodField()
 
@@ -218,35 +215,40 @@ class RestockSerializers(serializers.ModelSerializer):
         fields = [
             'restock_id',
             'no_faktur',
-            'due_date',
+            'created_at',
             'supplier',
-            'supplier_contact',
-            'salesman',
-            'salesman_contact',
             'total_restock_cost',
             'is_paid_off',
-            'deposit',
             'content'
         ]
 
     def get_total_restock_cost(self, obj):
-        restock_serializers = RestockDetailSerializers(obj.restock_detail_set, many=True)
+        restock_detail = RestockDetailSerializers(obj.restock_detail_set, many=True)
         total = 0
-        for restock in restock_serializers.data:
+        for restock in restock_detail.data:
             total += int(restock['individual_price']) * restock['quantity']
         return total
 
 
 class RestockDetailManagementSerializers(serializers.ModelSerializer):
     restock_detail_id = serializers.IntegerField(required=False)
+    sub_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Restock_detail
-        fields = ['restock_detail_id', 'sparepart_id', 'individual_price', 'quantity']
+        fields = ['restock_detail_id', 'sparepart_id', 'individual_price', 'quantity', 'sub_total']
+
+    def get_sub_total(self, obj):
+        return int(obj.quantity * obj.individual_price)
 
 
 class RestockManagementSerializers(serializers.ModelSerializer):
     due_date = serializers.DateField(format="%d-%m-%Y")
+    supplier = serializers.ReadOnlyField(source='salesman_id.supplier_id.name')
+    total_sparepart_quantity = serializers.SerializerMethodField()
+    total_restock_cost = serializers.SerializerMethodField()
+    remaining_payment = serializers.SerializerMethodField()
+    is_paid_off = serializers.SerializerMethodField()
     content = RestockDetailManagementSerializers(many=True, source='restock_detail_set')
 
     class Meta:
@@ -255,16 +257,68 @@ class RestockManagementSerializers(serializers.ModelSerializer):
             'restock_id',
             'no_faktur',
             'due_date',
-            'supplier_id',
             'salesman_id',
-            'is_paid_off',
+            'supplier',
+            'total_sparepart_quantity',
+            'total_restock_cost',
             'deposit',
+            'remaining_payment',
+            'is_paid_off',
             'content'
         ]
+
+    def get_total_sparepart_quantity(self, obj):
+        # Getting restock_detail data related to the restock
+        restock_detail = RestockDetailManagementSerializers(obj.restock_detail_set, many=True)
+
+        # Calculating amount_of_sparepart by looping trought restock_detail
+        total_sparepart_quantity = 0
+        for detail in restock_detail.data:
+            total_sparepart_quantity += detail['quantity']
+        return total_sparepart_quantity
+
+    def get_total_restock_cost(self, obj):
+        # Getting restock_detail data related to the restock
+        restock_detail = RestockDetailManagementSerializers(obj.restock_detail_set, many=True)
+
+        # Calculating total_restock_cost by looping trought restock_detail
+        total_restock_cost = 0
+        for restock in restock_detail.data:
+            total_restock_cost += restock['sub_total']
+        return total_restock_cost
+
+    def get_remaining_payment(self, obj):
+        # Getting total_cost data
+        total_restock_cost = self.get_total_restock_cost(obj)
+
+        # Calculating remaining_payment subtracting total_cost with deposit
+        remaining_payment = total_restock_cost - int(obj.deposit)
+        return remaining_payment
+
+    def get_is_paid_off(self, obj):
+        # Getting total_cost data
+        total_restock_cost = self.get_total_restock_cost(obj)
+
+        # Check if deposit is less than total_cost if yes then it's still not paid_off yet
+        if int(obj.deposit) < total_restock_cost:
+            return False
+        return True
 
     def create(self, validated_data):
         # get the nested objects list
         details = validated_data.pop('restock_detail_set')
+
+        # Calculate total_restock_cost
+        total_restock_cost = 0
+        for detail in details:
+            total_restock_cost += int(detail['individual_price']) * detail['quantity']
+
+        # Set is_paid_off based on deposit and total_restock_cost
+        if validated_data['deposit'] < total_restock_cost:
+            validated_data['is_paid_off'] = False
+        else:
+            validated_data['is_paid_off'] = True
+
         restock = Restock.objects.create(**validated_data)
         for details in details:
             try:
@@ -281,9 +335,18 @@ class RestockManagementSerializers(serializers.ModelSerializer):
         # Assigning input (validated_data) to object (instance)
         instance.no_faktur = validated_data.get('customer_name', instance.no_faktur)
         instance.due_date = validated_data.get('customer_contact', instance.due_date)
-        instance.supplier_id = validated_data.get('customer_contact', instance.supplier_id)
-        instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
         instance.deposit = validated_data.get('deposit', instance.deposit)
+
+        # Recalculate total_restock_cost
+        total_restock_cost = 0
+        for detail in validated_details:
+            total_restock_cost += int(detail['individual_price']) * detail['quantity']
+
+        # Set is_paid_off based on deposit and total_restock_cost
+        if instance.deposit < total_restock_cost:
+            instance.is_paid_off = False
+        else:
+            instance.is_paid_off = True
 
         # get all nested objects related with this instance and make a dict(id, object)
         details_dict = dict((i.restock_detail_id, i) for i in instance.restock_detail_set.all())
@@ -400,8 +463,8 @@ class RestockReportSerializers(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     due_date = serializers.DateField(format="%d-%m-%Y")
-    supplier = serializers.ReadOnlyField(source='supplier_id.name')
-    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact')
+    supplier = serializers.ReadOnlyField(source='salesman_id.supplier_id.name')
+    supplier_contact = serializers.ReadOnlyField(source='salesman_id.supplier_id.contact')
     salesman = serializers.ReadOnlyField(source='salesman_id.name')
     salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
     total_restock_cost = serializers.SerializerMethodField()
@@ -437,8 +500,8 @@ class RestockReportDetailSerializers(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     due_date = serializers.DateField(format="%d-%m-%Y")
-    supplier = serializers.ReadOnlyField(source='supplier_id.name')
-    supplier_contact = serializers.ReadOnlyField(source='supplier_id.contact')
+    supplier = serializers.ReadOnlyField(source='salesman_id.supplier_id.name')
+    supplier_contact = serializers.ReadOnlyField(source='salesman_id.supplier_id.contact')
     salesman = serializers.ReadOnlyField(source='salesman_id.name')
     salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
     content = RestockDetailSerializers(many=True, source='restock_detail_set')
@@ -891,7 +954,6 @@ class CustomerSerializers(serializers.ModelSerializer):
         for service in services.data:
             if str(date.today().year) in service['created_at']:
                 number_of_service += 1
-
         return number_of_service
 
     def get_total_payment(self, obj):

@@ -1165,12 +1165,11 @@ class RestockListTestCase(SetTestCase):
             Restock.objects.create(
                 no_faktur=f'URH45/28394/2022-N{i}D',
                 due_date=date(2023, 4, 13),
-                supplier_id=cls.supplier,
                 is_paid_off=False,
                 salesman_id=cls.salesman
             )
 
-        cls.restocks = Restock.objects.all()
+        cls.restocks = Restock.objects.all().order_by('restock_id')
 
         # Setting up restock detail data and getting their id
         cls.restock_detail_1 = Restock_detail.objects.create(
@@ -1199,57 +1198,58 @@ class RestockListTestCase(SetTestCase):
         response = self.client.get(self.restock_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 2)
-        self.assertEqual(response.data['results'], [
-            {
-                'restock_id': self.restocks[0].restock_id,
-                'no_faktur': 'URH45/28394/2022-N0D',
-                'due_date': '13-04-2023',
-                'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact,
-                'salesman': self.salesman.name,
-                'salesman_contact': self.salesman.contact,
-                'total_restock_cost': 9100000,
-                'is_paid_off': False,
-                'deposit': str(self.restocks[0].deposit),
-                'content': [
-                    {
-                        'restock_detail_id': self.restock_detail_1.restock_detail_id,
-                        'sparepart': self.spareparts[3].name,
-                        'individual_price':'4550000',
-                        'quantity': 2,
-                        'total_price': 9100000
-                    }
-                ]
-            },
-            {
-                'restock_id': self.restocks[1].restock_id,
-                'no_faktur': 'URH45/28394/2022-N1D',
-                'due_date': '13-04-2023',
-                'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact,
-                'salesman': self.salesman.name,
-                'salesman_contact': self.salesman.contact,
-                'total_restock_cost': 36400000,
-                'is_paid_off': False,
-                'deposit': str(self.restocks[1].deposit),
-                'content': [
-                    {
-                        'restock_detail_id': self.restock_detail_2.restock_detail_id,
-                        'sparepart': self.spareparts[0].name,
-                        'individual_price':'4550000',
-                        'quantity': 5,
-                        'total_price': 22750000
-                    },
-                    {
-                        'restock_detail_id': self.restock_detail_3.restock_detail_id,
-                        'sparepart': self.spareparts[1].name,
-                        'individual_price':'4550000',
-                        'quantity': 3,
-                        'total_price': 13650000
-                    }
-                ]
-            }
-        ])
+
+        # Validating surface level information of restock
+        # The first result data
+        self.assertEqual(response.data['results'][0]['restock_id'], self.restocks[0].restock_id)
+        self.assertEqual(response.data['results'][0]['no_faktur'], self.restocks[0].no_faktur)
+        self.assertEqual(response.data['results'][0]['created_at'],
+                         (self.restocks[0].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][0]['supplier'], self.supplier.name)
+        self.assertEqual(response.data['results'][0]['total_restock_cost'], 9100000)
+        self.assertEqual(response.data['results'][0]['is_paid_off'], self.restocks[0].is_paid_off)
+        # The second result data
+        self.assertEqual(response.data['results'][1]['restock_id'], self.restocks[1].restock_id)
+        self.assertEqual(response.data['results'][1]['no_faktur'], self.restocks[1].no_faktur)
+        self.assertEqual(response.data['results'][1]['created_at'],
+                         (self.restocks[1].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][1]['supplier'], self.supplier.name)
+        self.assertEqual(response.data['results'][1]['total_restock_cost'], 36400000)
+        self.assertEqual(response.data['results'][1]['is_paid_off'], self.restocks[1].is_paid_off)
+
+        # Validating detail information per sparepart of restock in content field
+        # The first result data
+        self.assertEqual(response.data['results'][0]['content'][0]['restock_detail_id'],
+                         self.restock_detail_1.restock_detail_id)
+        self.assertEqual(response.data['results'][0]['content'][0]['sparepart'],
+                         self.spareparts[3].name)
+        self.assertEqual(response.data['results'][0]['content'][0]['individual_price'],
+                         str(4550000))
+        self.assertEqual(response.data['results'][0]['content'][0]['quantity'],
+                         2)
+        self.assertEqual(response.data['results'][0]['content'][0]['total_price'],
+                         9100000)
+        # The second result data
+        self.assertEqual(response.data['results'][1]['content'][0]['restock_detail_id'],
+                         self.restock_detail_2.restock_detail_id)
+        self.assertEqual(response.data['results'][1]['content'][0]['sparepart'],
+                         self.spareparts[0].name)
+        self.assertEqual(response.data['results'][1]['content'][0]['individual_price'],
+                         str(4550000))
+        self.assertEqual(response.data['results'][1]['content'][0]['quantity'],
+                         5)
+        self.assertEqual(response.data['results'][1]['content'][0]['total_price'],
+                         22750000)
+        self.assertEqual(response.data['results'][1]['content'][1]['restock_detail_id'],
+                         self.restock_detail_3.restock_detail_id)
+        self.assertEqual(response.data['results'][1]['content'][1]['sparepart'],
+                         self.spareparts[1].name)
+        self.assertEqual(response.data['results'][1]['content'][1]['individual_price'],
+                         str(4550000))
+        self.assertEqual(response.data['results'][1]['content'][1]['quantity'],
+                         3)
+        self.assertEqual(response.data['results'][1]['content'][1]['total_price'],
+                         13650000)
 
     def test_nonlogin_failed_to_access_restock_list(self) -> None:
         """
@@ -1268,6 +1268,32 @@ class RestockListTestCase(SetTestCase):
         response = self.client.get(self.restock_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_successfully_searching_restock_with_result(self) -> None:
+        """
+        Ensure admin who searching restock with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('restock_list') + f'?q={self.restocks[0].no_faktur}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['results'][0]['restock_id'], self.restocks[0].restock_id)
+        self.assertEqual(response.data['results'][0]['no_faktur'], self.restocks[0].no_faktur)
+        self.assertEqual(response.data['results'][0]['created_at'],
+                         (self.restocks[0].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][0]['supplier'], self.supplier.name)
+        self.assertEqual(response.data['results'][0]['total_restock_cost'], 9100000)
+        self.assertEqual(response.data['results'][0]['is_paid_off'], self.restocks[0].is_paid_off)
+
+    def test_admin_successfully_searching_restock_without_result(self) -> None:
+        """
+        Ensure admin search restock that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('restock_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Pengadaan / restock yang dicari tidak ditemukan')
 
 
 class RestockAddTestCase(SetTestCase):
@@ -1322,10 +1348,8 @@ class RestockAddTestCase(SetTestCase):
         cls.data = {
             'no_faktur': 'URH45/28394/2022-N1D',
             'due_date': date(2023, 4, 13),
-            'supplier_id': cls.supplier.supplier_id,
             'salesman_id': cls.salesman.salesman_id,
-            'is_paid_off': False,
-            'deposit': 5000000,
+            'deposit': 500000000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[0].sparepart_id,
@@ -1350,19 +1374,30 @@ class RestockAddTestCase(SetTestCase):
         response = self.client.post(self.restock_add_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['message'], 'Data pengadaan berhasil ditambah')
-        self.assertEqual(response.data['no_faktur'], 'URH45/28394/2022-N1D')
-        self.assertEqual(response.data['due_date'], '13-04-2023')
-        self.assertEqual(response.data['supplier_id'], self.supplier.supplier_id)
+
+        # Validating surface level information of restock
+        self.assertEqual(response.data['no_faktur'], self.data['no_faktur'])
+        self.assertEqual(response.data['due_date'], self.data['due_date'].strftime('%d-%m-%Y'))
         self.assertEqual(response.data['salesman_id'], self.salesman.salesman_id)
-        self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(response.data['supplier'], self.salesman.supplier_id.name)
+        self.assertEqual(response.data['total_sparepart_quantity'], 210)
+        self.assertEqual(response.data['total_restock_cost'], 915000000)
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
+        self.assertEqual(response.data['remaining_payment'], 415000000)
+        self.assertEqual(response.data['is_paid_off'], False)
         self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of restock in content field
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
-        self.assertEqual(response.data['content'][0]['individual_price'], '4700000')
-        self.assertEqual(response.data['content'][0]['quantity'], 150)
+        self.assertEqual(response.data['content'][0]['individual_price'],
+                         str(self.data['content'][0]['individual_price']))
+        self.assertEqual(response.data['content'][0]['quantity'], self.data['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 705000000)
         self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
-        self.assertEqual(response.data['content'][1]['individual_price'], '3500000')
-        self.assertEqual(response.data['content'][1]['quantity'], 60)
+        self.assertEqual(response.data['content'][1]['individual_price'],
+                         str(self.data['content'][1]['individual_price']))
+        self.assertEqual(response.data['content'][1]['quantity'], self.data['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 210000000)
 
         # ensure sparepart quantity will be added (+) by detail's quantity
         # after restock successfully added
@@ -1460,7 +1495,6 @@ class RestockUpdateTestCase(SetTestCase):
         self.restock = Restock.objects.create(
                 no_faktur='78SDFBH/2022-YE/FA89',
                 due_date=date(2023, 4, 13),
-                supplier_id=self.supplier,
                 salesman_id=self.salesman,
                 is_paid_off=False
             )
@@ -1486,10 +1520,8 @@ class RestockUpdateTestCase(SetTestCase):
         self.data = {
             'no_faktur': '78SDFBH/2022-YE/FA89',
             'due_date': date(2023, 4, 13),
-            'supplier_id': self.supplier.supplier_id,
             'salesman_id': self.salesman.salesman_id,
-            'is_paid_off': True,
-            'deposit': 0,
+            'deposit': 802750000,
             'content': [
                 {
                     'restock_detail_id': self.restock_detail_1.restock_detail_id,
@@ -1516,21 +1548,32 @@ class RestockUpdateTestCase(SetTestCase):
         response = self.client.put(self.restock_update_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Data pengadaan berhasil dirubah')
-        self.assertEqual(response.data['no_faktur'], '78SDFBH/2022-YE/FA89')
-        self.assertEqual(response.data['due_date'], '13-04-2023')
-        self.assertEqual(response.data['supplier_id'], self.supplier.supplier_id)
+
+        # Validating surface level information of restock
+        self.assertEqual(response.data['no_faktur'], self.data['no_faktur'])
+        self.assertEqual(response.data['due_date'], self.data['due_date'].strftime('%d-%m-%Y'))
         self.assertEqual(response.data['salesman_id'], self.salesman.salesman_id)
-        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(response.data['supplier'], self.salesman.supplier_id.name)
+        self.assertEqual(response.data['total_sparepart_quantity'], 235)
+        self.assertEqual(response.data['total_restock_cost'], 802750000)
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
+        self.assertEqual(response.data['remaining_payment'], 0)
+        self.assertEqual(response.data['is_paid_off'], True)
         self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of restock in content field
         self.assertEqual(response.data['content'][0]['restock_detail_id'], self.restock_detail_1.restock_detail_id)
         self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
-        self.assertEqual(response.data['content'][0]['individual_price'], '4550000')
-        self.assertEqual(response.data['content'][0]['quantity'], 170)
+        self.assertEqual(response.data['content'][0]['individual_price'],
+                         str(self.data['content'][0]['individual_price']))
+        self.assertEqual(response.data['content'][0]['quantity'], self.data['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 773500000)
         self.assertEqual(response.data['content'][1]['restock_detail_id'], self.restock_detail_2.restock_detail_id)
         self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
-        self.assertEqual(response.data['content'][1]['individual_price'], '450000')
-        self.assertEqual(response.data['content'][1]['quantity'], 65)
+        self.assertEqual(response.data['content'][1]['individual_price'],
+                         str(self.data['content'][1]['individual_price']))
+        self.assertEqual(response.data['content'][1]['quantity'], self.data['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 29250000)
 
         # ensure sparepart quantity will be added (+) by detail's quantity
         # after restock successfully updated
@@ -1640,9 +1683,7 @@ class RestockDeleteTestCase(SetTestCase):
         self.restock = Restock.objects.create(
                 no_faktur='78SDFBH/2022-YE/FA89',
                 due_date=date(2023, 4, 13),
-                supplier_id=self.supplier,
                 salesman_id=self.salesman,
-                is_paid_off=False
             )
 
         # Getting newly added restock it's restock_id then set it to kwargs in reverse url
@@ -1672,8 +1713,8 @@ class RestockDeleteTestCase(SetTestCase):
         response = self.client.delete(self.restock_delete_url)
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data['message'], 'Data pengadaan berhasil dihapus')
-        self.assertEqual(len(Restock.objects.all()), 0)
-        self.assertEqual(len(Restock_detail.objects.all()), 0)
+        self.assertEqual(Restock.objects.count(), 0)
+        self.assertEqual(Restock_detail.objects.count(), 0)
 
         # ensure sparepart quantity will be subtracted by detail's quantity
         # after restock successfully delete
@@ -3499,7 +3540,6 @@ class CustomerListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.customer_url)
-        # print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 2)
         self.assertEqual(response.data['results'][0]['name'], self.customer.name)

@@ -341,7 +341,6 @@ class RestockReportTestCase(APITestCase):
             Restock.objects.create(
                 no_faktur=f'URH45/28394/2022-N{i}D',
                 due_date=date(2023, 4, 13),
-                supplier_id=cls.supplier,
                 is_paid_off=False,
                 user_id=cls.user,
                 salesman_id=cls.salesman
@@ -474,7 +473,6 @@ class RestockReportDetailTestCase(APITestCase):
         cls.restock = Restock.objects.create(
                 no_faktur=f'URH45/28394/2022-N{i}D',
                 due_date=date(2023, 4, 13),
-                supplier_id=cls.supplier,
                 is_paid_off=False,
                 user_id=cls.user,
                 salesman_id=cls.salesman
@@ -516,45 +514,83 @@ class RestockReportDetailTestCase(APITestCase):
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.restock_report_detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {
-                'restock_id': self.restock.restock_id,
-                'admin': 'Richard Rider',
-                'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
-                'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
-                'no_faktur': self.restock.no_faktur,
-                'total_restock_cost': 1395000000,
-                'is_paid_off': False,
-                'deposit': str(self.restock.deposit),
-                'due_date': self.restock.due_date.strftime('%d-%m-%Y'),
-                'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact,
-                'salesman': self.restock.salesman_id.name,
-                'salesman_contact': self.restock.salesman_id.contact,
-                'content': [
-                    {
-                        'restock_detail_id': self.restock_detail_1.restock_detail_id,
-                        'sparepart': self.spareparts[2].name,
-                        'individual_price':'5000000',
-                        'quantity': 200,
-                        'total_price': 1000000000
-                    },
-                    {
-                        'restock_detail_id': self.restock_detail_2.restock_detail_id,
-                        'sparepart': self.spareparts[0].name,
-                        'individual_price':'400000',
-                        'quantity': 500,
-                        'total_price': 200000000
-                    },
-                    {
-                        'restock_detail_id': self.restock_detail_3.restock_detail_id,
-                        'sparepart': self.spareparts[1].name,
-                        'individual_price':'650000',
-                        'quantity': 300,
-                        'total_price': 195000000
-                    }
-                ]
-            }
-        )
+        self.assertEqual(response.data['restock_id'], self.restock.restock_id)
+        self.assertEqual(response.data['admin'], self.restock.user_id.profile.name)
+        self.assertEqual(response.data['created_at'], self.created_at.strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['updated_at'], self.updated_at.strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['no_faktur'], self.restock.no_faktur)
+        self.assertEqual(response.data['total_restock_cost'], 1395000000)
+        self.assertEqual(response.data['is_paid_off'], self.restock.is_paid_off)
+        self.assertEqual(response.data['deposit'], str(self.restock.deposit))
+        self.assertEqual(response.data['due_date'], self.restock.due_date.strftime('%d-%m-%Y'))
+        self.assertEqual(response.data['supplier'], self.restock.salesman_id.supplier_id.name)
+        self.assertEqual(response.data['supplier_contact'], self.restock.salesman_id.supplier_id.contact)
+        self.assertEqual(response.data['salesman'], self.restock.salesman_id.name)
+        self.assertEqual(response.data['salesman_contact'], self.restock.salesman_id.contact)
+
+        self.assertEqual(response.data['content'][0]['restock_detail_id'],
+                         self.restock_detail_1.restock_detail_id)
+        self.assertEqual(response.data['content'][0]['sparepart'], self.spareparts[2].name)
+        self.assertEqual(response.data['content'][0]['individual_price'],
+                         str(self.restock_detail_1.individual_price))
+        self.assertEqual(response.data['content'][0]['quantity'], self.restock_detail_1.quantity)
+        self.assertEqual(response.data['content'][0]['total_price'], 1000000000)
+
+        self.assertEqual(response.data['content'][1]['restock_detail_id'],
+                         self.restock_detail_2.restock_detail_id)
+        self.assertEqual(response.data['content'][1]['sparepart'], self.spareparts[0].name)
+        self.assertEqual(response.data['content'][1]['individual_price'],
+                         str(self.restock_detail_2.individual_price))
+        self.assertEqual(response.data['content'][1]['quantity'], self.restock_detail_2.quantity)
+        self.assertEqual(response.data['content'][1]['total_price'], 200000000)
+
+        self.assertEqual(response.data['content'][2]['restock_detail_id'],
+                         self.restock_detail_3.restock_detail_id)
+        self.assertEqual(response.data['content'][2]['sparepart'], self.spareparts[1].name)
+        self.assertEqual(response.data['content'][2]['individual_price'],
+                         str(self.restock_detail_3.individual_price))
+        self.assertEqual(response.data['content'][2]['quantity'], self.restock_detail_3.quantity)
+        self.assertEqual(response.data['content'][2]['total_price'], 195000000)
+
+        # self.assertEqual(response.data, {
+        #         'restock_id': self.restock.restock_id,
+        #         'admin': 'Richard Rider',
+        #         'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
+        #         'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
+        #         'no_faktur': self.restock.no_faktur,
+        #         'total_restock_cost': 1395000000,
+        #         'is_paid_off': False,
+        #         'deposit': str(self.restock.deposit),
+        #         'due_date': self.restock.due_date.strftime('%d-%m-%Y'),
+        #         'supplier': self.supplier.name,
+        #         'supplier_contact': self.supplier.contact,
+        #         'salesman': self.restock.salesman_id.name,
+        #         'salesman_contact': self.restock.salesman_id.contact,
+        #         'content': [
+        #             {
+        #                 'restock_detail_id': self.restock_detail_1.restock_detail_id,
+        #                 'sparepart': self.spareparts[2].name,
+        #                 'individual_price':'5000000',
+        #                 'quantity': 200,
+        #                 'total_price': 1000000000
+        #             },
+        #             {
+        #                 'restock_detail_id': self.restock_detail_2.restock_detail_id,
+        #                 'sparepart': self.spareparts[0].name,
+        #                 'individual_price':'400000',
+        #                 'quantity': 500,
+        #                 'total_price': 200000000
+        #             },
+        #             {
+        #                 'restock_detail_id': self.restock_detail_3.restock_detail_id,
+        #                 'sparepart': self.spareparts[1].name,
+        #                 'individual_price':'650000',
+        #                 'quantity': 300,
+        #                 'total_price': 195000000
+        #             }
+        #         ]
+        #     }
+        # )
 
     def test_nonlogin_user_failed_to_access_restock_report_detail(self) -> None:
         """
