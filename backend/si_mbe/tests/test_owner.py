@@ -1450,7 +1450,7 @@ class MechanicListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(reverse('mechanic_list') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Mekanik yang dicari tidak ditemukan')
 

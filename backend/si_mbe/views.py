@@ -35,7 +35,7 @@ class SearchSparepart(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Sparepart yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         else:
             self.paginator.message = 'Pencarian sparepart berhasil'
         return super().get_paginated_response(data)
@@ -99,7 +99,7 @@ class SparepartDataList(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Sparepart yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
 
@@ -555,7 +555,7 @@ class SupplierList(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Supplier yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
 
@@ -1098,7 +1098,7 @@ class BrandList(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Brand / Merek sparepart yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
 
@@ -1187,7 +1187,7 @@ class CategoryList(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Kategori sparepart yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
 
@@ -1276,7 +1276,7 @@ class CustomerList(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Pelanggan yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
 
@@ -1365,7 +1365,7 @@ class MechanicList(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Mekanik yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
 
@@ -1454,7 +1454,7 @@ class SalesmanList(generics.ListAPIView):
     def get_paginated_response(self, data):
         if len(data) == 0:
             self.paginator.message = 'Salesman yang dicari tidak ditemukan'
-            self.paginator.status = status.HTTP_200_OK
+            self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
 

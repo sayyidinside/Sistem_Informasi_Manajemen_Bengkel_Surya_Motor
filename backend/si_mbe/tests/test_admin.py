@@ -295,7 +295,7 @@ class SparepartDataListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(reverse('sparepart_data_list') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')
 
@@ -1787,7 +1787,7 @@ class SupplierListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(reverse('supplier_list') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Supplier yang dicari tidak ditemukan')
 
@@ -2796,7 +2796,7 @@ class BrandListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(reverse('brand_list') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Brand / Merek sparepart yang dicari tidak ditemukan')
 
@@ -3008,7 +3008,7 @@ class CategoryListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(reverse('category_list') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Kategori sparepart yang dicari tidak ditemukan')
 
@@ -3279,7 +3279,7 @@ class CustomerListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(reverse('customer_list') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Pelanggan yang dicari tidak ditemukan')
 
@@ -3574,7 +3574,7 @@ class SalesmanListTestCase(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(reverse('salesman_list') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Salesman yang dicari tidak ditemukan')
 

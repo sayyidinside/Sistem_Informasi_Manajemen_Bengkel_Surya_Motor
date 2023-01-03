@@ -177,7 +177,7 @@ class SparepartSearchTestCase(APITestCase):
         Ensure user who searching sparepart that doesn't exist get empty result
         """
         response = self.client.get(reverse('search_sparepart') + '?q=random shit')
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')
 
