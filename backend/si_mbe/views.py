@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from si_mbe import exceptions, serializers
 from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
                            Restock, Sales, Salesman, Service, Sparepart,
-                           Storage, Supplier)
+                           Supplier)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
@@ -1082,84 +1082,6 @@ class ServiceDelete(generics.DestroyAPIView):
             # Update the quantity field of the Sparepart instance
             sparepart.quantity += old_data['quantity']
             sparepart.save()
-
-
-class StorageList(generics.ListAPIView):
-    queryset = Storage.objects.all().order_by('storage_id')
-    serializer_class = serializers.StorageSerializers
-    pagination_class = CustomPagination
-    permission_classes = [IsLogin, IsAdminRole]
-
-
-class StorageAdd(generics.CreateAPIView):
-    queryset = Storage.objects.all()
-    serializer_class = serializers.StorageSerializers
-    permission_classes = [IsLogin, IsAdminRole]
-
-    def create(self, request, *args, **kwargs):
-        if len(request.data) < 3:
-            return Response({'message': 'Data lokasi penyimpanan tidak sesuai / tidak lengkap'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        data = serializer.data
-        data['message'] = 'Data lokasi penyimpanan berhasil ditambah'
-        return Response(data, status=status.HTTP_201_CREATED, headers=headers)
-
-
-class StorageUpdate(generics.RetrieveUpdateAPIView):
-    queryset = Storage.objects.all()
-    serializer_class = serializers.StorageSerializers
-    permission_classes = [IsLogin, IsAdminRole]
-
-    lookup_field = 'storage_id'
-    lookup_url_kwarg = 'storage_id'
-
-    def handle_exception(self, exc):
-        if isinstance(exc, Http404):
-            exc = exceptions.StorageNotFound()
-        return super().handle_exception(exc)
-
-    def update(self, request, *args, **kwargs):
-        if len(request.data) < 3:
-            return Response({'message': 'Data lokasi penyimpanan tidak sesuai / tidak lengkap'},
-                            status=status.HTTP_400_BAD_REQUEST)
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        self.perform_update(serializer)
-        data = serializer.data
-        data['message'] = 'Data lokasi penyimpanan berhasil dirubah'
-
-        if getattr(instance, '_prefetched_objects_cache', None):
-            # If 'prefetch_related' has been applied to a queryset, we need to
-            # forcibly invalidate the prefetch cache on the instance.
-            instance._prefetched_objects_cache = {}
-
-        return Response(data)
-
-
-class StorageDelete(generics.DestroyAPIView):
-    queryset = Storage.objects.all()
-    serializer_class = serializers.StorageSerializers
-    permission_classes = [IsLogin, IsAdminRole]
-
-    lookup_field = 'storage_id'
-    lookup_url_kwarg = 'storage_id'
-
-    def handle_exception(self, exc):
-        if isinstance(exc, Http404):
-            exc = exceptions.StorageNotFound()
-        return super().handle_exception(exc)
-
-    def destroy(self, request, *args, **kwargs):
-        instance = self.get_object()
-        self.perform_destroy(instance)
-        message = {'message': 'Data lokasi penyimpanan berhasil dihapus'}
-        return Response(message, status=status.HTTP_204_NO_CONTENT)
 
 
 class BrandList(generics.ListAPIView):

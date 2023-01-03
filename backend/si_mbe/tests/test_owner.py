@@ -8,7 +8,7 @@ from rest_framework.test import APITestCase
 from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
                            Restock, Restock_detail, Sales, Sales_detail,
                            Salesman, Service, Service_action,
-                           Service_sparepart, Sparepart, Storage, Supplier)
+                           Service_sparepart, Sparepart, Supplier)
 from si_mbe.tests.test_admin import SetTestCase
 
 
@@ -27,9 +27,6 @@ class SalesReportListTestCase(APITestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Dragon Steel')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='EP-12')
-
         # Setting up category data
         cls.category = Category.objects.create(name='Book')
 
@@ -45,7 +42,7 @@ class SalesReportListTestCase(APITestCase):
                 workshop_price=5300000,
                 install_price=5500000,
                 brand_id=cls.brand,
-                storage_id=cls.storage,
+                storage_code='HJF-502',
                 category_id=cls.category
             )
 
@@ -145,9 +142,6 @@ class SalesReportDetail(APITestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Steins Gate')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='JD-24')
-
         # Setting up category data
         cls.category = Category.objects.create(name='Machine')
 
@@ -164,7 +158,7 @@ class SalesReportDetail(APITestCase):
                 install_price=5500000,
                 brand_id=cls.brand,
                 category_id=cls.category,
-                storage_id=cls.storage
+                storage_code='BNG-3051'
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -296,9 +290,6 @@ class RestockReportTestCase(APITestCase):
         # Setting up brand
         cls.brand = Brand.objects.create(name='Cosmic Being')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='FF-20')
-
         # Setting up category data
         cls.category = Category.objects.create(name='Creature')
 
@@ -331,7 +322,7 @@ class RestockReportTestCase(APITestCase):
                 install_price=5500000,
                 brand_id=cls.brand,
                 category_id=cls.category,
-                storage_id=cls.storage
+                storage_code='CSM-53100'
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -429,9 +420,6 @@ class RestockReportDetailTestCase(APITestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Galactic Empire')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='DS-01')
-
         # Setting up category data
         cls.category = Category.objects.create(name='Connector')
 
@@ -464,7 +452,7 @@ class RestockReportDetailTestCase(APITestCase):
                 install_price=5500000,
                 brand_id=cls.brand,
                 category_id=cls.category,
-                storage_id=cls.storage
+                storage_code='SITH-5782'
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -1280,9 +1268,6 @@ class ServiceReportDetailTestCase(SetTestCase):
             service_id=cls.service
         )
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='MN-9')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Lavish Chateau')
 
@@ -1301,7 +1286,7 @@ class ServiceReportDetailTestCase(SetTestCase):
             install_price=110000,
             brand_id=cls.brand,
             category_id=cls.category,
-            storage_id=cls.storage
+            storage_code='MN-9'
         )
 
         # Setting up service sparepart
@@ -1624,7 +1609,7 @@ class MechanicUpdateTestCase(SetTestCase):
 
 class MechanicDeleteTestCase(SetTestCase):
     def setUp(self) -> None:
-        # Setting up storage data
+        # Setting up mechanic data
         self.mechanic = Mechanic.objects.create(
             name='Jonathan Hickman',
             contact='086054056640',

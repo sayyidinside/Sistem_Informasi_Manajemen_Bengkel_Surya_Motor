@@ -1,6 +1,6 @@
 from django.contrib import admin
 from si_mbe.models import (Brand, Logs, Profile, Restock, Restock_detail,
-                           Sales, Sales_detail, Sparepart, Storage, Supplier)
+                           Sales, Sales_detail, Sparepart, Supplier)
 
 
 # Register your models here.
@@ -36,10 +36,6 @@ class SparepartAdmin(admin.ModelAdmin):
     readonly_fields = ['sparepart_id']
 
 
-class StorageAdmin(admin.ModelAdmin):
-    readonly_fields = ['storage_id']
-
-
 class SupplierAdmin(admin.ModelAdmin):
     readonly_fields = ['supplier_id']
 
@@ -52,5 +48,4 @@ admin.site.register(Restock_detail, RestockDetailAdmin)
 admin.site.register(Sales, SalesAdmin)
 admin.site.register(Sales_detail, SalesDetailAdmin)
 admin.site.register(Supplier, SupplierAdmin)
-admin.site.register(Storage, StorageAdmin)
 admin.site.register(Sparepart, SparepartAdmin)

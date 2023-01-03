@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 from si_mbe.models import (Brand, Category, Customer, Profile, Restock,
                            Restock_detail, Sales, Sales_detail, Salesman,
                            Service, Service_action, Service_sparepart,
-                           Sparepart, Storage, Supplier, Mechanic)
+                           Sparepart, Supplier, Mechanic)
 
 
 # Create your tests here.
@@ -191,11 +191,6 @@ class SparepartDataListTestCase(SetTestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Kenshin')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(
-            code='AD-34',
-        )
-
         # Setting up category data
         cls.category = Category.objects.create(name='Add-On')
 
@@ -213,7 +208,7 @@ class SparepartDataListTestCase(SetTestCase):
                 workshop_price=5300000,
                 install_price=5500000,
                 brand_id=cls.brand,
-                storage_id=cls.storage,
+                storage_code='FJJ-13',
                 category_id=cls.category
             )
 
@@ -313,9 +308,6 @@ class SparepartDataAddTestCase(SetTestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Shimada')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='JKG-299')
-
         # Setting up category data
         cls.category = Category.objects.create(name='Engine')
 
@@ -330,7 +322,7 @@ class SparepartDataAddTestCase(SetTestCase):
             'workshop_price': 5300000,
             'install_price': 5500000,
             'brand_id': cls.brand.brand_id,
-            'storage_id': cls.storage.storage_id,
+            'storage_code': 'DA-405',
             'category_id': cls.category.category_id,
             'image': ''
         }
@@ -354,7 +346,7 @@ class SparepartDataAddTestCase(SetTestCase):
         self.assertEqual(int(response.data['price']), self.data_sparepart['price'])
         self.assertEqual(int(response.data['workshop_price']), self.data_sparepart['workshop_price'])
         self.assertEqual(int(response.data['install_price']), self.data_sparepart['install_price'])
-        self.assertEqual(response.data['storage_id'], self.data_sparepart['storage_id'])
+        self.assertEqual(response.data['storage_code'], self.data_sparepart['storage_code'])
         self.assertEqual(response.data['category_id'], self.data_sparepart['category_id'])
         self.assertEqual(response.data['image'], None)
 
@@ -402,12 +394,6 @@ class SparepartDataUpdateTestCase(SetTestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Warbreaker')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(
-            code='6ABC',
-            location='Rak Biru B6'
-        )
-
         # Setting up category
         cls.category = Category.objects.create(name='Pathfinder')
 
@@ -423,7 +409,7 @@ class SparepartDataUpdateTestCase(SetTestCase):
             'price': 5800000,
             'workshop_price': 5400000,
             'install_price': 5500000,
-            'storage_id': cls.storage.storage_id,
+            'storage_code': 'HF-510i',
             'image': ''
         }
 
@@ -468,7 +454,7 @@ class SparepartDataUpdateTestCase(SetTestCase):
         self.assertEqual(int(response.data['price']), self.data['price'])
         self.assertEqual(int(response.data['workshop_price']), self.data['workshop_price'])
         self.assertEqual(int(response.data['install_price']), self.data['install_price'])
-        self.assertEqual(response.data['storage_id'], self.data['storage_id'])
+        self.assertEqual(response.data['storage_code'], self.data['storage_code'])
         self.assertEqual(response.data['category_id'], self.data['category_id'])
         self.assertEqual(response.data['image'], None)
 
@@ -529,9 +515,6 @@ class SparepartDataDeleteTestCase(SetTestCase):
         # Setting up category data
         cls.category = Category.objects.create(name='Storage')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='AP-20')
-
         return super().setUpTestData()
 
     def setUp(self) -> None:
@@ -548,7 +531,7 @@ class SparepartDataDeleteTestCase(SetTestCase):
                 install_price=850000,
                 brand_id=self.brand,
                 category_id=self.category,
-                storage_id=self.storage
+                storage_code='AP-20'
             )
 
         # Getting newly added sparepart it's sparepart_id then set it to kwargs in reverse url
@@ -735,9 +718,6 @@ class SalesAddTestCase(SetTestCase):
 
     @classmethod
     def setUpTestData(cls) -> None:
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='GA-9')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Stark Industries')
 
@@ -756,7 +736,7 @@ class SalesAddTestCase(SetTestCase):
                 workshop_price=5300000,
                 install_price=5500000,
                 brand_id=cls.brand,
-                storage_id=cls.storage,
+                storage_code='AH-359',
                 category_id=cls.category
             )
 
@@ -851,9 +831,6 @@ class SalesAddTestCase(SetTestCase):
 class SalesUpdateTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='DG-001')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Doom Guys')
 
@@ -872,7 +849,7 @@ class SalesUpdateTestCase(SetTestCase):
                 workshop_price=100000,
                 install_price=110000,
                 brand_id=cls.brand,
-                storage_id=cls.storage,
+                storage_code='ADF-125',
                 category_id=cls.category
             )
 
@@ -1007,9 +984,6 @@ class SalesUpdateTestCase(SetTestCase):
 class SalesDeleteTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='DG-001')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Doom Guys')
 
@@ -1029,7 +1003,7 @@ class SalesDeleteTestCase(SetTestCase):
                 install_price=110000,
                 brand_id=cls.brand,
                 category_id=cls.category,
-                storage_id=cls.storage
+                storage_code='FH-698'
             )
 
         cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
@@ -1133,9 +1107,6 @@ class RestockListTestCase(SetTestCase):
             contact='084523015663'
         )
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='CP-77')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Arasaka')
 
@@ -1154,7 +1125,7 @@ class RestockListTestCase(SetTestCase):
                 workshop_price=4620000,
                 install_price=4830000,
                 brand_id=cls.brand,
-                storage_id=cls.storage,
+                storage_code='HG-5689',
                 category_id=cls.category
             )
 
@@ -1317,9 +1288,6 @@ class RestockAddTestCase(SetTestCase):
             contact='084105634154'
         )
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='SP-31')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Parker')
 
@@ -1339,7 +1307,7 @@ class RestockAddTestCase(SetTestCase):
                 install_price=5500000,
                 brand_id=cls.brand,
                 category_id=cls.category,
-                storage_id=cls.storage
+                storage_code='GHO-85'
             )
 
         cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
@@ -1462,9 +1430,6 @@ class RestockUpdateTestCase(SetTestCase):
             name='Pumat Sol',
             contact='084105634154'
         )
-
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='P-3')
 
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Cerbereus')
@@ -1649,9 +1614,6 @@ class RestockDeleteTestCase(SetTestCase):
             contact='084105634154'
         )
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='FF-31')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Baster Creation')
 
@@ -1671,7 +1633,7 @@ class RestockDeleteTestCase(SetTestCase):
                 install_price=110000,
                 brand_id=cls.brand,
                 category_id=cls.category,
-                storage_id=cls.storage
+                storage_code='FHA-590'
             )
 
         cls.spareparts = Sparepart.objects.all().order_by('sparepart_id')
@@ -2123,9 +2085,6 @@ class ServiceListTestCase(SetTestCase):
             service_id=cls.service_1
         )
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='MN-9')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Lavish Chateau')
 
@@ -2144,7 +2103,7 @@ class ServiceListTestCase(SetTestCase):
             install_price=110000,
             brand_id=cls.brand,
             category_id=cls.category,
-            storage_id=cls.storage
+            storage_code='MN-9'
         )
         cls.sparepart_2 = Sparepart.objects.create(
             name='Dead People Tea',
@@ -2157,7 +2116,7 @@ class ServiceListTestCase(SetTestCase):
             install_price=80000,
             brand_id=cls.brand,
             category_id=cls.category,
-            storage_id=cls.storage
+            storage_code='MN-9'
         )
 
         # Setting up service sparepart
@@ -2298,9 +2257,6 @@ class ServiceAddTestCase(SetTestCase):
             contact='082541684051',
         )
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='MN-9')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Lavish Chateau')
 
@@ -2319,7 +2275,7 @@ class ServiceAddTestCase(SetTestCase):
             install_price=110000,
             brand_id=cls.brand,
             category_id=cls.category,
-            storage_id=cls.storage
+            storage_code='HW-5389'
         )
 
         cls.data = {
@@ -2449,9 +2405,6 @@ class ServiceUpdateTestCase(SetTestCase):
             contact='082541684051',
         )
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(code='MN-9')
-
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Lavish Chateau')
 
@@ -2470,7 +2423,7 @@ class ServiceUpdateTestCase(SetTestCase):
             install_price=110000,
             brand_id=cls.brand,
             category_id=cls.category,
-            storage_id=cls.storage
+            storage_code='HFPA-589'
         )
         cls.sparepart_2 = Sparepart.objects.create(
             name='Chorcoal Cupcake 2',
@@ -2483,7 +2436,7 @@ class ServiceUpdateTestCase(SetTestCase):
             install_price=110000,
             brand_id=cls.brand,
             category_id=cls.category,
-            storage_id=cls.storage
+            storage_code='HFA-512'
         )
 
         return super().setUpTestData()
@@ -2780,273 +2733,6 @@ class ServiceDeleteTestCase(SetTestCase):
         response = self.client.delete(reverse('service_delete', kwargs={'service_id': 85635}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')
-
-
-class StorageListTestCase(SetTestCase):
-    storage_url = reverse('storage_list')
-
-    @classmethod
-    def setUpTestData(cls) -> None:
-        # setting up storage data
-        cls.storage = Storage.objects.create(
-            code='A-23',
-            location='1',
-            is_full=True
-        )
-        Storage.objects.create(
-            code='OT-3',
-            location='2',
-            is_full=False
-        )
-
-        return super().setUpTestData()
-
-    def test_admin_successfully_access_storage_list(self) -> None:
-        """
-        Ensure admin can get storage list successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.storage_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count_item'], 2)
-        self.assertEqual(response.data['results'][0]['code'], self.storage.code)
-        self.assertEqual(response.data['results'][0]['location'], self.storage.location)
-        self.assertEqual(response.data['results'][0]['is_full'], self.storage.is_full)
-
-    def test_nonlogin_user_failed_to_access_storage_list(self) -> None:
-        """
-        Ensure non-login user cannot access storage list
-        """
-        self.client.force_authenticate(user=None, token=None)
-        response = self.client.get(self.storage_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_nonadmin_user_failed_to_access_storage_list(self) -> None:
-        """
-        Ensure non-admin user cannot access storage list
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.get(self.storage_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-
-class StorageAddTestCase(SetTestCase):
-    storage_add_url = reverse('storage_add')
-
-    @classmethod
-    def setUpTestData(cls) -> None:
-        cls.data = {
-            'code': 'A-23',
-            'location': '1',
-            'is_full': True
-        }
-        cls.incomplete_data = {
-            'location': '1',
-            'is_full': True
-        }
-
-        return super().setUpTestData()
-
-    def test_admin_successfully_add_storage(self) -> None:
-        """
-        Ensure admin can add new storage successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.storage_add_url, self.data)
-        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan berhasil ditambah')
-        self.assertEqual(response.data['code'], self.data['code'])
-        self.assertEqual(response.data['location'], self.data['location'])
-        self.assertEqual(response.data['is_full'], self.data['is_full'])
-
-    def test_nonlogin_user_failed_to_add_new_storage(self) -> None:
-        """
-        Ensure non-login user cannot add new storage
-        """
-        self.client.force_authenticate(user=None, token=None)
-        response = self.client.post(self.storage_add_url, self.data)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_nonadmin_user_failed_to_add_new_storage(self) -> None:
-        """
-        Ensure non-admin user cannot add new storage
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.post(self.storage_add_url, self.data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_admin_failed_to_add_storage_with_empty_data(self) -> None:
-        """
-        Ensure admin cannot add storage with empty data / input
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.storage_add_url, {})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')
-
-    def test_admin_failed_to_add_storage_with_incomplete_data(self) -> None:
-        """
-        Ensure admin cannot add storage with incomplete data / input
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.storage_add_url, self.incomplete_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')
-
-
-class StorageUpdateTestCase(SetTestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        # Setting up storage data
-        cls.storage = Storage.objects.create(
-            code='DB-14',
-            location='2',
-            is_full=True
-        )
-
-        cls.storage_update_url = reverse(
-            'storage_update',
-            kwargs={'storage_id': cls.storage.storage_id}
-        )
-
-        # Setting up input data
-        cls.data = {
-            'code': 'DB-14',
-            'location': '2',
-            'is_full': False
-        }
-        # Setting up input data
-        cls.incomplete_data = {
-            'is_full': False
-        }
-
-        return super().setUpTestData()
-
-    def test_successfully_update_storage(self) -> None:
-        """
-        Ensure admin can update storage successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(self.storage_update_url, self.data)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan berhasil dirubah')
-        self.assertEqual(response.data['code'], self.data['code'])
-        self.assertEqual(response.data['location'], self.data['location'])
-        self.assertEqual(response.data['is_full'], self.data['is_full'])
-
-    def test_nonlogin_user_failed_to_update_storage(self) -> None:
-        """
-        Ensure non-login user cannot update storage
-        """
-        self.client.force_authenticate(user=None, token=None)
-        response = self.client.put(self.storage_update_url, self.data)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_nonadmin_user_failed_to_update_storage(self) -> None:
-        """
-        Ensure non-admin user cannot update storage
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.put(self.storage_update_url, self.data)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_admin_failed_to_update_nonexist_storage(self) -> None:
-        """
-        Ensure admin cannot update non-exist storage
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(reverse('storage_update', kwargs={'storage_id': 526523}),
-                                   self.data)
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak ditemukan')
-
-    def test_admin_failed_to_update_storage_with_empty_data(self) -> None:
-        """
-        Ensure admin cannot update data storage with empty data / input
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(self.storage_update_url, {})
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')
-
-    def test_admin_failed_to_update_storage_with_incomplete_data(self) -> None:
-        """
-        Ensure admin cannot update data storage with incomplete data / input
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(self.storage_update_url, self.incomplete_data)
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak sesuai / tidak lengkap')
-
-
-class StorageDeleteTestCase(SetTestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        Storage.objects.create(
-            code='KF-13',
-            location='1',
-            is_full=False
-        )
-
-        return super().setUpTestData()
-
-    def setUp(self) -> None:
-        # Setting up storage data
-        self.storage = Storage.objects.create(
-            code='DB-14',
-            location='2',
-            is_full=True
-        )
-
-        self.storage_delete_url = reverse(
-            'storage_delete',
-            kwargs={'storage_id': self.storage.storage_id}
-        )
-
-        return super().setUp()
-
-    def test_admin_successfully_delete_storage(self) -> None:
-        """
-        Ensure admin can delete storage successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.delete(self.storage_delete_url)
-        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan berhasil dihapus')
-        self.assertEqual(len(Storage.objects.all()), 1)
-
-    def test_nonlogin_user_failed_to_delete_storage(self) -> None:
-        """
-        Ensure non-login user cannot delete storage
-        """
-        self.client.force_authenticate(user=None, token=None)
-        response = self.client.delete(self.storage_delete_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_nonadmin_user_failed_to_delete_storage(self) -> None:
-        """
-        Ensure non-admin user cannot delete storage
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.delete(self.storage_delete_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_admin_failed_to_delete_nonexist_storage(self) -> None:
-        """
-        Ensure admin cannot to delete non-exist storage
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.delete(reverse('storage_delete', kwargs={'storage_id': 86591}))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['message'], 'Data lokasi penyimpanan tidak ditemukan')
 
 
 class BrandListTestCase(SetTestCase):
@@ -3748,7 +3434,7 @@ class CustomerUpdateTestCase(SetTestCase):
 
 class CustomerDeleteTestCase(SetTestCase):
     def setUp(self) -> None:
-        # Setting up storage data
+        # Setting up customer data
         self.customer = Customer.objects.create(
             name='The Father',
             contact='083515301351'
@@ -4082,7 +3768,7 @@ class SalesmanDeleteTestCase(SetTestCase):
         return super().setUpTestData()
 
     def setUp(self) -> None:
-        # Setting up storage data
+        # Setting up salesman data
         self.salesman = Salesman.objects.create(
             name='Clamentine',
             contact='086054056640',

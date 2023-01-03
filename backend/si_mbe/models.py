@@ -271,32 +271,6 @@ class Salesman(models.Model):
         db_table = 'salesman'
 
 
-# storage table to store sparepart location information
-class Storage(models.Model):
-    storage_id = models.AutoField(
-        primary_key=True,
-        unique=True
-    )
-    code = models.CharField(max_length=8, unique=True)
-
-    class Locations(models.TextChoices):
-        FIRST = '1', _('Bengkel 1 Jalan ...')
-        SECOND = '2', _('Bengkel 2 Jalan ...')
-    location = models.CharField(
-        max_length=30,
-        choices=Locations.choices,
-        default=Locations.FIRST
-    )
-
-    is_full = models.BooleanField(default=False)
-
-    def __str__(self) -> str:
-        return f'Storage {self.location} | full={self.is_full}'
-
-    class Meta:
-        db_table = 'storage'
-
-
 # brand table to store brand name of sparepart
 class Brand(models.Model):
     brand_id = models.AutoField(
@@ -342,6 +316,7 @@ class Sparepart(models.Model):
     partnumber = models.CharField(max_length=20, default='')
     quantity = models.SmallIntegerField(default=0, blank=True)
     limit = models.PositiveSmallIntegerField(default=10)
+    storage_code = models.CharField(max_length=15, default='', blank=True)
     motor_type = models.CharField(max_length=20, default='')
     sparepart_type = models.CharField(max_length=20)
     image = models.ImageField(
@@ -351,8 +326,8 @@ class Sparepart(models.Model):
         validators=[validate_image_size]
     )
     price = models.DecimalField(max_digits=15, decimal_places=0)
-    workshop_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)
-    install_price = models.DecimalField(max_digits=15, decimal_places=0, null=True)
+    workshop_price = models.DecimalField(max_digits=15, decimal_places=0, blank=True, default=0)
+    install_price = models.DecimalField(max_digits=15, decimal_places=0, blank=True, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     brand_id = models.ForeignKey(
@@ -366,12 +341,6 @@ class Sparepart(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         db_column='category_id'
-    )
-    storage_id = models.ForeignKey(
-        Storage,
-        on_delete=models.SET_NULL,
-        null=True,
-        db_column='storage_id'
     )
 
     def __str__(self) -> str:

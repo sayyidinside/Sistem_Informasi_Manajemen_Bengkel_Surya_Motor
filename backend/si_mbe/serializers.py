@@ -4,7 +4,7 @@ from rest_framework import serializers
 from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
                            Restock_detail, Sales, Sales_detail, Service,
                            Service_action, Service_sparepart, Sparepart,
-                           Storage, Supplier, Mechanic, Salesman)
+                           Supplier, Mechanic, Salesman)
 from si_mbe.validators import validate_image_size
 from django.core.validators import FileExtensionValidator
 
@@ -14,7 +14,6 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
     serializers for searching sparepart
     """
     brand = serializers.ReadOnlyField(source='brand_id.name')
-    location = serializers.ReadOnlyField(source='storage_id.code')
     category = serializers.ReadOnlyField(source='category_id.name')
     image = serializers.ImageField(required=False, allow_empty_file=True, use_url=True)
 
@@ -33,7 +32,7 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
             'price',
             'workshop_price',
             'install_price',
-            'location',
+            'storage_code',
         ]
 
 
@@ -69,6 +68,7 @@ class SparepartSerializers(serializers.ModelSerializer):
             'name',
             'partnumber',
             'quantity',
+            'storage_code',
             'category_id',
             'motor_type',
             'sparepart_type',
@@ -76,7 +76,6 @@ class SparepartSerializers(serializers.ModelSerializer):
             'price',
             'workshop_price',
             'install_price',
-            'storage_id',
             'image',
         ]
 
@@ -917,12 +916,6 @@ class ServiceManagementSerializers(serializers.ModelSerializer):
         instance.save()
 
         return instance
-
-
-class StorageSerializers(serializers.ModelSerializer):
-    class Meta:
-        model = Storage
-        fields = ['storage_id', 'code', 'location', 'is_full']
 
 
 class BrandSerializers(serializers.ModelSerializer):

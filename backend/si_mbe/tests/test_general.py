@@ -5,7 +5,7 @@ from django.urls import reverse
 from django.utils.encoding import force_str
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import Brand, Category, Profile, Sparepart, Storage
+from si_mbe.models import Brand, Category, Profile, Sparepart
 
 
 class SetTestCase(APITestCase):
@@ -126,11 +126,6 @@ class SparepartSearchTestCase(APITestCase):
         # Setting up brand data
         cls.brand = Brand.objects.create(name='Kymco')
 
-        # Setting up storage data
-        cls.storage = Storage.objects.create(
-            code='WB31'
-        )
-
         # Setting up category data
         cls.category = Category.objects.create(name='Power')
 
@@ -146,7 +141,7 @@ class SparepartSearchTestCase(APITestCase):
                             install_price=5500000,
                             brand_id=cls.brand,
                             category_id=cls.category,
-                            storage_id=cls.storage
+                            storage_code='WD-12'
                         )
 
         return super().setUpTestData()
@@ -173,7 +168,7 @@ class SparepartSearchTestCase(APITestCase):
                 'price': str(self.sparepart.price),
                 'workshop_price': str(self.sparepart.workshop_price),
                 'install_price': str(self.sparepart.install_price),
-                'location': self.storage.code
+                'storage_code': self.sparepart.storage_code
             }
         ])
 
@@ -334,230 +329,3 @@ class ResetPasswordTestCase(APITestCase):
 
         response = self.client.post(self.reset_password_confirm, self.wrong_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-
-
-class ProfileDetailTestCase(APITestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        # Setting up admin user and non-admin user
-        cls.user = User.objects.create_user(
-            username='richardrider',
-            password='NovaPrimeAnnahilations',
-            email='chad.bladess@gmail.com'
-        )
-        Profile.objects.create(
-            user_id=cls.user,
-            role='A',
-            name='Richard Rider',
-            contact='081256456948',
-            address='Earth'
-        )
-
-        cls.nonadmin_user = User.objects.create_user(
-            username='Phalanx',
-            password='TryintoTakeOver',
-            email='spacevirusalien@gmail.com'
-        )
-        Profile.objects.create(
-            user_id=cls.nonadmin_user,
-            role='P',
-            name='Ultron',
-            contact='011011000111',
-            address='Earth'
-        )
-
-        return super().setUpTestData()
-
-    def test_user_successfully_access_their_own_profile_detail(self) -> None:
-        """
-        Ensure user can access their own profile detail successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.user.pk}))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {
-            'name': self.user.profile.name,
-            'email': self.user.email,
-            'contact': self.user.profile.contact,
-            'address': self.user.profile.address,
-            'role': self.user.profile.get_role_display()
-        })
-
-    def test_nonlogin_user_failed_to_access_profile_detail(self) -> None:
-        """
-        Ensure non-login user cannot access profile detail
-        """
-        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.user.pk}))
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_user_failed_to_access_another_user_profile_detail(self) -> None:
-        """
-        Ensure user cannot access another user / people profile detail
-        """
-        self.client.force_authenticate(user=self.nonadmin_user)
-        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.user.pk}))
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_admin_successfully_access_another_user_profile_detail(self) -> None:
-        """
-        Ensure admin can access another user / people profile detail successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(reverse('profile_detail', kwargs={'user_id': self.nonadmin_user.pk}))
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {
-            'name': self.nonadmin_user.profile.name,
-            'email': self.nonadmin_user.email,
-            'contact': self.nonadmin_user.profile.contact,
-            'address': self.user.profile.address,
-            'role': self.nonadmin_user.profile.get_role_display()
-        })
-
-
-class ProfileUpdateTestCase(APITestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        # Setting up admin user and non-admin user details
-        cls.user = User.objects.create_user(
-            username='richardrider',
-            password='NovaPrimeAnnahilations',
-            email='chad.bladess@gmail.com'
-        )
-
-        cls.nonadmin_user = User.objects.create_user(
-            username='Phalanx',
-            password='TryintoTakeOver',
-            email='spacevirusalien@gmail.com'
-        )
-
-        # Setting up admin and non-admin user profile
-        Profile.objects.create(
-            user_id=cls.user,
-            role='A',
-            name='Richard Rider',
-            contact='081256456948'
-        )
-
-        Profile.objects.create(
-            user_id=cls.nonadmin_user,
-            role='P',
-            name='Ultron',
-            contact='011011000111'
-        )
-
-        # Setting up input data
-        cls.data = {
-            'username': 'richardrider',
-            'name': 'Sam Alexander',
-            'email': 'kidnova@gmail.com',
-            'contact': '085263486045',
-            'address': 'Xandar, Andromeda'
-        }
-        cls.other_data = {
-            'username': 'steveditko',
-            'name': 'Steve Ditko',
-            'email': 'ditko@marvel.com',
-            'contact': '088164064604',
-            'address': 'New York, America'
-        }
-        cls.incomplete_data = {
-            'username': 'selfwarlock',
-            'email': 'newmutant@xavier.com'
-        }
-
-        return super().setUpTestData()
-
-    def test_user_successfully_update_their_own_profile(self) -> None:
-        """
-        Ensure user can update their own profile successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(
-            reverse('profile_update', kwargs={'user_id': self.user.pk}),
-            self.data,
-            format='json'
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['message'], 'Profile berhasil dirubah')
-        self.assertEqual(response.data, {
-            'name': self.data['name'],
-            'contact': self.data['contact'],
-            'address': self.data['address'],
-            'email': self.data['email'],
-            'username': self.data['username'],
-            'message': 'Profile berhasil dirubah'
-        })
-
-    def test_nonlogin_user_failed_to_update_profile(self) -> None:
-        """
-        Ensure non-login user cannot update profile
-        """
-        response = self.client.put(
-            reverse('profile_update', kwargs={'user_id': self.user.pk}),
-            self.data,
-            format='json'
-        )
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_user_failed_to_update_another_user_profile(self) -> None:
-        """
-        Ensure user cannot update another user / people profile
-        """
-        self.client.force_authenticate(user=self.nonadmin_user)
-        response = self.client.put(
-            reverse('profile_update', kwargs={'user_id': self.user.pk}),
-            self.data,
-            format='json'
-        )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_user_failed_to_update_profile_with_empty_data(self) -> None:
-        """
-        Ensure user cannot update profile with empty data / input
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(
-            reverse('profile_update', kwargs={'user_id': self.user.pk}),
-            {},
-            format='json'
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data profile tidak sesuai / tidak lengkap')
-
-    def test_user_failed_to_update_profile_incomplete_data(self) -> None:
-        """
-        Ensure user cannot update profile incomplete data / input
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(
-            reverse('profile_update', kwargs={'user_id': self.user.pk}),
-            self.incomplete_data,
-            format='json'
-        )
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['message'], 'Data profile tidak sesuai / tidak lengkap')
-
-    def test_admin_successfully_update_other_user_profile(self) -> None:
-        """
-        Ensure admin can update other user profile successfully
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(
-            reverse('profile_update', kwargs={'user_id': self.nonadmin_user.pk}),
-            self.other_data,
-            format='json'
-        )
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['message'], 'Profile berhasil dirubah')
-        self.assertEqual(response.data, {
-            'name': self.other_data['name'],
-            'contact': self.other_data['contact'],
-            'address': self.other_data['address'],
-            'email': self.other_data['email'],
-            'username': self.other_data['username'],
-            'message': 'Profile berhasil dirubah'
-        })
