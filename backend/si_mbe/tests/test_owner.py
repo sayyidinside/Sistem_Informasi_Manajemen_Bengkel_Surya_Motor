@@ -181,19 +181,16 @@ class SalesReportDetail(APITestCase):
         # Setting up sales detail data and getting their object
         cls.sales_details_1 = Sales_detail.objects.create(
             quantity=15,
-            is_workshop=False,
             sales_id=cls.sales,
             sparepart_id=cls.spareparts[2]
         )
         cls.sales_details_2 = Sales_detail.objects.create(
             quantity=10,
-            is_workshop=False,
             sales_id=cls.sales,
             sparepart_id=cls.spareparts[0]
         )
         cls.sales_details_3 = Sales_detail.objects.create(
             quantity=20,
-            is_workshop=True,
             sales_id=cls.sales,
             sparepart_id=cls.spareparts[1]
         )
@@ -211,41 +208,31 @@ class SalesReportDetail(APITestCase):
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.sales_report_detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {
-                'sales_id': self.sales.sales_id,
-                'admin': 'Richard Rider',
-                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'customer': self.sales.customer_id.name,
-                'contact': self.sales.customer_id.contact,
-                'total_price_sales': 241000000,
-                'is_paid_off': False,
-                'deposit': str(self.sales.deposit),
-                'content': [
-                    {
-                        'sales_detail_id': self.sales_details_1.sales_detail_id,
-                        'sparepart': self.spareparts[2].name,
-                        'quantity': 15,
-                        'is_workshop': False,
-                        'total_price': 81000000
-                    },
-                    {
-                        'sales_detail_id': self.sales_details_2.sales_detail_id,
-                        'sparepart': self.spareparts[0].name,
-                        'quantity': 10,
-                        'is_workshop': False,
-                        'total_price': 54000000
-                    },
-                    {
-                        'sales_detail_id': self.sales_details_3.sales_detail_id,
-                        'sparepart': self.spareparts[1].name,
-                        'quantity': 20,
-                        'is_workshop': True,
-                        'total_price': 106000000
-                    }
-                ]
-            }
-        )
+
+        # Validating surface level information of sales report detail
+        self.assertEqual(response.data['sales_id'], self.sales.sales_id)
+        self.assertEqual(response.data['admin'], self.sales.user_id.profile.name)
+        self.assertEqual(response.data['created_at'], self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['updated_at'], self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['customer'], self.sales.customer_id.name)
+        self.assertEqual(response.data['contact'], self.sales.customer_id.contact)
+        self.assertEqual(response.data['total_price_sales'], 243000000)
+        self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(response.data['deposit'], str(self.sales.deposit))
+
+        # Validating detail information per sparepart of sales report detail in content field
+        self.assertEqual(response.data['content'][0]['sales_detail_id'], self.sales_details_1.sales_detail_id)
+        self.assertEqual(response.data['content'][0]['sparepart'], self.spareparts[2].name)
+        self.assertEqual(response.data['content'][0]['quantity'], self.sales_details_1.quantity)
+        self.assertEqual(response.data['content'][0]['sub_total'], 81000000)
+        self.assertEqual(response.data['content'][1]['sales_detail_id'], self.sales_details_2.sales_detail_id)
+        self.assertEqual(response.data['content'][1]['sparepart'], self.spareparts[0].name)
+        self.assertEqual(response.data['content'][1]['quantity'], 10)
+        self.assertEqual(response.data['content'][1]['sub_total'], 54000000)
+        self.assertEqual(response.data['content'][2]['sales_detail_id'], self.sales_details_3.sales_detail_id)
+        self.assertEqual(response.data['content'][2]['sparepart'], self.spareparts[1].name)
+        self.assertEqual(response.data['content'][2]['quantity'], 20)
+        self.assertEqual(response.data['content'][2]['sub_total'], 108000000)
 
     def test_nonlogin_user_failed_to_access_sales_report_detail(self) -> None:
         """
@@ -722,8 +709,7 @@ class OwnerDashboardTestCase(SetTestCase):
         Sales_detail.objects.create(
             sales_id=cls.sales_2,
             quantity=23,
-            sparepart_id=cls.sparepart,
-            is_workshop=True
+            sparepart_id=cls.sparepart
         )
 
         # Setting up service data
@@ -803,8 +789,8 @@ class OwnerDashboardTestCase(SetTestCase):
             len(response.data['revenue_in_month']),
             monthrange(year=date.today().year, month=date.today().month)[1]
         )
-        self.assertEqual(response.data['total_revenue_today'], 594500)
-        self.assertEqual(response.data['sales_revenue_today'], 349000)
+        self.assertEqual(response.data['total_revenue_today'], 617500)
+        self.assertEqual(response.data['sales_revenue_today'], 372000)
         self.assertEqual(response.data['service_revenue_today'], 245500)
         self.assertEqual(response.data['sales_count_today'], 2)
         self.assertEqual(response.data['service_count_today'], 2)

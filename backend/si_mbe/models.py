@@ -71,7 +71,7 @@ class Logs(models.Model):
         db_table = 'log'
 
 
-# Customer table to store customer data, purchase and service records
+# Customer table to store customer data
 class Customer(models.Model):
     customer_id = models.AutoField(
         primary_key=True,
@@ -104,6 +104,7 @@ class Sales(Base_transaction):
         primary_key=True,
         unique=True
     )
+    is_workshop = models.BooleanField(default=False)
     deposit = models.DecimalField(max_digits=15, decimal_places=0, default=0)
 
     user_id = models.ForeignKey(
@@ -133,7 +134,6 @@ class Sales_detail(models.Model):
         unique=True
     )
     quantity = models.PositiveSmallIntegerField()
-    is_workshop = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     sales_id = models.ForeignKey(

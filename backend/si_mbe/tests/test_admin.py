@@ -601,7 +601,7 @@ class SalesListTestCase(SetTestCase):
                 workshop_price=5300000,
                 install_price=5500000,
                 brand_id=cls.brand,
-                category_id=cls.category
+                category_id=cls.category,
             )
 
         cls.spareparts = Sparepart.objects.all()
@@ -623,19 +623,16 @@ class SalesListTestCase(SetTestCase):
         # Setting up sales detail data and getting their id
         cls.sales_details_1 = Sales_detail.objects.create(
             quantity=2,
-            is_workshop=False,
             sales_id=cls.sales[0],
             sparepart_id=cls.spareparts[3]
         )
         cls.sales_details_2 = Sales_detail.objects.create(
             quantity=5,
-            is_workshop=True,
             sales_id=cls.sales[1],
             sparepart_id=cls.spareparts[0]
         )
         cls.sales_details_3 = Sales_detail.objects.create(
             quantity=3,
-            is_workshop=False,
             sales_id=cls.sales[1],
             sparepart_id=cls.spareparts[1]
         )
@@ -650,49 +647,50 @@ class SalesListTestCase(SetTestCase):
         response = self.client.get(self.sales_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 2)
-        self.assertEqual(response.data['results'], [
-            {
-                'sales_id': self.sales[0].sales_id,
-                'customer': self.sales[0].customer_id.name,
-                'contact': self.sales[0].customer_id.contact,
-                'total_price_sales': 10800000,
-                'is_paid_off': False,
-                'deposit': str(self.sales[0].deposit),
-                'content': [
-                    {
-                        'sales_detail_id': self.sales_details_1.sales_detail_id,
-                        'sparepart': self.spareparts[3].name,
-                        'quantity': 2,
-                        'is_workshop': False,
-                        'total_price': 10800000
-                    }
-                ]
-            },
-            {
-                'sales_id': self.sales[1].sales_id,
-                'customer': self.sales[1].customer_id.name,
-                'contact': self.sales[1].customer_id.contact,
-                'total_price_sales': 42700000,
-                'is_paid_off': False,
-                'deposit': str(self.sales[1].deposit),
-                'content': [
-                    {
-                        'sales_detail_id': self.sales_details_2.sales_detail_id,
-                        'sparepart': self.spareparts[0].name,
-                        'quantity': 5,
-                        'is_workshop': True,
-                        'total_price': 26500000
-                    },
-                    {
-                        'sales_detail_id': self.sales_details_3.sales_detail_id,
-                        'sparepart': self.spareparts[1].name,
-                        'quantity': 3,
-                        'is_workshop': False,
-                        'total_price': 16200000
-                    }
-                ]
-            }
-        ])
+
+        # Validating surface level information of sales
+        # The first result data
+        self.assertEqual(response.data['results'][0]['sales_id'], self.sales[0].sales_id)
+        self.assertEqual(response.data['results'][0]['created_at'],
+                         (self.sales[0].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][0]['customer'], self.sales[0].customer_id.name)
+        self.assertEqual(response.data['results'][0]['total_price_sales'], 10800000)
+        self.assertEqual(response.data['results'][0]['is_paid_off'], self.sales[0].is_paid_off)
+        self.assertEqual(response.data['results'][0]['deposit'], str(self.sales[0].deposit))
+        # The second result data
+        self.assertEqual(response.data['results'][1]['sales_id'], self.sales[1].sales_id)
+        self.assertEqual(response.data['results'][1]['created_at'],
+                         (self.sales[1].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][1]['customer'], self.sales[1].customer_id.name)
+        self.assertEqual(response.data['results'][1]['total_price_sales'], 43200000)
+        self.assertEqual(response.data['results'][1]['is_paid_off'], self.sales[1].is_paid_off)
+        self.assertEqual(response.data['results'][1]['deposit'], str(self.sales[1].deposit))
+
+        # Validating detail information per sparepart of sales in content field
+        # The first result data
+        self.assertEqual(response.data['results'][0]['content'][0]['sales_detail_id'],
+                         self.sales_details_1.sales_detail_id)
+        self.assertEqual(response.data['results'][0]['content'][0]['sparepart'],
+                         self.spareparts[3].name)
+        self.assertEqual(response.data['results'][0]['content'][0]['quantity'],
+                         self.sales_details_1.quantity)
+        self.assertEqual(response.data['results'][0]['content'][0]['sub_total'], 10800000)
+        # The second result data
+        self.assertEqual(response.data['results'][1]['content'][0]['sales_detail_id'],
+                         self.sales_details_2.sales_detail_id)
+        self.assertEqual(response.data['results'][1]['content'][0]['sparepart'],
+                         self.spareparts[0].name)
+        self.assertEqual(response.data['results'][1]['content'][0]['quantity'],
+                         self.sales_details_2.quantity)
+        self.assertEqual(response.data['results'][1]['content'][0]['sub_total'], 27000000)
+
+        self.assertEqual(response.data['results'][1]['content'][1]['sales_detail_id'],
+                         self.sales_details_3.sales_detail_id)
+        self.assertEqual(response.data['results'][1]['content'][1]['sparepart'],
+                         self.spareparts[1].name)
+        self.assertEqual(response.data['results'][1]['content'][1]['quantity'],
+                         self.sales_details_3.quantity)
+        self.assertEqual(response.data['results'][1]['content'][1]['sub_total'], 16200000)
 
     def test_nonlogin_user_failed_to_access_sales_list(self) -> None:
         """
@@ -711,6 +709,43 @@ class SalesListTestCase(SetTestCase):
         response = self.client.get(self.sales_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_successfully_searching_sales_with_result(self) -> None:
+        """
+        Ensure admin who searching sales with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('sales_list') + f'?q={self.sales[0].sales_id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+
+        # Validating surface level information of sales
+        self.assertEqual(response.data['results'][0]['sales_id'], self.sales[0].sales_id)
+        self.assertEqual(response.data['results'][0]['created_at'],
+                         (self.sales[0].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][0]['customer'], self.sales[0].customer_id.name)
+        self.assertEqual(response.data['results'][0]['total_price_sales'], 10800000)
+        self.assertEqual(response.data['results'][0]['is_paid_off'], self.sales[0].is_paid_off)
+        self.assertEqual(response.data['results'][0]['deposit'], str(self.sales[0].deposit))
+
+        # Validating detail information per sparepart of sales in content field
+        self.assertEqual(response.data['results'][0]['content'][0]['sales_detail_id'],
+                         self.sales_details_1.sales_detail_id)
+        self.assertEqual(response.data['results'][0]['content'][0]['sparepart'],
+                         self.spareparts[3].name)
+        self.assertEqual(response.data['results'][0]['content'][0]['quantity'],
+                         self.sales_details_1.quantity)
+        self.assertEqual(response.data['results'][0]['content'][0]['sub_total'], 10800000)
+
+    def test_admin_failed_to_searching_sales_without_result(self) -> None:
+        """
+        Ensure admin search sales that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('sales_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Transaksi penjualan yang dicari tidak ditemukan')
 
 
 class SalesAddTestCase(SetTestCase):
@@ -751,20 +786,90 @@ class SalesAddTestCase(SetTestCase):
         # Creating data that gonna be use as input
         cls.data = {
             'customer_id': cls.customer.customer_id,
-            'is_paid_off': False,
-            'deposit': 200000,
+            'is_workshop': True,
+            'deposit': 20000000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[1].sparepart_id,
                     'quantity': 1,
-                    'is_workshop': False,
                 },
                 {
                     'sparepart_id': cls.spareparts[0].sparepart_id,
                     'quantity': 30,
-                    'is_workshop': True,
                 }
             ]
+        }
+
+        cls.data_paid = {
+            'customer_id': cls.customer.customer_id,
+            'is_workshop': True,
+            'deposit': 164300000,
+            'content': [
+                {
+                    'sparepart_id': cls.spareparts[1].sparepart_id,
+                    'quantity': 1,
+                },
+                {
+                    'sparepart_id': cls.spareparts[0].sparepart_id,
+                    'quantity': 30,
+                }
+            ]
+        }
+
+        cls.data_with_new_user = {
+            'customer_name': 'Felisin',
+            'customer_contact': '086468560046',
+            'is_workshop': True,
+            'deposit': 20000000,
+            'content': [
+                {
+                    'sparepart_id': cls.spareparts[1].sparepart_id,
+                    'quantity': 1,
+                },
+                {
+                    'sparepart_id': cls.spareparts[0].sparepart_id,
+                    'quantity': 30,
+                }
+            ]
+        }
+
+        cls.data_incomplete_new_user = {
+            'customer_name': 'Felisin',
+            'is_workshop': True,
+            'deposit': 20000000,
+            'content': [
+                {
+                    'sparepart_id': cls.spareparts[1].sparepart_id,
+                    'quantity': 1,
+                },
+                {
+                    'sparepart_id': cls.spareparts[0].sparepart_id,
+                    'quantity': 30,
+                }
+            ]
+        }
+
+        cls.data_confliting_user = {
+            'customer_id': cls.customer.customer_id,
+            'customer_name': 'Felisin',
+            'customer_contact': '086468560046',
+            'is_workshop': True,
+            'deposit': 20000000,
+            'content': [
+                {
+                    'sparepart_id': cls.spareparts[1].sparepart_id,
+                    'quantity': 1,
+                },
+                {
+                    'sparepart_id': cls.spareparts[0].sparepart_id,
+                    'quantity': 30,
+                }
+            ]
+        }
+
+        cls.incomplete_data = {
+            'customer_id': cls.customer.customer_id,
+            'is_workshop': True,
         }
 
         return super().setUpTestData()
@@ -777,18 +882,141 @@ class SalesAddTestCase(SetTestCase):
         response = self.client.post(self.sales_add_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['message'], 'Data penjualan berhasil ditambah')
-        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
-        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
-        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
-        self.assertEqual(len(response.data['content']), 2)
-        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[1].sparepart_id)
-        self.assertEqual(response.data['content'][0]['quantity'], 1)
-        self.assertEqual(response.data['content'][0]['is_workshop'], False)
 
-        # ensure sparepart quantity will be subtracted by detail's quantity
+        # Validating surface level information of sales
+        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
+        self.assertEqual(response.data['is_workshop'], self.data['is_workshop'])
+        self.assertEqual(int(response.data['deposit']), self.data['deposit'])
+        self.assertEqual(response.data['total_quantity_sales'], 31)
+        self.assertEqual(response.data['total_price_sales'], 164300000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 144300000)
+        self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of sales in content field
+        self.assertEqual(response.data['content'][0]['sparepart_id'],
+                         self.data['content'][0]['sparepart_id'])
+        self.assertEqual(response.data['content'][0]['quantity'],
+                         self.data['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 5300000)
+
+        self.assertEqual(response.data['content'][1]['sparepart_id'],
+                         self.data['content'][1]['sparepart_id'])
+        self.assertEqual(response.data['content'][1]['quantity'],
+                         self.data['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 159000000)
+
+        # Validate sparepart quantity will be subtracted by detail's quantity
         # after sales successfully added
         self.assertEqual(self.spareparts[0].quantity, 20)
         self.assertEqual(self.spareparts[1].quantity, 49)
+
+    def test_admin_successfully_add_sales_as_paid_off(self) -> None:
+        """
+        Ensure admin can add new sales data with it's content_as paid off
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sales_add_url, self.data_paid, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data penjualan berhasil ditambah')
+
+        # Validating surface level information of sales
+        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
+        self.assertEqual(response.data['is_workshop'], self.data_paid['is_workshop'])
+        self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
+        self.assertEqual(response.data['total_quantity_sales'], 31)
+        self.assertEqual(response.data['total_price_sales'], 164300000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 0)
+        self.assertEqual(Sales.objects.all()[0].is_paid_off, True)
+        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of sales in content field
+        self.assertEqual(response.data['content'][0]['sparepart_id'],
+                         self.data['content'][0]['sparepart_id'])
+        self.assertEqual(response.data['content'][0]['quantity'],
+                         self.data['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 5300000)
+
+        self.assertEqual(response.data['content'][1]['sparepart_id'],
+                         self.data['content'][1]['sparepart_id'])
+        self.assertEqual(response.data['content'][1]['quantity'],
+                         self.data['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 159000000)
+
+        # Validate sparepart quantity will be subtracted by detail's quantity
+        # after sales successfully added
+        self.assertEqual(self.spareparts[0].quantity, 20)
+        self.assertEqual(self.spareparts[1].quantity, 49)
+
+    def test_admin_successfully_add_sales_with_new_customer(self) -> None:
+        """
+        Ensure admin can add new sales data with it's content, also create customer
+        using new customer data
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sales_add_url, self.data_with_new_user, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data penjualan berhasil ditambah')
+
+        # Validate customer got created
+        self.cust_new = Customer.objects.get(name=self.data_with_new_user['customer_name'])
+        self.assertEqual(Customer.objects.count(), 2)
+
+        # Validating surface level information of sales
+        self.assertEqual(response.data['customer_id'], self.cust_new.customer_id)
+        self.assertEqual(self.cust_new.name, self.data_with_new_user['customer_name'])
+        self.assertEqual(self.cust_new.contact, self.data_with_new_user['customer_contact'])
+        self.assertEqual(response.data['is_workshop'], self.data_with_new_user['is_workshop'])
+        self.assertEqual(int(response.data['deposit']), self.data_with_new_user['deposit'])
+        self.assertEqual(response.data['total_quantity_sales'], 31)
+        self.assertEqual(response.data['total_price_sales'], 164300000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 144300000)
+        self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of sales in content field
+        self.assertEqual(response.data['content'][0]['sparepart_id'],
+                         self.data_with_new_user['content'][0]['sparepart_id'])
+        self.assertEqual(response.data['content'][0]['quantity'],
+                         self.data_with_new_user['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 5300000)
+
+        self.assertEqual(response.data['content'][1]['sparepart_id'],
+                         self.data_with_new_user['content'][1]['sparepart_id'])
+        self.assertEqual(response.data['content'][1]['quantity'],
+                         self.data_with_new_user['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 159000000)
+
+        # Validate sparepart quantity will be subtracted by detail's quantity
+        # after sales successfully added
+        self.assertEqual(self.spareparts[0].quantity, 20)
+        self.assertEqual(self.spareparts[1].quantity, 49)
+
+    def test_admin_failed_to_add_sales_with_incomplete_new_customer_data(self) -> None:
+        """
+        Ensure admin cannot add data sales with incomplete new customer data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sales_add_url, self.data_incomplete_new_user, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['customer_contact'][0],
+                         'Baris ini harus diisi jika mengisi baris customer_name')
+
+    def test_admin_failed_to_add_sales_with_conflicting_customer_data(self) -> None:
+        """
+        Ensure admin cannot add data sales with conflicting customer data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.sales_add_url, self.data_confliting_user, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['customer'],
+                         'Anda tidak dapat mengisi baris kedua tipe pelanggan secara bersamaan\n'
+                         'Pelanggan lama = customer_id\n'
+                         'Pelanggan baru = customer_name dan customer_contact')
 
     def test_nonlogin_user_failed_to_add_sales(self) -> None:
         """
@@ -817,13 +1045,12 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
-    def test_admin_failed_to_add_sales_with_partially_empty_data(self) -> None:
+    def test_admin_failed_to_add_sales_with_incomplete_data(self) -> None:
         """
-        Ensure admin cannot add data sales with partially empty data / input
+        Ensure admin cannot add data sales with incomplete data / input
         """
-        self.partial_data = {'customer_name': 'Matt Mercer', 'customer_contact': '085634405602', 'is_paid_off': False}
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.sales_add_url, self.partial_data)
+        response = self.client.post(self.sales_add_url, self.incomplete_data)
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
@@ -866,7 +1093,8 @@ class SalesUpdateTestCase(SetTestCase):
     def setUp(self) -> None:
         # Setting up sales data and getting their id
         self.sales = Sales.objects.create(
-            customer_id=self.customer
+            customer_id=self.customer,
+            is_workshop=False
         )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -875,13 +1103,11 @@ class SalesUpdateTestCase(SetTestCase):
         # Setting up sales detail data and getting their id
         self.sales_detail_1 = Sales_detail.objects.create(
             quantity=2,
-            is_workshop=False,
             sales_id=self.sales,
             sparepart_id=self.spareparts[2]
         )
         self.sales_detail_2 = Sales_detail.objects.create(
             quantity=35,
-            is_workshop=True,
             sales_id=self.sales,
             sparepart_id=self.spareparts[0]
         )
@@ -889,20 +1115,48 @@ class SalesUpdateTestCase(SetTestCase):
         # Creating data that gonna be use as input
         self.data = {
             'customer_id': self.customer.customer_id,
-            'is_paid_off': True,
+            'is_workshop': True,
+            'deposit': 2000000,
+            'content': [
+                {
+                    'sales_detail_id': self.sales_detail_1.sales_detail_id,
+                    'sparepart_id': self.spareparts[2].sparepart_id,
+                    'quantity': 5,
+                },
+                {
+                    'sales_detail_id': self.sales_detail_2.sales_detail_id,
+                    'sparepart_id': self.spareparts[0].sparepart_id,
+                    'quantity': 30,
+                }
+            ]
+        }
+
+        self.data_paid = {
+            'customer_id': self.customer.customer_id,
+            'is_workshop': True,
             'deposit': 5000000,
             'content': [
                 {
                     'sales_detail_id': self.sales_detail_1.sales_detail_id,
                     'sparepart_id': self.spareparts[2].sparepart_id,
                     'quantity': 5,
-                    'is_workshop': False,
                 },
                 {
                     'sales_detail_id': self.sales_detail_2.sales_detail_id,
                     'sparepart_id': self.spareparts[0].sparepart_id,
                     'quantity': 30,
-                    'is_workshop': True,
+                }
+            ]
+        }
+
+        self.incomplete_data = {
+            'customer_id': self.customer.customer_id,
+            'content': [
+                {
+                    'sales_detail_id': self.sales_detail_1.sales_detail_id,
+                },
+                {
+                    'sales_detail_id': self.sales_detail_2.sales_detail_id,
                 }
             ]
         }
@@ -917,18 +1171,72 @@ class SalesUpdateTestCase(SetTestCase):
         response = self.client.put(self.sales_update_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Data penjualan berhasil dirubah')
+
+        # Validate surface level sales information
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
-        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
+        self.assertEqual(response.data['is_workshop'], True)
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
+        self.assertEqual(response.data['total_quantity_sales'], 35)
+        self.assertEqual(response.data['total_price_sales'], 3500000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 1500000)
+        self.assertEqual(Sales.objects.all()[0].is_paid_off, False)
+        self.assertEqual(response.data['is_paid_off'], False)
         self.assertEqual(len(response.data['content']), 2)
-        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[2].sparepart_id)
-        self.assertEqual(response.data['content'][0]['quantity'], 5)
-        self.assertEqual(response.data['content'][0]['is_workshop'], False)
-        self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[0].sparepart_id)
-        self.assertEqual(response.data['content'][1]['quantity'], 30)
-        self.assertEqual(response.data['content'][1]['is_workshop'], True)
+
+        # validate detail level sales information per sparepart in content field
+        self.assertEqual(response.data['content'][0]['sparepart_id'],
+                         self.spareparts[2].sparepart_id)
+        self.assertEqual(response.data['content'][0]['quantity'],
+                         self.data['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 500000)
+
+        self.assertEqual(response.data['content'][1]['sparepart_id'],
+                         self.spareparts[0].sparepart_id)
+        self.assertEqual(response.data['content'][1]['quantity'],
+                         self.data['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 3000000)
 
         # ensure sparepart quantity will be subtracted by detail's quantity
+        # after sales successfully updated
+        self.assertEqual(self.spareparts[0].quantity, 55)
+        self.assertEqual(self.spareparts[2].quantity, 49)
+
+    def test_admin_successfully_update_sales_as_paid_off(self) -> None:
+        """
+        Ensure admin can update new sales data with it's content_as paid off
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.sales_update_url, self.data_paid, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data penjualan berhasil dirubah')
+
+        # Validating surface level information of sales
+        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
+        self.assertEqual(response.data['is_workshop'], self.data_paid['is_workshop'])
+        self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
+        self.assertEqual(response.data['total_quantity_sales'], 35)
+        self.assertEqual(response.data['total_price_sales'], 3500000)
+        self.assertEqual(response.data['change'], 1500000)
+        self.assertEqual(response.data['remaining_payment'], 0)
+        self.assertEqual(Sales.objects.all()[0].is_paid_off, True)
+        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of sales in content field
+        self.assertEqual(response.data['content'][0]['sparepart_id'],
+                         self.data_paid['content'][0]['sparepart_id'])
+        self.assertEqual(response.data['content'][0]['quantity'],
+                         self.data_paid['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 500000)
+
+        self.assertEqual(response.data['content'][1]['sparepart_id'],
+                         self.data_paid['content'][1]['sparepart_id'])
+        self.assertEqual(response.data['content'][1]['quantity'],
+                         self.data_paid['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 3000000)
+
+        # Validate sparepart quantity will be subtracted by detail's quantity
         # after sales successfully updated
         self.assertEqual(self.spareparts[0].quantity, 55)
         self.assertEqual(self.spareparts[2].quantity, 49)
@@ -970,13 +1278,12 @@ class SalesUpdateTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
-    def test_admin_failed_to_update_sales_with_partially_empty_data(self) -> None:
+    def test_admin_failed_to_update_sales_with_incomplete_data(self) -> None:
         """
-        Ensure admin cannot update sales with partially empty data / input
+        Ensure admin cannot update sales with incomplete data / input
         """
-        self.partail_data = {'customer_name': 'Cassian Andor', 'customer_contact': '087425502660'}
         self.client.force_authenticate(user=self.user)
-        response = self.client.put(self.sales_update_url, self.partail_data, format='json')
+        response = self.client.put(self.sales_update_url, self.incomplete_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(response.data['message'], 'Data penjualan tidak sesuai / tidak lengkap')
 
@@ -1021,6 +1328,7 @@ class SalesDeleteTestCase(SetTestCase):
         self.sales = Sales.objects.create(
             customer_id=self.customer,
             deposit=400000,
+            is_workshop=False,
         )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -1029,13 +1337,11 @@ class SalesDeleteTestCase(SetTestCase):
         # Setting up sales detail data
         Sales_detail.objects.create(
             quantity=3,
-            is_workshop=False,
             sales_id=self.sales,
             sparepart_id=self.spareparts[2]
         )
         Sales_detail.objects.create(
             quantity=51,
-            is_workshop=True,
             sales_id=self.sales,
             sparepart_id=self.spareparts[0]
         )
@@ -1264,7 +1570,7 @@ class RestockListTestCase(SetTestCase):
         response = self.client.get(reverse('restock_list') + '?q=random shit')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
-        self.assertEqual(response.data['message'], 'Pengadaan / restock yang dicari tidak ditemukan')
+        self.assertEqual(response.data['message'], 'Transaksi pengadaan / restock yang dicari tidak ditemukan')
 
 
 class RestockAddTestCase(SetTestCase):

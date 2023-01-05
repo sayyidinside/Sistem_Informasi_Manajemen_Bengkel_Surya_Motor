@@ -5,6 +5,7 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
                            Restock_detail, Sales, Sales_detail, Service,
                            Service_action, Service_sparepart, Sparepart,
                            Supplier, Mechanic, Salesman)
+from si_mbe.exceptions import CustomerValidationError, CustomerConflictError
 from si_mbe.validators import validate_image_size
 from django.core.validators import FileExtensionValidator
 
@@ -82,30 +83,34 @@ class SparepartSerializers(serializers.ModelSerializer):
 
 class SalesDetailSerializers(serializers.ModelSerializer):
     sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
-    total_price = serializers.SerializerMethodField()
+    sub_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Sales_detail
-        fields = ['sales_detail_id', 'sparepart', 'quantity', 'is_workshop', 'total_price']
+        fields = ['sales_detail_id', 'sparepart', 'quantity', 'sub_total']
 
-    def get_total_price(self, obj):
-        if obj.is_workshop:
+    def get_sub_total(self, obj):
+        # Check if workshop is true
+        if obj.sales_id.is_workshop:
+            # calculate with workshop price
             return int(obj.quantity * obj.sparepart_id.workshop_price)
+
+        # calculate with normal price
         return int(obj.quantity * obj.sparepart_id.price)
 
 
 class SalesSerializers(serializers.ModelSerializer):
-    content = SalesDetailSerializers(many=True, source='sales_detail_set')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     customer = serializers.ReadOnlyField(source='customer_id.name')
-    contact = serializers.ReadOnlyField(source='customer_id.contact')
     total_price_sales = serializers.SerializerMethodField()
+    content = SalesDetailSerializers(many=True, source='sales_detail_set')
 
     class Meta:
         model = Sales
         fields = [
             'sales_id',
+            'created_at',
             'customer',
-            'contact',
             'total_price_sales',
             'is_paid_off',
             'deposit',
@@ -113,22 +118,43 @@ class SalesSerializers(serializers.ModelSerializer):
         ]
 
     def get_total_price_sales(self, obj):
+        # Getting all sales_detail data related to the sales
         sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
         total_price = 0
+
+        # calculating total price by looping throught sales_detail list
         for sales in sales_serializer.data:
-            total_price += sales['total_price']
+            total_price += sales['sub_total']
         return total_price
 
 
 class SalesDetailManagementSerializers(serializers.ModelSerializer):
     sales_detail_id = serializers.IntegerField(required=False)
+    sub_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Sales_detail
-        fields = ['sales_detail_id', 'sparepart_id', 'quantity', 'is_workshop']
+        fields = ['sales_detail_id', 'sparepart_id', 'quantity', 'sub_total']
+
+    def get_sub_total(self, obj):
+        # Check if workshop is true
+        if obj.sales_id.is_workshop:
+            # calculate with workshop price
+            return int(obj.quantity * obj.sparepart_id.workshop_price)
+
+        # calculate with normal price
+        return int(obj.quantity * obj.sparepart_id.price)
 
 
 class SalesManagementSerializers(serializers.ModelSerializer):
+    customer_name = serializers.CharField(max_length=30, write_only=True, required=False)
+    customer_contact = serializers.CharField(max_length=15, write_only=True, required=False)
+    total_price_sales = serializers.SerializerMethodField()
+    total_quantity_sales = serializers.SerializerMethodField()
+    total_price_sales = serializers.SerializerMethodField()
+    change = serializers.SerializerMethodField()
+    remaining_payment = serializers.SerializerMethodField()
+    is_paid_off = serializers.SerializerMethodField()
     content = SalesDetailManagementSerializers(many=True, source='sales_detail_set')
 
     class Meta:
@@ -136,16 +162,128 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         fields = [
             'sales_id',
             'customer_id',
-            'is_paid_off',
+            'customer_name',
+            'customer_contact',
+            'is_workshop',
             'deposit',
+            'total_quantity_sales',
+            'total_price_sales',
+            'change',
+            'remaining_payment',
+            'is_paid_off',
             'content'
         ]
 
+    def get_total_quantity_sales(self, obj):
+        # Getting all sales_detail data related to the sales
+        sales_serializer = SalesDetailManagementSerializers(obj.sales_detail_set, many=True)
+        quantity = 0
+
+        # calculating total quantity by looping throught sales_detail list
+        for sales in sales_serializer.data:
+            quantity += sales['quantity']
+        return quantity
+
+    def get_total_price_sales(self, obj):
+        # Getting all sales_detail data related to the sales
+        sales_serializer = SalesDetailManagementSerializers(obj.sales_detail_set, many=True)
+
+        # calculating total price by looping throught sales_detail list
+        total_price = 0
+        for sales in sales_serializer.data:
+            total_price += sales['sub_total']
+        return total_price
+
+    def get_change(self, obj):
+        # Getting total_price using class method
+        total_price = self.get_total_price_sales(obj)
+
+        change = int(obj.deposit) - total_price
+
+        # Check if change is greater then 0, if yes return that amount
+        # else return 0, because change can't be display as negative
+        if change > 0:
+            return change
+        return 0
+
+    def get_remaining_payment(self, obj):
+        # Getting total_price using class method
+        total_price = self.get_total_price_sales(obj)
+
+        # Calculating remaining_payment subtracting total_price with deposit
+        total = total_price - int(obj.deposit)
+
+        # Check if remaining payment is greater then 0, if yes return that amount
+        # else return 0, because remaining payment can't be display as negative
+        if total < 0:
+            return 0
+        return total
+
+    def get_is_paid_off(self, obj):
+        # Getting remaining payment value using class method
+        remaining_payment = self.get_remaining_payment(obj)
+
+        # Check if remaining payment is eqaul to 0,
+        # then set paid off status as True (paid)
+        if remaining_payment == 0:
+            return True
+        return False
+
     def create(self, validated_data):
+        # Get the customer information from validated_data if there none get as None
+        customer_id = validated_data.get('customer_id', None)
+        customer_name = validated_data.pop('customer_name', None)
+        customer_contact = validated_data.pop('customer_contact', None)
+
+        # check if user send new customer name must include contact and vise versa
+        if (customer_name is not None) ^ (customer_contact is not None):
+            raise CustomerValidationError(
+                customer_name=customer_name,
+                customer_contact=customer_contact,
+                serializer=self
+            )
+        # check if user fills both old customer field and new customer fields
+        elif all((customer_id is not None, customer_contact is not None, customer_name is not None)):
+            raise CustomerConflictError(serializer=self)
+
+        # If user send new customer data and customer_id has't register in database,
+        # create new customer data in database
+        if all((customer_id is None, customer_contact is not None, customer_name is not None)):
+            # Create dict of the new customer name and contact
+            customer_detail = {}
+            customer_detail['name'] = customer_name
+            customer_detail['contact'] = customer_contact
+
+            # Create new customer in database
+            customer = Customer.objects.create(**customer_detail)
+
+            # send the newly created customer instance to the validated_data
+            validated_data['customer_id'] = customer
+
         # get the nested objects list
         details = validated_data.pop('sales_detail_set')
+
+        # Calculate total_sales_price
+        total_sales_price = 0
+        for detail in details:
+            if validated_data['is_workshop']:
+                total_sales_price += int(detail['sparepart_id'].workshop_price) * detail['quantity']
+            else:
+                total_sales_price += int(detail['sparepart_id'].price) * detail['quantity']
+
+        # Set is_paid_off based on deposit and total_sales_price
+        if validated_data['deposit'] < total_sales_price:
+            validated_data['is_paid_off'] = False
+        else:
+            validated_data['is_paid_off'] = True
+
+        # Creating new sales object using all validated data
         sales = Sales.objects.create(**validated_data)
+
+        # Creating all sales_detail object related to the sales
+        # by looping throught sales detail list of dict
         for details in details:
+            # Remove sales_detail_id because in create operations we didn't need it
             try:
                 details.pop('sales_detail_id')
             except Exception:
@@ -157,17 +295,42 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         # get the nested objects list
         validated_details = validated_data.pop('sales_detail_set')
 
+        # Remove customer name and contact because in update operations we didn't need it
+        try:
+            validated_data.pop('customer_name')
+            validated_data.pop('customer_contact')
+        except Exception:
+            pass
+
         # Assigning input (validated_data) to object (instance)
         instance.customer_id = validated_data.get('customer_id', instance.customer_id)
         instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
         instance.deposit = validated_data.get('deposit', instance.deposit)
+        instance.is_workshop = validated_data.get('is_workshop', instance.deposit)
+
+        # Calculate total_sales_price
+        total_sales_price = 0
+        for detail in validated_details:
+            if validated_data['is_workshop']:
+                total_sales_price += int(detail['sparepart_id'].workshop_price) * detail['quantity']
+            else:
+                total_sales_price += int(detail['sparepart_id'].price) * detail['quantity']
+
+        # Set is_paid_off based on deposit and total_sales_price
+        if instance.deposit < total_sales_price:
+            instance.is_paid_off = False
+        else:
+            instance.is_paid_off = True
 
         # get all nested objects related with this instance and make a dict(id, object)
         details_dict = dict((i.sales_detail_id, i) for i in instance.sales_detail_set.all())
 
+        # Updating all sales_detail object related to the sales
+        # by looping throught sales detail list of dict
         for validated_detail in validated_details:
+            # Check if exists sales_detail_id
             if 'sales_detail_id' in validated_detail:
-                # if exists sales_detail_id remove from the dict and update
+                # remove from the dict and update
                 detail = details_dict.pop(validated_detail['sales_detail_id'])
 
                 # remove sales_detail_id from validated data as we don't require it.
@@ -222,7 +385,10 @@ class RestockSerializers(serializers.ModelSerializer):
         ]
 
     def get_total_restock_cost(self, obj):
+        # Getting all restock_detail data related to the restock
         restock_detail = RestockDetailSerializers(obj.restock_detail_set, many=True)
+
+        # calculating total price by looping throught restock_detail list
         total = 0
         for restock in restock_detail.data:
             total += int(restock['individual_price']) * restock['quantity']
@@ -292,6 +458,11 @@ class RestockManagementSerializers(serializers.ModelSerializer):
 
         # Calculating remaining_payment subtracting total_cost with deposit
         remaining_payment = total_restock_cost - int(obj.deposit)
+
+        # Check if remaining payment is greater then 0, if yes return that amount
+        # else return 0, because remaining payment can't be display as negative
+        if remaining_payment < 0:
+            return 0
         return remaining_payment
 
     def get_is_paid_off(self, obj):
@@ -318,8 +489,13 @@ class RestockManagementSerializers(serializers.ModelSerializer):
         else:
             validated_data['is_paid_off'] = True
 
+        # Create restock instance using all validated data
         restock = Restock.objects.create(**validated_data)
+
+        # Creating all restock_detail object related to the restock
+        # by looping throught restock detail list of dict
         for details in details:
+            # Remove restock_detail_id because in create operations we didn't need it
             try:
                 details.pop('restock_detail_id')
             except Exception:
@@ -351,8 +527,9 @@ class RestockManagementSerializers(serializers.ModelSerializer):
         details_dict = dict((i.restock_detail_id, i) for i in instance.restock_detail_set.all())
 
         for validated_detail in validated_details:
+            # if exists restock_detail_id
             if 'restock_detail_id' in validated_detail:
-                # if exists restock_detail_id remove from the dict and update
+                # remove from the dict and update
                 detail = details_dict.pop(validated_detail['restock_detail_id'])
 
                 # remove restock_detail_id from validated data as we don't require it.
@@ -453,7 +630,7 @@ class SalesReportDetailSerializers(serializers.ModelSerializer):
         sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
         total_price = 0
         for sales in sales_serializer.data:
-            total_price += sales['total_price']
+            total_price += sales['sub_total']
         return total_price
 
 
@@ -1088,7 +1265,7 @@ class SalesRevenueSerializers(serializers.ModelSerializer):
         sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
         revenue = 0
         for sales in sales_serializer.data:
-            revenue += sales['total_price']
+            revenue += sales['sub_total']
         return revenue
 
 

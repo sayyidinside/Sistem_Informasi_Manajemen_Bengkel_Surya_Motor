@@ -14,7 +14,7 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.utility import perform_log
+from si_mbe.utility import perform_log, sales_adjust_sparepart_quantity
 
 
 class Home(generics.GenericAPIView):
@@ -184,14 +184,25 @@ class SparepartDataDelete(generics.DestroyAPIView):
 
 
 class SalesList(generics.ListAPIView):
-    queryset = Sales.objects.all().order_by('sales_id')
+    queryset = Sales.objects.select_related('customer_id').prefetch_related('sales_detail_set').order_by('sales_id')
     serializer_class = serializers.SalesSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsAdminRole]
+
+    pagination_class = CustomPagination
+    pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['sales_id', 'customer_id__name', 'is_paid_off']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.paginator.message = 'Transaksi penjualan yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_404_NOT_FOUND
+        return super().get_paginated_response(data)
 
 
 class SalesAdd(generics.CreateAPIView):
-    queryset = Sales.objects.all().order_by('sales_id')
+    queryset = Sales.objects.select_related('customer_id').prefetch_related('sales_detail_set').order_by('sales_id')
     serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -200,7 +211,7 @@ class SalesAdd(generics.CreateAPIView):
             return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
-            if len(content) < 3:
+            if len(content) < 2:
                 return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                                 status=status.HTTP_400_BAD_REQUEST)
 
@@ -219,17 +230,12 @@ class SalesAdd(generics.CreateAPIView):
         # Save the new Sales instance to the database
         instance = serializer.save()
 
-        # Subtracting spareapart quantity with new sales detail data
-        for sales_detail in instance.sales_detail_set.all():
-            # Get the Sparepart instance associated with the Sales_detail instance
-            sparepart = sales_detail.sparepart_id
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity -= sales_detail.quantity
-            sparepart.save()
+        # Adjust sparepart data based on new sales data
+        sales_adjust_sparepart_quantity(new_instance=instance, create=True)
 
 
 class SalesUpdate(generics.RetrieveUpdateAPIView):
-    queryset = Sales.objects.all().order_by('sales_id')
+    queryset = Sales.objects.select_related('customer_id').prefetch_related('sales_detail_set').order_by('sales_id')
     serializer_class = serializers.SalesManagementSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
@@ -246,7 +252,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
             return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
-            if len(content) < 4:
+            if len(content) < 3:
                 return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                                 status=status.HTTP_400_BAD_REQUEST)
 
@@ -268,41 +274,19 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
         return Response(data)
 
     def perform_update(self, serializer):
-        # Get the old Sales instance and its associated Sales_detail instances
+        # Get the old Sales instance and its associated sales_detail instances
         old_instance = self.get_object()
-        old_sales_details = old_instance.sales_detail_set.all().order_by('sales_detail_id')
+        old_sales_details = old_instance.sales_detail_set.all()
 
-        # Getting list of dict from old data, for post save calculaltion
-        old_data_list = []
-        for old_data in old_sales_details:
-            old_data_list.append(
-                {
-                    'sales_detail_id': old_data.sales_detail_id,
-                    'quantity': old_data.quantity,
-                    'sparepart_id': old_data.sparepart_id
-                }
-            )
-
-        # Update the Sales instance in the database
+        # Save intance to database
         instance = serializer.save()
 
-        # Adding (plus) Sparepart quantity with old sales detail data
-        for old_data in old_data_list:
-            # Get the Sparepart instance associated with the old Sales_detail instance
-            sparepart = old_data['sparepart_id']
-            # Update the quantity field of the Sparepart instance
-
-            sparepart.quantity += old_data['quantity']
-            sparepart.save()
-
-        # Subtracting spareapart quantity with new sales detail data
-        for sales_detail in instance.sales_detail_set.all():
-            # Get the Sparepart instance associated with the new Sales_detail instance
-            sparepart = sales_detail.sparepart_id
-
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity -= sales_detail.quantity
-            sparepart.save()
+        # Adjust sparepart data based on old and new sales data
+        sales_adjust_sparepart_quantity(
+            new_instance=instance,
+            old_instance=old_sales_details,
+            update=True
+        )
 
 
 class SalesDelete(generics.DestroyAPIView):
@@ -332,7 +316,7 @@ class SalesDelete(generics.DestroyAPIView):
         old_instance = self.get_object()
         old_sales_details = old_instance.sales_detail_set.all().order_by('sales_detail_id')
 
-        # Getting list of dict from old data, for post save calculaltion
+        # Getting list of dict from old data, for post delete calculaltion
         old_data_list = []
         for old_data in old_sales_details:
             old_data_list.append(
@@ -346,13 +330,8 @@ class SalesDelete(generics.DestroyAPIView):
         # Deleting instance in database
         instance.delete()
 
-        # Adding (plus) Sparepart quantity with old sales detail data
-        for old_data in old_data_list:
-            # Get the Sparepart instance associated with the old Sales_detail instance
-            sparepart = old_data['sparepart_id']
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity += old_data['quantity']
-            sparepart.save()
+        # Adjust sparepart data based on old data as list
+        sales_adjust_sparepart_quantity(old_data_list=old_data_list)
 
 
 class RestockList(generics.ListAPIView):
@@ -368,7 +347,7 @@ class RestockList(generics.ListAPIView):
 
     def get_paginated_response(self, data):
         if len(data) == 0:
-            self.paginator.message = 'Pengadaan / restock yang dicari tidak ditemukan'
+            self.paginator.message = 'Transaksi pengadaan / restock yang dicari tidak ditemukan'
             self.paginator.status = status.HTTP_404_NOT_FOUND
         return super().get_paginated_response(data)
 
