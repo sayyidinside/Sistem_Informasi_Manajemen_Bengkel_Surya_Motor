@@ -177,9 +177,9 @@ class SalesManagementSerializers(serializers.ModelSerializer):
     def get_total_quantity_sales(self, obj):
         # Getting all sales_detail data related to the sales
         sales_serializer = SalesDetailManagementSerializers(obj.sales_detail_set, many=True)
-        quantity = 0
 
         # calculating total quantity by looping throught sales_detail list
+        quantity = 0
         for sales in sales_serializer.data:
             quantity += sales['quantity']
         return quantity
@@ -215,9 +215,9 @@ class SalesManagementSerializers(serializers.ModelSerializer):
 
         # Check if remaining payment is greater then 0, if yes return that amount
         # else return 0, because remaining payment can't be display as negative
-        if total < 0:
-            return 0
-        return total
+        if total > 0:
+            return total
+        return 0
 
     def get_is_paid_off(self, obj):
         # Getting remaining payment value using class method
@@ -870,13 +870,13 @@ class ServiceActionSerializers(serializers.ModelSerializer):
 
 class ServiceSparepartSerializers(serializers.ModelSerializer):
     sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
-    total_price = serializers.SerializerMethodField()
+    sub_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Service_sparepart
-        fields = ['service_sparepart_id', 'sparepart', 'quantity', 'total_price']
+        fields = ['service_sparepart_id', 'sparepart', 'quantity', 'sub_total']
 
-    def get_total_price(self, obj):
+    def get_sub_total(self, obj):
         return int(obj.quantity * obj.sparepart_id.install_price)
 
 
@@ -915,7 +915,7 @@ class ServiceReportDetailSerializers(serializers.ModelSerializer):
         action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
         total_price = 0
         for sparepart in sparepart_serializer.data:
-            total_price += sparepart['total_price']
+            total_price += sparepart['sub_total']
         for action in action_serializer.data:
             total_price += int(action['cost'])
         return total_price - int(obj.discount)
@@ -925,34 +925,29 @@ class ServiceSerializers(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     mechanic = serializers.ReadOnlyField(source='mechanic_id.name')
     customer = serializers.ReadOnlyField(source='customer_id.name')
-    customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
+    total_service_price = serializers.SerializerMethodField()
     service_actions = ServiceActionSerializers(many=True, source='service_action_set')
     service_spareparts = ServiceSparepartSerializers(many=True, source='service_sparepart_set')
-    total_price_of_service = serializers.SerializerMethodField()
 
     class Meta:
         model = Service
         fields = [
             'service_id',
             'created_at',
-            'police_number',
-            'mechanic',
             'customer',
-            'customer_contact',
-            'total_price_of_service',
+            'mechanic',
+            'total_service_price',
             'is_paid_off',
-            'deposit',
-            'discount',
             'service_actions',
             'service_spareparts'
         ]
 
-    def get_total_price_of_service(self, obj):
+    def get_total_service_price(self, obj):
         sparepart_serializer = ServiceSparepartSerializers(obj.service_sparepart_set, many=True)
         action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
         total_price = 0
         for sparepart in sparepart_serializer.data:
-            total_price += sparepart['total_price']
+            total_price += sparepart['sub_total']
         for action in action_serializer.data:
             total_price += int(action['cost'])
         return total_price - int(obj.discount)
@@ -969,13 +964,28 @@ class ServiceActionManagementSerializers(serializers.ModelSerializer):
 
 class ServiceSparepartManagementSerializers(serializers.ModelSerializer):
     service_sparepart_id = serializers.IntegerField(required=False)
+    price = serializers.ReadOnlyField(source='sparepart_id.price')
+    sub_total = serializers.SerializerMethodField()
 
     class Meta:
         model = Service_sparepart
-        fields = ['service_sparepart_id', 'sparepart_id', 'quantity']
+        fields = ['service_sparepart_id', 'sparepart_id', 'quantity', 'price', 'sub_total']
+
+    def get_sub_total(self, obj):
+        # calculate sub total with install price of sparepart
+        return int(obj.quantity * obj.sparepart_id.install_price)
 
 
 class ServiceManagementSerializers(serializers.ModelSerializer):
+    customer_name = serializers.CharField(max_length=30, write_only=True, required=False)
+    customer_contact = serializers.CharField(max_length=15, write_only=True, required=False)
+    spareparts_amount = serializers.SerializerMethodField()
+    sub_total_actions = serializers.SerializerMethodField()
+    sub_total_spareparts = serializers.SerializerMethodField()
+    total_service_price = serializers.SerializerMethodField()
+    change = serializers.SerializerMethodField()
+    remaining_payment = serializers.SerializerMethodField()
+    is_paid_off = serializers.SerializerMethodField()
     service_actions = ServiceActionManagementSerializers(many=True, source='service_action_set')
     service_spareparts = ServiceSparepartManagementSerializers(many=True, source='service_sparepart_set')
 
@@ -985,21 +995,139 @@ class ServiceManagementSerializers(serializers.ModelSerializer):
             'service_id',
             'mechanic_id',
             'customer_id',
+            'customer_name',
+            'customer_contact',
             'police_number',
             'motor_type',
-            'is_paid_off',
             'deposit',
-            'discount',
+            'spareparts_amount',
+            'sub_total_actions',
+            'sub_total_spareparts',
+            'total_service_price',
+            'change',
+            'remaining_payment',
+            'is_paid_off',
             'service_actions',
             'service_spareparts'
         ]
 
+    def get_spareparts_amount(self, obj):
+        # Getting all service_sparepart data related to the service
+        service_spareparts = ServiceSparepartManagementSerializers(obj.service_sparepart_set, many=True)
+
+        # calculating total quantity by looping throught service_sparepart list
+        sparepart_amounts = 0
+        for sparepart in service_spareparts.data:
+            sparepart_amounts += sparepart['quantity']
+        return sparepart_amounts
+
+    def get_sub_total_actions(self, obj):
+        # Getting all service_action data related to the service
+        service_action = ServiceActionManagementSerializers(obj.service_action_set, many=True)
+
+        # calculating sub_total by looping throught service_action list
+        sub_total = 0
+        for action in service_action.data:
+            sub_total += int(action['cost'])
+        return sub_total
+
+    def get_sub_total_spareparts(self, obj):
+        # Getting all service_sparepart data related to the service
+        service_spareparts = ServiceSparepartManagementSerializers(obj.service_sparepart_set, many=True)
+
+        # calculating sub_total by looping throught service_sparepart list
+        sub_total = 0
+        for sparepart in service_spareparts.data:
+            sub_total += sparepart['sub_total']
+        return sub_total
+
+    def get_total_service_price(self, obj):
+        # Getting sub total action and sparepart using class method
+        sub_total_action = self.get_sub_total_actions(obj)
+        sub_total_sparepart = self.get_sub_total_spareparts(obj)
+        return sub_total_action + sub_total_sparepart
+
+    def get_change(self, obj):
+        # Getting total service price using class method
+        total = self.get_total_service_price(obj)
+
+        change = int(obj.deposit) - total
+
+        # Check if change is greater then 0, if yes return that amount
+        # else return 0, because change can't be display as negative
+        if change > 0:
+            return change
+        return 0
+
+    def get_remaining_payment(self, obj):
+        # Getting total service price using class method
+        total = self.get_total_service_price(obj)
+
+        remaining_payment = total - int(obj.deposit)
+
+        # Check if remaining payment is greater then 0, if yes return that amount
+        # else return 0, because remaining payment can't be display as negative
+        if remaining_payment > 0:
+            return remaining_payment
+        return 0
+
+    def get_is_paid_off(self, obj):
+        # Getting remaining payment value using class method
+        remaining_payment = self.get_remaining_payment(obj)
+
+        # Check if remaining payment is eqaul to 0,
+        # then set paid off status as True (paid)
+        if remaining_payment == 0:
+            return True
+        return False
+
     def create(self, validated_data):
+        # Get the customer information from validated_data if there none get as None
+        customer_id = validated_data.get('customer_id', None)
+        customer_name = validated_data.pop('customer_name', None)
+        customer_contact = validated_data.pop('customer_contact', None)
+
+        # check if user send new customer name must include contact and vise versa
+        if (customer_name is not None) ^ (customer_contact is not None):
+            raise CustomerValidationError(
+                customer_name=customer_name,
+                customer_contact=customer_contact,
+                serializer=self
+            )
+        # check if user fills both old customer field and new customer fields
+        elif all((customer_id is not None, customer_contact is not None, customer_name is not None)):
+            raise CustomerConflictError(serializer=self)
+
+        # If user send new customer data and customer_id has't register in database,
+        # create new customer data in database
+        if all((customer_id is None, customer_contact is not None, customer_name is not None)):
+            # Create dict of the new customer name and contact
+            customer_detail = {}
+            customer_detail['name'] = customer_name
+            customer_detail['contact'] = customer_contact
+
+            # Create new customer in database
+            customer = Customer.objects.create(**customer_detail)
+
+            # send the newly created customer instance to the validated_data
+            validated_data['customer_id'] = customer
+
         # get the service actions nested objects list
         action_details = validated_data.pop('service_action_set')
 
         # get the service spareparts nested objects list
         sparepart_details = validated_data.pop('service_sparepart_set')
+
+        # Calculate total_service_price
+        total_service_price = 0
+        for detail in sparepart_details:
+            total_service_price += int(detail['sparepart_id'].install_price) * detail['quantity']
+
+        # Set is_paid_off based on deposit and total_service_price
+        if validated_data['deposit'] < total_service_price:
+            validated_data['is_paid_off'] = False
+        else:
+            validated_data['is_paid_off'] = True
 
         # create service data / instance
         service = Service.objects.create(**validated_data)
@@ -1023,6 +1151,13 @@ class ServiceManagementSerializers(serializers.ModelSerializer):
         return service
 
     def update(self, instance, validated_data):
+        # Remove customer name and contact because in update operations we didn't need it
+        try:
+            validated_data.pop('customer_name')
+            validated_data.pop('customer_contact')
+        except Exception:
+            pass
+
         # get the service actions nested objects list
         action_details = validated_data.pop('service_action_set')
 
@@ -1037,6 +1172,19 @@ class ServiceManagementSerializers(serializers.ModelSerializer):
         instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
         instance.deposit = validated_data.get('deposit', instance.deposit)
         instance.discount = validated_data.get('discount', instance.discount)
+
+        # Calculate total_service_price
+        total_service_price = 0
+        for sparepart in sparepart_details:
+            total_service_price += int(sparepart['sparepart_id'].install_price) * sparepart['quantity']
+        for action in action_details:
+            total_service_price += int(action['cost'])
+
+        # Set is_paid_off based on deposit and total_service_price
+        if instance.deposit < total_service_price:
+            instance.is_paid_off = False
+        else:
+            instance.is_paid_off = True
 
         # get all service action nested objects related with this instance
         # and make a dict(id, object)
@@ -1136,7 +1284,7 @@ class CustomerSerializers(serializers.ModelSerializer):
         # Calculating total_payment by looping trought services and sales data, only current year
         for service in services.data:
             if str(date.today().year) in service['created_at']:
-                total_payment += service['total_price_of_service']
+                total_payment += service['total_service_price']
         for sale in sales.data:
             if str(date.today().year) in sale['created_at']:
                 total_payment += sale['total_price_sales']
@@ -1282,7 +1430,7 @@ class ServiceRevenueSerializers(serializers.ModelSerializer):
         action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
         revenue = 0
         for sparepart in sparepart_serializer.data:
-            revenue += sparepart['total_price']
+            revenue += sparepart['sub_total']
         for action in action_serializer.data:
             revenue += int(action['cost'])
         return revenue - int(obj.discount)

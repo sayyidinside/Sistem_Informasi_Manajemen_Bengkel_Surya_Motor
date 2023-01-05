@@ -135,3 +135,67 @@ def restock_adjust_sparepart_quantity(
             # Update the quantity field of the Sparepart instance
             sparepart.quantity -= old_data['quantity']
             sparepart.save()
+
+
+def service_adjust_sparepart_quantity(
+                                    new_instance: any = None,
+                                    old_instance: any = None,
+                                    old_data_list: list = [],
+                                    create: bool = False,
+                                    update: bool = False
+                                ) -> None:
+    '''
+    A function to adjust sparepart quantity after Creating, Updating, and Deleting
+    Service data / object / instance
+    '''
+    instance = new_instance
+    old_service_spareparts = old_instance
+
+    if create:
+        # Subtracting spareapart quantity with new service_sparepart data
+        for service_sparepart in instance.service_sparepart_set.all():
+            # Get the Sparepart instance associated with the Service_sparepart instance
+            sparepart = service_sparepart.sparepart_id
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity -= service_sparepart.quantity
+            sparepart.save()
+    elif update:
+        # looping trought new service sparepart data to adjust sparepart quantity
+        for service_sparepart in instance.service_sparepart_set.all():
+            # Get the Sparepart instance associated with the Service_sparepart instance
+            sparepart = service_sparepart.sparepart_id
+
+            # Find the old Service_sparepart instance with the same sparepart_id
+            old_service_sparepart = next(
+                (ss for ss in old_service_spareparts if ss.sparepart_id == sparepart),
+                None
+            )
+
+            # Update the quantity field of the Sparepart instance:
+            # 1. If an old Service_action instance was found, increase the quantity field of
+            # the Sparepart instance by the old quantity value
+            if old_service_sparepart:
+                sparepart.quantity += old_service_sparepart.quantity
+
+            # 2. Decrease the quantity field of the Sparepart instance by the new quantity value
+            sparepart.quantity -= service_sparepart.quantity
+            sparepart.save()
+
+        # Loop over all the old Service_sparepart instances
+        for old_service_sparepart in old_service_spareparts:
+            # Check if the old Service_sparepart instance is not present in the
+            # new data / updated instance
+            if old_service_sparepart not in instance.service_sparepart_set.all():
+                sparepart = old_service_sparepart.sparepart_id
+                # increase the quantity field of the Sparepart instance by the old
+                # quantity value
+                sparepart.quantity += old_service_sparepart.quantity
+                sparepart.save()
+    else:
+        # Adding (plus) Sparepart quantity with old service_sparepart data
+        for old_data in old_data_list:
+            # Get the Sparepart instance associated with the old service_sparepart instance
+            sparepart = old_data['sparepart_id']
+            # Update the quantity field of the Sparepart instance
+            sparepart.quantity += old_data['quantity']
+            sparepart.save()

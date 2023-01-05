@@ -2456,75 +2456,64 @@ class ServiceListTestCase(SetTestCase):
         response = self.client.get(self.service_list_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 2)
-        self.assertEqual(response.data['results'], [
-            {
-                'service_id': self.service_1.service_id,
-                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'police_number': self.service_1.police_number,
-                'mechanic': self.service_1.mechanic_id.name,
-                'customer': self.service_1.customer_id.name,
-                'customer_contact': self.service_1.customer_id.contact,
-                'total_price_of_service': 910000,
-                'is_paid_off': self.service_1.is_paid_off,
-                'deposit': str(self.service_1.deposit),
-                'discount': str(self.service_1.discount),
-                'service_actions': [
-                    {
-                        'service_action_id': self.action_1.service_action_id,
-                        'service_name': self.action_1.name,
-                        'cost': str(self.action_1.cost)
-                    },
-                    {
-                        'service_action_id': self.action_2.service_action_id,
-                        'service_name': self.action_2.name,
-                        'cost': str(self.action_2.cost)
-                    },
-                    {
-                        'service_action_id': self.action_3.service_action_id,
-                        'service_name': self.action_3.name,
-                        'cost': str(self.action_3.cost)
-                    }
-                ],
-                'service_spareparts': [
-                    {
-                        'service_sparepart_id': self.service_sparepart_1.service_sparepart_id,
-                        'sparepart': self.service_sparepart_1.sparepart_id.name,
-                        'quantity': self.service_sparepart_1.quantity,
-                        'total_price':
-                        int(self.service_sparepart_1.sparepart_id.install_price * self.service_sparepart_1.quantity)
-                    }
-                ]
-            },
-            {
-                'service_id': self.service_2.service_id,
-                'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
-                'police_number': self.service_2.police_number,
-                'mechanic': self.service_2.mechanic_id.name,
-                'customer': self.service_2.customer_id.name,
-                'customer_contact': self.service_2.customer_id.contact,
-                'total_price_of_service': 725000,
-                'is_paid_off': self.service_2.is_paid_off,
-                'deposit': str(self.service_2.deposit),
-                'discount': str(self.service_2.discount),
-                'service_actions': [],
-                'service_spareparts': [
-                    {
-                        'service_sparepart_id': self.service_sparepart_2.service_sparepart_id,
-                        'sparepart': self.service_sparepart_2.sparepart_id.name,
-                        'quantity': self.service_sparepart_2.quantity,
-                        'total_price':
-                        int(self.service_sparepart_2.sparepart_id.install_price * self.service_sparepart_2.quantity)
-                    },
-                    {
-                        'service_sparepart_id': self.service_sparepart_3.service_sparepart_id,
-                        'sparepart': self.service_sparepart_3.sparepart_id.name,
-                        'quantity': self.service_sparepart_3.quantity,
-                        'total_price':
-                        int(self.service_sparepart_3.sparepart_id.install_price * self.service_sparepart_3.quantity)
-                    }
-                ]
-            }
-        ])
+
+        # Validate surface level information of service
+        # The first data
+        self.assertEqual(response.data['results'][0]['service_id'], self.service_1.service_id)
+        self.assertEqual(response.data['results'][0]['created_at'], self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][0]['customer'], self.service_1.customer_id.name)
+        self.assertEqual(response.data['results'][0]['mechanic'], self.service_1.mechanic_id.name)
+        self.assertEqual(response.data['results'][0]['total_service_price'], 910000)
+        self.assertEqual(response.data['results'][0]['is_paid_off'], False)
+        # The second data
+        self.assertEqual(response.data['results'][1]['service_id'], self.service_2.service_id)
+        self.assertEqual(response.data['results'][1]['created_at'], self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][1]['customer'], self.service_2.customer_id.name)
+        self.assertEqual(response.data['results'][1]['mechanic'], self.service_2.mechanic_id.name)
+        self.assertEqual(response.data['results'][1]['total_service_price'], 725000)
+        self.assertEqual(response.data['results'][1]['is_paid_off'], False)
+
+        # Validating detail information per action of service in content field
+        self.assertEqual(response.data['results'][0]['service_actions'][0]['service_action_id'],
+                         self.action_1.service_action_id)
+        self.assertEqual(response.data['results'][0]['service_actions'][0]['service_name'], self.action_1.name)
+        self.assertEqual(response.data['results'][0]['service_actions'][0]['cost'], str(self.action_1.cost))
+        self.assertEqual(response.data['results'][0]['service_actions'][1]['service_action_id'],
+                         self.action_2.service_action_id)
+        self.assertEqual(response.data['results'][0]['service_actions'][1]['service_name'], self.action_2.name)
+        self.assertEqual(response.data['results'][0]['service_actions'][1]['cost'], str(self.action_2.cost))
+        self.assertEqual(response.data['results'][0]['service_actions'][2]['service_action_id'],
+                         self.action_3.service_action_id)
+        self.assertEqual(response.data['results'][0]['service_actions'][2]['service_name'], self.action_3.name)
+        self.assertEqual(response.data['results'][0]['service_actions'][2]['cost'], str(self.action_3.cost))
+
+        # Validating detail information per sparepart of service in content field
+        # The first data
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['service_sparepart_id'],
+                         self.service_sparepart_1.service_sparepart_id)
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['sparepart'],
+                         self.service_sparepart_1.sparepart_id.name)
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['quantity'],
+                         self.service_sparepart_1.quantity)
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['sub_total'],
+                         int(self.service_sparepart_1.sparepart_id.install_price * self.service_sparepart_1.quantity))
+        # The second data
+        self.assertEqual(response.data['results'][1]['service_spareparts'][0]['service_sparepart_id'],
+                         self.service_sparepart_2.service_sparepart_id)
+        self.assertEqual(response.data['results'][1]['service_spareparts'][0]['sparepart'],
+                         self.service_sparepart_2.sparepart_id.name)
+        self.assertEqual(response.data['results'][1]['service_spareparts'][0]['quantity'],
+                         self.service_sparepart_2.quantity)
+        self.assertEqual(response.data['results'][1]['service_spareparts'][0]['sub_total'],
+                         int(self.service_sparepart_2.sparepart_id.install_price * self.service_sparepart_2.quantity))
+        self.assertEqual(response.data['results'][1]['service_spareparts'][1]['service_sparepart_id'],
+                         self.service_sparepart_3.service_sparepart_id)
+        self.assertEqual(response.data['results'][1]['service_spareparts'][1]['sparepart'],
+                         self.service_sparepart_3.sparepart_id.name)
+        self.assertEqual(response.data['results'][1]['service_spareparts'][1]['quantity'],
+                         self.service_sparepart_3.quantity)
+        self.assertEqual(response.data['results'][1]['service_spareparts'][1]['sub_total'],
+                         int(self.service_sparepart_3.sparepart_id.install_price * self.service_sparepart_3.quantity))
 
     def test_nonlogin_user_failed_to_access_service_list(self) -> None:
         """
@@ -2543,6 +2532,57 @@ class ServiceListTestCase(SetTestCase):
         response = self.client.get(self.service_list_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_successfully_searching_service_with_result(self) -> None:
+        """
+        Ensure admin who searching service with correct keyword get correct result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('service_list') + f'?q={self.service_1.service_id}')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+
+        # Validate surface level information of service
+        self.assertEqual(response.data['results'][0]['service_id'], self.service_1.service_id)
+        self.assertEqual(response.data['results'][0]['created_at'], self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'))
+        self.assertEqual(response.data['results'][0]['customer'], self.service_1.customer_id.name)
+        self.assertEqual(response.data['results'][0]['mechanic'], self.service_1.mechanic_id.name)
+        self.assertEqual(response.data['results'][0]['total_service_price'], 910000)
+        self.assertEqual(response.data['results'][0]['is_paid_off'], False)
+
+        # Validating detail information per action of service in content field
+        self.assertEqual(response.data['results'][0]['service_actions'][0]['service_action_id'],
+                         self.action_1.service_action_id)
+        self.assertEqual(response.data['results'][0]['service_actions'][0]['service_name'], self.action_1.name)
+        self.assertEqual(response.data['results'][0]['service_actions'][0]['cost'], str(self.action_1.cost))
+        self.assertEqual(response.data['results'][0]['service_actions'][1]['service_action_id'],
+                         self.action_2.service_action_id)
+        self.assertEqual(response.data['results'][0]['service_actions'][1]['service_name'], self.action_2.name)
+        self.assertEqual(response.data['results'][0]['service_actions'][1]['cost'], str(self.action_2.cost))
+        self.assertEqual(response.data['results'][0]['service_actions'][2]['service_action_id'],
+                         self.action_3.service_action_id)
+        self.assertEqual(response.data['results'][0]['service_actions'][2]['service_name'], self.action_3.name)
+        self.assertEqual(response.data['results'][0]['service_actions'][2]['cost'], str(self.action_3.cost))
+
+        # Validating detail information per sparepart of service in content field
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['service_sparepart_id'],
+                         self.service_sparepart_1.service_sparepart_id)
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['sparepart'],
+                         self.service_sparepart_1.sparepart_id.name)
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['quantity'],
+                         self.service_sparepart_1.quantity)
+        self.assertEqual(response.data['results'][0]['service_spareparts'][0]['sub_total'],
+                         int(self.service_sparepart_1.sparepart_id.install_price * self.service_sparepart_1.quantity))
+
+    def test_admin_failed_to_searching_service_without_result(self) -> None:
+        """
+        Ensure admin search service that doesn't exist get empty result
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('service_list') + '?q=random shit')
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['count_item'], 0)
+        self.assertEqual(response.data['message'], 'Transaksi servis yang dicari tidak ditemukan')
 
 
 class ServiceAddTestCase(SetTestCase):
@@ -2589,9 +2629,106 @@ class ServiceAddTestCase(SetTestCase):
             'customer_id': cls.customer.customer_id,
             'police_number': 'B 8546 D',
             'motor_type': 'Yamaha',
-            'is_paid_off': False,
             'deposit': 30000,
-            'discount': 5000,
+            'service_actions': [
+                {
+                    'service_name': 'Angkat Spion',
+                    'cost': 50000,
+                },
+                {
+                    'service_name': 'Isi Bensin',
+                    'cost': 10000,
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'sparepart_id': cls.sparepart.sparepart_id,
+                    'quantity': 2
+                }
+            ]
+        }
+
+        cls.data_paid = {
+            'mechanic_id': cls.mechanic.mechanic_id,
+            'customer_id': cls.customer.customer_id,
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'deposit': 280000,
+            'service_actions': [
+                {
+                    'service_name': 'Angkat Spion',
+                    'cost': 50000,
+                },
+                {
+                    'service_name': 'Isi Bensin',
+                    'cost': 10000,
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'sparepart_id': cls.sparepart.sparepart_id,
+                    'quantity': 2
+                }
+            ]
+        }
+
+        cls.data_with_new_cust = {
+            'mechanic_id': cls.mechanic.mechanic_id,
+            'customer_name': 'Asplar',
+            'customer_contact': '084664046465',
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'deposit': 30000,
+            'service_actions': [
+                {
+                    'service_name': 'Angkat Spion',
+                    'cost': 50000,
+                },
+                {
+                    'service_name': 'Isi Bensin',
+                    'cost': 10000,
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'sparepart_id': cls.sparepart.sparepart_id,
+                    'quantity': 2
+                }
+            ]
+        }
+
+        cls.data_with_incomplete_new_cust = {
+            'mechanic_id': cls.mechanic.mechanic_id,
+            'customer_name': 'Crockus',
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'deposit': 30000,
+            'service_actions': [
+                {
+                    'service_name': 'Angkat Spion',
+                    'cost': 50000,
+                },
+                {
+                    'service_name': 'Isi Bensin',
+                    'cost': 10000,
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'sparepart_id': cls.sparepart.sparepart_id,
+                    'quantity': 2
+                }
+            ]
+        }
+
+        cls.data_with_conflicting_customer = {
+            'mechanic_id': cls.mechanic.mechanic_id,
+            'customer_id': cls.customer.customer_id,
+            'customer_name': 'Rallick Nom',
+            'customer_contact': '084664046465',
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'deposit': 30000,
             'service_actions': [
                 {
                     'service_name': 'Angkat Spion',
@@ -2628,35 +2765,162 @@ class ServiceAddTestCase(SetTestCase):
         response = self.client.post(self.service_add_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(response.data['message'], 'Data servis berhasil ditambah')
+
+        # Validate surface level information of service
         self.assertEqual(response.data['mechanic_id'], self.mechanic.mechanic_id)
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
         self.assertEqual(response.data['police_number'], self.data['police_number'])
         self.assertEqual(response.data['motor_type'], self.data['motor_type'])
-        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
-        self.assertEqual(int(response.data['discount']), self.data['discount'])
+        self.assertEqual(response.data['spareparts_amount'], self.data['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['sub_total_actions'], 60000)
+        self.assertEqual(response.data['sub_total_spareparts'], 220000)
+        self.assertEqual(response.data['total_service_price'], 280000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 250000)
+        self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(Service.objects.all()[0].is_paid_off, False)
 
+        # Validating detail information per action of service in content field
         self.assertEqual(response.data['service_actions'][0]['service_name'],
                          self.data['service_actions'][0]['service_name'])
-
         self.assertEqual(int(response.data['service_actions'][0]['cost']),
                          self.data['service_actions'][0]['cost'])
-
         self.assertEqual(response.data['service_actions'][1]['service_name'],
                          self.data['service_actions'][1]['service_name'])
-
         self.assertEqual(int(response.data['service_actions'][1]['cost']),
                          self.data['service_actions'][1]['cost'])
 
+        # Validating detail information per sparepart of service in content field
         self.assertEqual(response.data['service_spareparts'][0]['sparepart_id'],
                          self.data['service_spareparts'][0]['sparepart_id'])
-
         self.assertEqual(response.data['service_spareparts'][0]['quantity'],
                          self.data['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['service_spareparts'][0]['sub_total'], 220000)
 
         # ensure sparepart quantity will be subtracted by service_sparepart's quantity
         # after service successfully added
         self.assertEqual(Sparepart.objects.all()[0].quantity, 48)
+
+    def test_admin_successfully_add_service_as_paid_off(self) -> None:
+        """
+        Ensure admin can add new service data with it's content_as paid off
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.service_add_url, self.data_paid, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data servis berhasil ditambah')
+
+        # Validate surface level information of service
+        self.assertEqual(response.data['mechanic_id'], self.mechanic.mechanic_id)
+        self.assertEqual(response.data['customer_id'], self.customer.customer_id)
+        self.assertEqual(response.data['police_number'], self.data_paid['police_number'])
+        self.assertEqual(response.data['motor_type'], self.data_paid['motor_type'])
+        self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
+        self.assertEqual(response.data['spareparts_amount'], self.data_paid['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['sub_total_actions'], 60000)
+        self.assertEqual(response.data['sub_total_spareparts'], 220000)
+        self.assertEqual(response.data['total_service_price'], 280000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 0)
+        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(Service.objects.all()[0].is_paid_off, True)
+
+        # Validating detail information per action of service in content field
+        self.assertEqual(response.data['service_actions'][0]['service_name'],
+                         self.data_paid['service_actions'][0]['service_name'])
+        self.assertEqual(int(response.data['service_actions'][0]['cost']),
+                         self.data_paid['service_actions'][0]['cost'])
+        self.assertEqual(response.data['service_actions'][1]['service_name'],
+                         self.data_paid['service_actions'][1]['service_name'])
+        self.assertEqual(int(response.data['service_actions'][1]['cost']),
+                         self.data_paid['service_actions'][1]['cost'])
+
+        # Validating detail information per sparepart of service in content field
+        self.assertEqual(response.data['service_spareparts'][0]['sparepart_id'],
+                         self.data_paid['service_spareparts'][0]['sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][0]['quantity'],
+                         self.data_paid['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['service_spareparts'][0]['sub_total'], 220000)
+
+        # ensure sparepart quantity will be subtracted by service_sparepart's quantity
+        # after service successfully added
+        self.assertEqual(Sparepart.objects.all()[0].quantity, 48)
+
+    def test_admin_successfully_add_service_with_new_customer(self) -> None:
+        """
+        Ensure admin can add new service data with it's content, also create customer
+        using new customer data
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.service_add_url, self.data_with_new_cust, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data servis berhasil ditambah')
+
+        # Validate customer got created
+        self.cust_new = Customer.objects.get(name=self.data_with_new_cust['customer_name'])
+        self.assertEqual(Customer.objects.count(), 2)
+
+        # Validate surface level information of service
+        self.assertEqual(response.data['mechanic_id'], self.mechanic.mechanic_id)
+        self.assertEqual(response.data['customer_id'], self.cust_new.customer_id)
+        self.assertEqual(self.cust_new.name, self.data_with_new_cust['customer_name'])
+        self.assertEqual(self.cust_new.contact, self.data_with_new_cust['customer_contact'])
+        self.assertEqual(response.data['police_number'], self.data_with_new_cust['police_number'])
+        self.assertEqual(response.data['motor_type'], self.data_with_new_cust['motor_type'])
+        self.assertEqual(int(response.data['deposit']), self.data_with_new_cust['deposit'])
+        self.assertEqual(response.data['spareparts_amount'],
+                         self.data_with_new_cust['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['sub_total_actions'], 60000)
+        self.assertEqual(response.data['sub_total_spareparts'], 220000)
+        self.assertEqual(response.data['total_service_price'], 280000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 250000)
+        self.assertEqual(response.data['is_paid_off'], False)
+        self.assertEqual(Service.objects.all()[0].is_paid_off, False)
+
+        # Validating detail information per action of service in content field
+        self.assertEqual(response.data['service_actions'][0]['service_name'],
+                         self.data_with_new_cust['service_actions'][0]['service_name'])
+        self.assertEqual(int(response.data['service_actions'][0]['cost']),
+                         self.data_with_new_cust['service_actions'][0]['cost'])
+        self.assertEqual(response.data['service_actions'][1]['service_name'],
+                         self.data_with_new_cust['service_actions'][1]['service_name'])
+        self.assertEqual(int(response.data['service_actions'][1]['cost']),
+                         self.data_with_new_cust['service_actions'][1]['cost'])
+
+        # Validating detail information per sparepart of service in content field
+        self.assertEqual(response.data['service_spareparts'][0]['sparepart_id'],
+                         self.data_with_new_cust['service_spareparts'][0]['sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][0]['quantity'],
+                         self.data_with_new_cust['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['service_spareparts'][0]['sub_total'], 220000)
+
+        # ensure sparepart quantity will be subtracted by service_sparepart's quantity
+        # after service successfully added
+        self.assertEqual(Sparepart.objects.all()[0].quantity, 48)
+
+    def test_admin_failed_to_add_service_with_incomplete_new_customer_data(self) -> None:
+        """
+        Ensure admin cannot add data service with incomplete new customer data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.service_add_url, self.data_with_incomplete_new_cust, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['customer_contact'][0],
+                         'Baris ini harus diisi jika mengisi baris customer_name')
+
+    def test_admin_failed_to_add_service_with_conflicting_customer_data(self) -> None:
+        """
+        Ensure admin cannot add data service with conflicting customer data / input
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.service_add_url, self.data_with_conflicting_customer, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data['customer'],
+                         'Anda tidak dapat mengisi baris kedua tipe pelanggan secara bersamaan\n'
+                         'Pelanggan lama = customer_id\n'
+                         'Pelanggan baru = customer_name dan customer_contact')
 
     def test_nonlogin_user_failed_to_add_service(self) -> None:
         """
@@ -2790,9 +3054,39 @@ class ServiceUpdateTestCase(SetTestCase):
             'customer_id': self.customer.customer_id,
             'police_number': 'B 8546 D',
             'motor_type': 'Yamaha',
-            'is_paid_off': False,
-            'deposit': 600000,
-            'discount': 5000,
+            'deposit': 940000,
+            'service_actions': [
+                {
+                    'service_action_id': self.action_1.service_action_id,
+                    'service_name': 'Pompa Ban',
+                    'cost': 10000,
+                },
+                {
+                    'service_action_id': self.action_2.service_action_id,
+                    'service_name': 'Bongkar Mesin',
+                    'cost': 800000,
+                }
+            ],
+            'service_spareparts': [
+                {
+                    'service_sparepart_id': self.service_sparepart.service_sparepart_id,
+                    'sparepart_id': self.sparepart.sparepart_id,
+                    'quantity': 3
+                },
+                {
+                    'service_sparepart_id': self.service_sparepart_2.service_sparepart_id,
+                    'sparepart_id': self.sparepart_2.sparepart_id,
+                    'quantity': 10
+                }
+            ]
+        }
+
+        self.data_paid = {
+            'mechanic_id': self.mechanic.mechanic_id,
+            'customer_id': self.customer.customer_id,
+            'police_number': 'B 8546 D',
+            'motor_type': 'Yamaha',
+            'deposit': 2250000,
             'service_actions': [
                 {
                     'service_action_id': self.action_1.service_action_id,
@@ -2850,40 +3144,109 @@ class ServiceUpdateTestCase(SetTestCase):
         response = self.client.put(self.service_update_url, self.data, format='json')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['message'], 'Data servis berhasil dirubah')
+
+        # Validate surface level information of service
         self.assertEqual(response.data['mechanic_id'], self.data['mechanic_id'])
         self.assertEqual(response.data['customer_id'], self.data['customer_id'])
         self.assertEqual(response.data['police_number'], self.data['police_number'])
         self.assertEqual(response.data['motor_type'], self.data['motor_type'])
-        self.assertEqual(response.data['is_paid_off'], self.data['is_paid_off'])
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
-        self.assertEqual(int(response.data['discount']), self.data['discount'])
+        self.assertEqual(response.data['spareparts_amount'], 13)
+        self.assertEqual(response.data['sub_total_actions'], 810000)
+        self.assertEqual(response.data['sub_total_spareparts'], 1430000)
+        self.assertEqual(response.data['total_service_price'], 2240000)
+        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(response.data['remaining_payment'], 1300000)
+        self.assertEqual(response.data['is_paid_off'], False)
 
+        # Validating detail information per action of service in content field
         self.assertEqual(response.data['service_actions'][0]['service_action_id'],
                          self.data['service_actions'][0]['service_action_id'])
-
         self.assertEqual(response.data['service_actions'][0]['service_name'],
                          self.data['service_actions'][0]['service_name'])
-
         self.assertEqual(int(response.data['service_actions'][0]['cost']),
                          self.data['service_actions'][0]['cost'])
-
         self.assertEqual(response.data['service_actions'][1]['service_action_id'],
                          self.data['service_actions'][1]['service_action_id'])
-
         self.assertEqual(response.data['service_actions'][1]['service_name'],
                          self.data['service_actions'][1]['service_name'])
-
         self.assertEqual(int(response.data['service_actions'][1]['cost']),
                          self.data['service_actions'][1]['cost'])
 
+        # Validating detail information per sparepart of service in content field
         self.assertEqual(response.data['service_spareparts'][0]['service_sparepart_id'],
                          self.data['service_spareparts'][0]['service_sparepart_id'])
-
         self.assertEqual(response.data['service_spareparts'][0]['sparepart_id'],
                          self.data['service_spareparts'][0]['sparepart_id'])
-
         self.assertEqual(response.data['service_spareparts'][0]['quantity'],
                          self.data['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['service_spareparts'][0]['sub_total'], 330000)
+        self.assertEqual(response.data['service_spareparts'][1]['service_sparepart_id'],
+                         self.data['service_spareparts'][1]['service_sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][1]['sparepart_id'],
+                         self.data['service_spareparts'][1]['sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][1]['quantity'],
+                         self.data['service_spareparts'][1]['quantity'])
+        self.assertEqual(response.data['service_spareparts'][1]['sub_total'], 1100000)
+
+        # ensure sparepart quantity will be subtracted by service_sparepart's quantity
+        # after service successfully updated
+        self.assertEqual(Sparepart.objects.all().order_by('sparepart_id')[0].quantity, 52)
+        self.assertEqual(Sparepart.objects.all().order_by('sparepart_id')[1].quantity, 103)
+
+    def test_admin_successfully_update_service_as_paid_off(self) -> None:
+        """
+        Ensure admin can update new service data with it's content_as paid off
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.service_update_url, self.data_paid, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data servis berhasil dirubah')
+
+        # Validate surface level information of service
+        self.assertEqual(response.data['mechanic_id'], self.data_paid['mechanic_id'])
+        self.assertEqual(response.data['customer_id'], self.data_paid['customer_id'])
+        self.assertEqual(response.data['police_number'], self.data_paid['police_number'])
+        self.assertEqual(response.data['motor_type'], self.data_paid['motor_type'])
+        self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
+        self.assertEqual(response.data['spareparts_amount'], 13)
+        self.assertEqual(response.data['sub_total_actions'], 810000)
+        self.assertEqual(response.data['sub_total_spareparts'], 1430000)
+        self.assertEqual(response.data['total_service_price'], 2240000)
+        self.assertEqual(response.data['change'], 10000)
+        self.assertEqual(response.data['remaining_payment'], 0)
+        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(Service.objects.all()[0].is_paid_off, True)
+
+        # Validating detail information per action of service in content field
+        self.assertEqual(response.data['service_actions'][0]['service_action_id'],
+                         self.data_paid['service_actions'][0]['service_action_id'])
+        self.assertEqual(response.data['service_actions'][0]['service_name'],
+                         self.data_paid['service_actions'][0]['service_name'])
+        self.assertEqual(int(response.data['service_actions'][0]['cost']),
+                         self.data_paid['service_actions'][0]['cost'])
+        self.assertEqual(response.data['service_actions'][1]['service_action_id'],
+                         self.data_paid['service_actions'][1]['service_action_id'])
+        self.assertEqual(response.data['service_actions'][1]['service_name'],
+                         self.data_paid['service_actions'][1]['service_name'])
+        self.assertEqual(int(response.data['service_actions'][1]['cost']),
+                         self.data_paid['service_actions'][1]['cost'])
+
+        # Validating detail information per sparepart of service in content field
+        self.assertEqual(response.data['service_spareparts'][0]['service_sparepart_id'],
+                         self.data_paid['service_spareparts'][0]['service_sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][0]['sparepart_id'],
+                         self.data_paid['service_spareparts'][0]['sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][0]['quantity'],
+                         self.data_paid['service_spareparts'][0]['quantity'])
+        self.assertEqual(response.data['service_spareparts'][0]['sub_total'], 330000)
+        self.assertEqual(response.data['service_spareparts'][1]['service_sparepart_id'],
+                         self.data_paid['service_spareparts'][1]['service_sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][1]['sparepart_id'],
+                         self.data_paid['service_spareparts'][1]['sparepart_id'])
+        self.assertEqual(response.data['service_spareparts'][1]['quantity'],
+                         self.data_paid['service_spareparts'][1]['quantity'])
+        self.assertEqual(response.data['service_spareparts'][1]['sub_total'], 1100000)
 
         # ensure sparepart quantity will be subtracted by service_sparepart's quantity
         # after service successfully updated
@@ -3005,9 +3368,10 @@ class ServiceDeleteTestCase(SetTestCase):
         response = self.client.delete(self.service_delete_url, format='json')
         self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
         self.assertEqual(response.data['message'], 'Data servis berhasil dihapus')
-        self.assertEqual(len(Service.objects.all()), 0)
-        self.assertEqual(len(Service_action.objects.all()), 0)
-        self.assertEqual(len(Service_sparepart.objects.all()), 0)
+        self.assertEqual(Service.objects.count(), 0)
+        self.assertEqual(Service_action.objects.count(), 0)
+        self.assertEqual(Service_sparepart.objects.count(), 0)
+        self.assertEqual(Customer.objects.count(), 1)
 
         # ensure sparepart quantity will be added (+) by service_sparepart's quantity
         # after service successfully deleted

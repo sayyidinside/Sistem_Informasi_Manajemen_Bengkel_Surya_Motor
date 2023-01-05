@@ -377,7 +377,7 @@ class Service(Base_transaction):
     police_number = models.CharField(max_length=10)
     motor_type = models.CharField(max_length=20)
     deposit = models.DecimalField(max_digits=15, decimal_places=0, default=0)
-    discount = models.DecimalField(max_digits=15, decimal_places=0)
+    discount = models.DecimalField(max_digits=15, decimal_places=0, default=0)
 
     user_id = models.ForeignKey(
         User,

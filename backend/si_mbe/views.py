@@ -15,7 +15,7 @@ from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
 from si_mbe.utility import (perform_log, restock_adjust_sparepart_quantity,
-                            sales_adjust_sparepart_quantity)
+                            sales_adjust_sparepart_quantity, service_adjust_sparepart_quantity)
 
 
 class Home(generics.GenericAPIView):
@@ -853,8 +853,18 @@ class ServiceList(generics.ListAPIView):
     queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set').order_by('service_id')
     serializer_class = serializers.ServiceSerializers
     permission_classes = [IsLogin, IsAdminRole]
+
     pagination_class = CustomPagination
     pagination_class.page_size = 100
+
+    filter_backends = [filters.SearchFilter]
+    search_fields = ['service_id', 'customer_id__name', 'mechanic_id__name', 'is_paid_off']
+
+    def get_paginated_response(self, data):
+        if len(data) == 0:
+            self.paginator.message = 'Transaksi servis yang dicari tidak ditemukan'
+            self.paginator.status = status.HTTP_404_NOT_FOUND
+        return super().get_paginated_response(data)
 
 
 class ServiceAdd(generics.CreateAPIView):
@@ -866,9 +876,18 @@ class ServiceAdd(generics.CreateAPIView):
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 9:
+        if len(request.data) < 7:
             return Response({'message': 'Data servis tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
+        for action in request.data['service_actions']:
+            if len(action) < 2:
+                return Response({'message': 'Data servis tidak sesuai / tidak lengkap'},
+                                status=status.HTTP_400_BAD_REQUEST)
+        for sparepart in request.data['service_spareparts']:
+            if len(sparepart) < 2:
+                return Response({'message': 'Data servis tidak sesuai / tidak lengkap'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -884,13 +903,8 @@ class ServiceAdd(generics.CreateAPIView):
         # Save the new Service instance to the database
         instance = serializer.save()
 
-        # Subtracting spareapart quantity with new service_sparepart data
-        for service_sparepart in instance.service_sparepart_set.all():
-            # Get the Sparepart instance associated with the Service_sparepart instance
-            sparepart = service_sparepart.sparepart_id
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity -= service_sparepart.quantity
-            sparepart.save()
+        # Adjust sparepart data based on new service data
+        service_adjust_sparepart_quantity(create=True, new_instance=instance)
 
 
 class ServiceUpdate(generics.RetrieveUpdateAPIView):
@@ -909,7 +923,7 @@ class ServiceUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 9:
+        if len(request.data) < 7:
             return Response({'message': 'Data servis tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for action in request.data['service_actions']:
@@ -946,37 +960,12 @@ class ServiceUpdate(generics.RetrieveUpdateAPIView):
         # Save intance to database
         instance = serializer.save()
 
-        # looping trought new service sparepart data to adjust sparepart quantity
-        for service_sparepart in instance.service_sparepart_set.all():
-            # Get the Sparepart instance associated with the Service_sparepart instance
-            sparepart = service_sparepart.sparepart_id
-
-            # Find the old Service_sparepart instance with the same sparepart_id
-            old_service_sparepart = next(
-                (ss for ss in old_service_spareparts if ss.sparepart_id == sparepart),
-                None
-            )
-
-            # Update the quantity field of the Sparepart instance:
-            # 1. If an old Service_action instance was found, increase the quantity field of
-            # the Sparepart instance by the old quantity value
-            if old_service_sparepart:
-                sparepart.quantity += old_service_sparepart.quantity
-
-            # 2. Decrease the quantity field of the Sparepart instance by the new quantity value
-            sparepart.quantity -= service_sparepart.quantity
-            sparepart.save()
-
-        # Loop over all the old Service_sparepart instances
-        for old_service_sparepart in old_service_spareparts:
-            # Check if the old Service_sparepart instance is not present in the
-            # new data / updated instance
-            if old_service_sparepart not in instance.service_sparepart_set.all():
-                sparepart = old_service_sparepart.sparepart_id
-                # increase the quantity field of the Sparepart instance by the old
-                # quantity value
-                sparepart.quantity += old_service_sparepart.quantity
-                sparepart.save()
+        # Adjust sparepart data based on old and new service data
+        service_adjust_sparepart_quantity(
+            update=True,
+            new_instance=instance,
+            old_instance=old_service_spareparts
+        )
 
 
 class ServiceDelete(generics.DestroyAPIView):
@@ -1020,13 +1009,8 @@ class ServiceDelete(generics.DestroyAPIView):
         # Deleting instance in database
         instance.delete()
 
-        # Adding (plus) Sparepart quantity with old service_sparepart data
-        for old_data in old_data_list:
-            # Get the Sparepart instance associated with the old service_sparepart instance
-            sparepart = old_data['sparepart_id']
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity += old_data['quantity']
-            sparepart.save()
+        # Adjust sparepart data based on old service data
+        service_adjust_sparepart_quantity(old_data_list=old_data_list)
 
 
 class BrandList(generics.ListAPIView):

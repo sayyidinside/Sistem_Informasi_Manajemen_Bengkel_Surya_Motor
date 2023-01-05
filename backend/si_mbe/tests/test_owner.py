@@ -1330,7 +1330,7 @@ class ServiceReportDetailTestCase(SetTestCase):
                     'service_sparepart_id': self.service_sparepart.service_sparepart_id,
                     'sparepart': self.service_sparepart.sparepart_id.name,
                     'quantity': self.service_sparepart.quantity,
-                    'total_price':
+                    'sub_total':
                     int(self.service_sparepart.sparepart_id.install_price * self.service_sparepart.quantity)
                 }
             ]
