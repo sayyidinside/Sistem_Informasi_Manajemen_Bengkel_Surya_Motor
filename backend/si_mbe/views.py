@@ -3,7 +3,7 @@ from datetime import date, timedelta
 
 from dj_rest_auth.views import PasswordChangeView
 from django.contrib.auth.models import User
-from django.db.models import Q, F
+from django.db.models import F, Q
 from django.http import Http404
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
@@ -14,7 +14,8 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.utility import perform_log, sales_adjust_sparepart_quantity
+from si_mbe.utility import (perform_log, restock_adjust_sparepart_quantity,
+                            sales_adjust_sparepart_quantity)
 
 
 class Home(generics.GenericAPIView):
@@ -381,13 +382,8 @@ class RestockAdd(generics.CreateAPIView):
         # Save the new Restock instance to the database
         instance = serializer.save()
 
-        # Subtracting spareapart quantity with new restock detail data
-        for restock_detail in instance.restock_detail_set.all():
-            # Get the Sparepart instance associated with the Restock_detail instance
-            sparepart = restock_detail.sparepart_id
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity += restock_detail.quantity
-            sparepart.save()
+        # Adjust sparepart data based on new sales data
+        restock_adjust_sparepart_quantity(create=True, new_instance=instance)
 
 
 class RestockUpdate(generics.RetrieveUpdateAPIView):
@@ -437,37 +433,12 @@ class RestockUpdate(generics.RetrieveUpdateAPIView):
         # Save intance to database
         instance = serializer.save()
 
-        # looping trought new restock sparepart data to adjust sparepart quantity
-        for restock_detail in instance.restock_detail_set.all():
-            # Get the Sparepart instance associated with the restock_detail instance
-            sparepart = restock_detail.sparepart_id
-
-            # Find the old restock_sparepart instance with the same sparepart_id
-            old_restock_detail = next(
-                (rd for rd in old_restock_details if rd.sparepart_id == sparepart),
-                None
-            )
-
-            # Update the quantity field of the Sparepart instance:
-            # 1. If an old restock_detail instance was found, increase the quantity field of
-            # the Sparepart instance by the old quantity value
-            if old_restock_detail:
-                sparepart.quantity -= old_restock_detail.quantity
-
-            # 2. Decrease the quantity field of the Sparepart instance by the new quantity value
-            sparepart.quantity += restock_detail.quantity
-            sparepart.save()
-
-        # Loop over all the old restock_detail instances, to find old but not present data in new data
-        for old_restock_detail in old_restock_details:
-            # Check if the old Service_sparepart instance is not present in the
-            # new data / updated instance
-            if old_restock_detail not in instance.restock_detail_set.all():
-                sparepart = old_restock_detail.sparepart_id
-                # increase the quantity field of the Sparepart instance by the old
-                # quantity value
-                sparepart.quantity -= old_restock_detail.quantity
-                sparepart.save()
+        # Adjust sparepart data based on old and new restock data
+        restock_adjust_sparepart_quantity(
+            update=True,
+            new_instance=instance,
+            old_instance=old_restock_details
+        )
 
 
 class RestockDelete(generics.DestroyAPIView):
@@ -511,13 +482,8 @@ class RestockDelete(generics.DestroyAPIView):
         # Deleting instance in database
         instance.delete()
 
-        # Adding (plus) Sparepart quantity with old restock detail data
-        for old_data in old_data_list:
-            # Get the Sparepart instance associated with the old Restock_detail instance
-            sparepart = old_data['sparepart_id']
-            # Update the quantity field of the Sparepart instance
-            sparepart.quantity -= old_data['quantity']
-            sparepart.save()
+        # Adjust sparepart data based on old data as list
+        restock_adjust_sparepart_quantity(old_data_list=old_data_list)
 
 
 class SupplierList(generics.ListAPIView):
