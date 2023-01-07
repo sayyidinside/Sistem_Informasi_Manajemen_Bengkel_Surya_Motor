@@ -12,8 +12,8 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
 from si_mbe.tests.test_admin import SetTestCase
 
 
-class SalesReportListTestCase(APITestCase):
-    sales_report_url = reverse('sales_report_list')
+class SalesReportTestCase(APITestCase):
+    sales_report_url = reverse('sales_report')
 
     @classmethod
     def setUpTestData(cls) -> None:
@@ -38,9 +38,9 @@ class SalesReportListTestCase(APITestCase):
                 quantity=50,
                 motor_type='Fantasy',
                 sparepart_type='Ori',
-                price=5400000,
-                workshop_price=5300000,
-                install_price=5500000,
+                price=540000,
+                workshop_price=530000,
+                install_price=550000,
                 brand_id=cls.brand,
                 storage_code='HJF-502',
                 category_id=cls.category
@@ -62,53 +62,68 @@ class SalesReportListTestCase(APITestCase):
         cls.sales_1 = Sales.objects.create(
                 customer_id=cls.customer_1,
                 user_id=cls.user,
+                deposit=751000
             )
         cls.sales_2 = Sales.objects.create(
                 customer_id=cls.customer_2,
-                is_paid_off=True,
                 user_id=cls.user,
+                is_workshop=True
             )
 
-        # Setting up time data for test comparison
-        cls.created_at_1 = cls.sales_1.created_at + timedelta(hours=7)
-        cls.updated_at_1 = cls.sales_1.updated_at + timedelta(hours=7)
-        cls.created_at_2 = cls.sales_2.created_at + timedelta(hours=7)
-        cls.updated_at_2 = cls.sales_2.updated_at + timedelta(hours=7)
+        Sales_detail.objects.create(
+            sales_id=cls.sales_1,
+            sparepart_id=cls.spareparts[0],
+            quantity=5
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales_1,
+            sparepart_id=cls.spareparts[1],
+            quantity=2
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales_1,
+            sparepart_id=cls.spareparts[2],
+            quantity=7
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales_2,
+            sparepart_id=cls.spareparts[0],
+            quantity=30
+        )
+        Sales_detail.objects.create(
+            sales_id=cls.sales_2,
+            sparepart_id=cls.spareparts[1],
+            quantity=40
+        )
+
+        cls.date = int(date.today().day) - 1
 
         return super().setUpTestData()
 
-    def test_owner_successfully_access_sales_report_list(self) -> None:
+    def test_owner_successfully_access_sales_report(self) -> None:
         """
-        Ensure owner can get sales report list
+        Ensure owner can get sales report
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.sales_report_url)
+        # print(response.data)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count_item'], 2)
-        self.assertEqual(response.data['results'], [
-            {
-                'sales_id': self.sales_1.sales_id,
-                'admin': 'Richard Rider',
-                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'customer': self.sales_1.customer_id.name,
-                'contact': self.sales_1.customer_id.contact,
-                'total_price_sales': 0,
-                'is_paid_off': False,
-                'deposit': str(self.sales_1.deposit)
-            },
-            {
-                'sales_id': self.sales_2.sales_id,
-                'admin': 'Richard Rider',
-                'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
-                'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
-                'customer': self.sales_2.customer_id.name,
-                'contact': self.sales_2.customer_id.contact,
-                'total_price_sales': 0,
-                'is_paid_off': True,
-                'deposit': str(self.sales_2.deposit)
-            }
-        ])
+
+        # Validate sales information per day table data
+        self.assertEqual(response.data['sales_report'][self.date]['date'], date.today() + timedelta(hours=7))
+        self.assertEqual(response.data['sales_report'][self.date]['sales_transaction'], 44660000)
+        self.assertEqual(response.data['sales_report'][self.date]['sales_revenue'], 751000)
+        self.assertEqual(response.data['sales_report'][self.date]['sales_count'], 2)
+
+        self.assertEqual(response.data['sales_report'][self.date - 2]['date'],
+                         date.today() - timedelta(days=2) + timedelta(hours=7))
+        self.assertEqual(response.data['sales_report'][self.date - 2]['sales_transaction'], 0)
+        self.assertEqual(response.data['sales_report'][self.date - 2]['sales_revenue'], 0)
+        self.assertEqual(response.data['sales_report'][self.date - 2]['sales_count'], 0)
+
+        # Validate total month informations
+        self.assertEqual(response.data['sales_transaction_month'], 44660000)
+        self.assertEqual(response.data['sales_revenue_month'], 751000)
 
     def test_nonlogin_user_failed_to_access_sales_report_list(self) -> None:
         """
@@ -127,139 +142,6 @@ class SalesReportListTestCase(APITestCase):
         response = self.client.get(self.sales_report_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
-
-
-class SalesReportDetail(APITestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        # Setting up admin user and owner user
-        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
-
-        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role='P')
-
-        # Setting up brand data
-        cls.brand = Brand.objects.create(name='Steins Gate')
-
-        # Setting up category data
-        cls.category = Category.objects.create(name='Machine')
-
-        # Setting up sparepart data and getting their object
-        for i in range(3):
-            Sparepart.objects.create(
-                name=f'el psy congroo S-{i}',
-                partnumber=f'0Y3AD-FY{i}',
-                quantity=50,
-                motor_type='Time Machine',
-                sparepart_type='DIY',
-                price=5400000,
-                workshop_price=5300000,
-                install_price=5500000,
-                brand_id=cls.brand,
-                category_id=cls.category,
-                storage_code='BNG-3051'
-            )
-
-        cls.spareparts = Sparepart.objects.all()
-
-        # Setting up customer data
-        cls.customer = Customer.objects.create(
-            name='Rintaro Okabe',
-            contact='084468104651',
-        )
-
-        # Setting up sales data and getting their object
-        cls.sales = Sales.objects.create(
-                customer_id=cls.customer,
-                user_id=cls.user,
-            )
-
-        # Getting newly added sales it's sales_id then set it to kwargs in reverse url
-        cls.sales_report_detail_url = reverse('sales_report_detail', kwargs={'sales_id': cls.sales.sales_id})
-
-        # Setting up sales detail data and getting their object
-        cls.sales_details_1 = Sales_detail.objects.create(
-            quantity=15,
-            sales_id=cls.sales,
-            sparepart_id=cls.spareparts[2]
-        )
-        cls.sales_details_2 = Sales_detail.objects.create(
-            quantity=10,
-            sales_id=cls.sales,
-            sparepart_id=cls.spareparts[0]
-        )
-        cls.sales_details_3 = Sales_detail.objects.create(
-            quantity=20,
-            sales_id=cls.sales,
-            sparepart_id=cls.spareparts[1]
-        )
-
-        # Setting up time data for test comparison
-        cls.created_at_1 = cls.sales.created_at + timedelta(hours=7)
-        cls.updated_at_1 = cls.sales.updated_at + timedelta(hours=7)
-
-        return super().setUpTestData()
-
-    def test_owner_successfully_access_sales_report_detail(self) -> None:
-        """
-        Ensure owner can get sales report detail
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.get(self.sales_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-
-        # Validating surface level information of sales report detail
-        self.assertEqual(response.data['sales_id'], self.sales.sales_id)
-        self.assertEqual(response.data['admin'], self.sales.user_id.profile.name)
-        self.assertEqual(response.data['created_at'], self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'))
-        self.assertEqual(response.data['updated_at'], self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'))
-        self.assertEqual(response.data['customer'], self.sales.customer_id.name)
-        self.assertEqual(response.data['contact'], self.sales.customer_id.contact)
-        self.assertEqual(response.data['total_price_sales'], 243000000)
-        self.assertEqual(response.data['is_paid_off'], False)
-        self.assertEqual(response.data['deposit'], str(self.sales.deposit))
-
-        # Validating detail information per sparepart of sales report detail in content field
-        self.assertEqual(response.data['content'][0]['sales_detail_id'], self.sales_details_1.sales_detail_id)
-        self.assertEqual(response.data['content'][0]['sparepart'], self.spareparts[2].name)
-        self.assertEqual(response.data['content'][0]['quantity'], self.sales_details_1.quantity)
-        self.assertEqual(response.data['content'][0]['sub_total'], 81000000)
-        self.assertEqual(response.data['content'][1]['sales_detail_id'], self.sales_details_2.sales_detail_id)
-        self.assertEqual(response.data['content'][1]['sparepart'], self.spareparts[0].name)
-        self.assertEqual(response.data['content'][1]['quantity'], 10)
-        self.assertEqual(response.data['content'][1]['sub_total'], 54000000)
-        self.assertEqual(response.data['content'][2]['sales_detail_id'], self.sales_details_3.sales_detail_id)
-        self.assertEqual(response.data['content'][2]['sparepart'], self.spareparts[1].name)
-        self.assertEqual(response.data['content'][2]['quantity'], 20)
-        self.assertEqual(response.data['content'][2]['sub_total'], 108000000)
-
-    def test_nonlogin_user_failed_to_access_sales_report_detail(self) -> None:
-        """
-        Ensure non-login user cannot access sales report detail
-        """
-        self.client.force_authenticate(user=None, token=None)
-        response = self.client.get(self.sales_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_nonowner_user_failed_to_access_sales_report_detail(self) -> None:
-        """
-        Ensure non-owner user cannot access sales report detail
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.sales_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_owner_failed_to_access_non_exist_sales_report_detail(self) -> None:
-        """
-        Ensure owner user cannot access non exist sales report detail
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.get(reverse('sales_report_detail', kwargs={'sales_id': 930514}))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['message'], 'Data penjualan tidak ditemukan')
 
 
 class RestockReportTestCase(APITestCase):

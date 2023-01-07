@@ -1,4 +1,6 @@
 from si_mbe.models import Logs
+from datetime import date
+from calendar import monthrange
 
 
 def perform_log(request: any, operation: str, table: str) -> None:
@@ -199,3 +201,54 @@ def service_adjust_sparepart_quantity(
             # Update the quantity field of the Sparepart instance
             sparepart.quantity += old_data['quantity']
             sparepart.save()
+
+
+def get_sales_report(
+                    data_list: list,
+                    year: int = date.today().year,
+                    month: int = date.today().month,
+                ) -> dict:
+    '''
+    Function to get sales report information per day as dict (date, sales_transaction, sales_revenue, sales_count),
+    total sales a month, total revenue a month.
+
+    Then return a dict as result in format of {sales_report, sales_transaction_month, sales_revenue_month}
+    '''
+    # Getting number of day form current month
+    number_of_day = monthrange(year=year, month=month)[1]
+
+    # Getting total revenue per day in particular a month
+    sales_report = []
+
+    # Getting sales revenue, transaction, and count for a month
+    sales_transaction_month = 0
+    sales_revenue_month = 0
+
+    data_list = data_list
+
+    # Make sales report information in particular month
+    for i, object in enumerate(range(number_of_day), 1):
+        # Getting sales revenue, transaction, and count for a day
+        sales_transaction = 0
+        sales_revenue = 0
+        sales_count = 0
+
+        for sales in data_list:
+            if sales['created_at'] == date(year, month, i).strftime('%d-%m-%Y'):
+                sales_transaction_month += sales['total_price_sales']
+                sales_revenue_month += int(sales['deposit'])
+                sales_transaction += sales['total_price_sales']
+                sales_revenue += int(sales['deposit'])
+                sales_count += 1
+        sales_report.append({
+            'date': date(year, month, i),
+            'sales_transaction': sales_transaction,
+            'sales_revenue': sales_revenue,
+            'sales_count': sales_count
+        })
+
+    return {
+                'sales_report': sales_report,
+                'sales_transaction_month': sales_transaction_month,
+                'sales_revenue_month': sales_revenue_month
+            }

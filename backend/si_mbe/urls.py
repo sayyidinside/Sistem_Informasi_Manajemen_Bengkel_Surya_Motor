@@ -53,8 +53,7 @@ urlpatterns = [
 
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
-     path('owner/report/sales/', views.SalesReportList.as_view(), name='sales_report_list'),
-     path('owner/report/sales/<int:sales_id>/', views.SalesReportDetail.as_view(), name='sales_report_detail'),
+     path('owner/report/sales/', views.SalesReport.as_view(), name='sales_report'),
      path('owner/report/restock/', views.RestockReportList.as_view(), name='restock_report_list'),
      path('owner/report/restock/<int:restock_id>/', views.RestockReportDetail.as_view(), name='restock_report_detail'),
      path('owner/report/service/', views.ServiceReportList.as_view(), name='service_report_list'),

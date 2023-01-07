@@ -581,8 +581,8 @@ class SupplierManagementSerializers(serializers.ModelSerializer):
 
 class SalesReportSerializers(serializers.ModelSerializer):
     admin = serializers.ReadOnlyField(source='user_id.profile.name')
-    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
-    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y')
+    updated_at = serializers.DateTimeField(format='%d-%m-%Y')
     customer = serializers.ReadOnlyField(source='customer_id.name')
     contact = serializers.ReadOnlyField(source='customer_id.contact')
     total_price_sales = serializers.SerializerMethodField()
@@ -605,7 +605,7 @@ class SalesReportSerializers(serializers.ModelSerializer):
         sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
         total_price = 0
         for sales in sales_serializer.data:
-            total_price += sales['total_price']
+            total_price += sales['sub_total']
         return total_price
 
 

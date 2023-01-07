@@ -1,23 +1,25 @@
 from calendar import monthrange
 from datetime import date, timedelta
 
-from django_filters.rest_framework import DjangoFilterBackend
 from dj_rest_auth.views import PasswordChangeView
 from django.contrib.auth.models import User
 from django.db.models import F, Q
 from django.http import Http404
+from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import filters, generics, status
 from rest_framework.response import Response
 from si_mbe import exceptions, serializers
+from si_mbe.filters import SparepartFilter
 from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
                            Restock, Sales, Salesman, Service, Sparepart,
                            Supplier)
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.utility import (perform_log, restock_adjust_sparepart_quantity,
-                            sales_adjust_sparepart_quantity, service_adjust_sparepart_quantity)
-from si_mbe.filters import SparepartFilter
+from si_mbe.utility import (get_sales_report, perform_log,
+                            restock_adjust_sparepart_quantity,
+                            sales_adjust_sparepart_quantity,
+                            service_adjust_sparepart_quantity)
 
 
 class Home(generics.GenericAPIView):
@@ -577,25 +579,29 @@ class SupplierDelete(generics.DestroyAPIView):
         return Response(message, status=status.HTTP_204_NO_CONTENT)
 
 
-class SalesReportList(generics.ListAPIView):
-    queryset = Sales.objects.all().order_by('sales_id')
+class SalesReport(generics.GenericAPIView):
+    queryset = Sales.objects.select_related('customer_id', 'user_id').prefetch_related('sales_detail_set')
     serializer_class = serializers.SalesReportSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
 
+    def get(self, request, *args, **kwargs):
+        # Getting url params of year and month if doesn't exist use today value
+        self.year = int(request.query_params.get('year', date.today().year))
+        self.month = int(request.query_params.get('month', date.today().month))
 
-class SalesReportDetail(generics.RetrieveAPIView):
-    queryset = Sales.objects.all()
-    serializer_class = serializers.SalesReportDetailSerializers
-    permission_classes = [IsLogin, IsOwnerRole]
+        # Getting sales data
+        sales_queryset = self.filter_queryset(self.get_queryset())
+        sales = self.get_serializer(sales_queryset, many=True)
+        sales_list = sorted(sales.data, key=lambda k: k['created_at'], reverse=True)
 
-    lookup_field = 'sales_id'
-    lookup_url_kwarg = 'sales_id'
+        # Getting sales report data
+        self.data = get_sales_report(
+            data_list=sales_list,
+            year=self.year,
+            month=self.month
+        )
 
-    def handle_exception(self, exc):
-        if isinstance(exc, Http404):
-            exc = exceptions.SalesNotFound()
-        return super().handle_exception(exc)
+        return Response(self.data)
 
 
 class RestockReportList(generics.ListAPIView):
