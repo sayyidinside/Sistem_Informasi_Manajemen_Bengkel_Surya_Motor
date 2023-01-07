@@ -145,7 +145,7 @@ class SalesReportTestCase(APITestCase):
 
 
 class RestockReportTestCase(APITestCase):
-    restock_report_url = reverse('restock_report_list')
+    restock_report_url = reverse('restock_report')
 
     @classmethod
     def setUpTestData(cls) -> None:
@@ -203,16 +203,45 @@ class RestockReportTestCase(APITestCase):
                 due_date=date(2023, 4, 13),
                 is_paid_off=False,
                 user_id=cls.user,
-                salesman_id=cls.salesman
+                salesman_id=cls.salesman,
+                deposit=int(f'{i}1{i+3}00000')
             )
 
         cls.restocks = Restock.objects.all()
 
-        # Setting up time data for test comparison
-        cls.created_at_1 = cls.restocks[0].created_at + timedelta(hours=7)
-        cls.updated_at_1 = cls.restocks[0].updated_at + timedelta(hours=7)
-        cls.created_at_2 = cls.restocks[1].created_at + timedelta(hours=7)
-        cls.updated_at_2 = cls.restocks[1].updated_at + timedelta(hours=7)
+        Restock_detail.objects.create(
+            restock_id=cls.restocks[0],
+            sparepart_id=cls.spareparts[0],
+            quantity=200,
+            individual_price=15000
+        )
+        Restock_detail.objects.create(
+            restock_id=cls.restocks[0],
+            sparepart_id=cls.spareparts[1],
+            quantity=100,
+            individual_price=38000
+        )
+        Restock_detail.objects.create(
+            restock_id=cls.restocks[0],
+            sparepart_id=cls.spareparts[2],
+            quantity=350,
+            individual_price=2700
+        )
+        Restock_detail.objects.create(
+            restock_id=cls.restocks[1],
+            sparepart_id=cls.spareparts[0],
+            quantity=200,
+            individual_price=35200
+        )
+        Restock_detail.objects.create(
+            restock_id=cls.restocks[1],
+            sparepart_id=cls.spareparts[1],
+            quantity=50,
+            individual_price=62000
+        )
+
+        # Getting current date / day
+        cls.date = int(date.today().day) - 1
 
         return super().setUpTestData()
 
@@ -223,39 +252,20 @@ class RestockReportTestCase(APITestCase):
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.restock_report_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count_item'], 2)
-        self.assertEqual(response.data['results'], [
-            {
-                'restock_id': self.restocks[0].restock_id,
-                'admin': 'Richard Rider',
-                'created_at': self.created_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'updated_at': self.updated_at_1.strftime('%d-%m-%Y %H:%M:%S'),
-                'no_faktur': self.restocks[0].no_faktur,
-                'total_restock_cost': 0,
-                'is_paid_off': False,
-                'deposit': str(self.restocks[0].deposit),
-                'due_date': self.restocks[0].due_date.strftime('%d-%m-%Y'),
-                'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact,
-                'salesman': self.restocks[0].salesman_id.name,
-                'salesman_contact': self.restocks[0].salesman_id.contact
-            },
-            {
-                'restock_id': self.restocks[1].restock_id,
-                'admin': 'Richard Rider',
-                'created_at': self.created_at_2.strftime('%d-%m-%Y %H:%M:%S'),
-                'updated_at': self.updated_at_2.strftime('%d-%m-%Y %H:%M:%S'),
-                'no_faktur': self.restocks[1].no_faktur,
-                'total_restock_cost': 0,
-                'is_paid_off': False,
-                'deposit': str(self.restocks[1].deposit),
-                'due_date': self.restocks[1].due_date.strftime('%d-%m-%Y'),
-                'supplier': self.supplier.name,
-                'supplier_contact': self.supplier.contact,
-                'salesman': self.restocks[1].salesman_id.name,
-                'salesman_contact': self.restocks[1].salesman_id.contact
-            }
-        ])
+
+        # Validate restock information per day table data
+        self.assertEqual(response.data['restock_report'][self.date]['date'], date.today() + timedelta(hours=7))
+        self.assertEqual(response.data['restock_report'][self.date]['restock_transaction'], 17885000)
+        self.assertEqual(response.data['restock_report'][self.date]['restock_cost'], 12700000)
+
+        self.assertEqual(response.data['restock_report'][self.date - 2]['date'],
+                         date.today() - timedelta(days=2) + timedelta(hours=7))
+        self.assertEqual(response.data['restock_report'][self.date - 2]['restock_transaction'], 0)
+        self.assertEqual(response.data['restock_report'][self.date - 2]['restock_cost'], 0)
+
+        # Validate total month informations
+        self.assertEqual(response.data['restock_transaction_month'], 17885000)
+        self.assertEqual(response.data['restock_cost_month'], 12700000)
 
     def test_nonlogin_user_failed_to_access_restock_report_list(self) -> None:
         """
@@ -274,207 +284,6 @@ class RestockReportTestCase(APITestCase):
         response = self.client.get(self.restock_report_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
-
-
-class RestockReportDetailTestCase(APITestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        # Setting up admin user and owner user
-        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
-
-        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role='P')
-
-        # Setting up brand data
-        cls.brand = Brand.objects.create(name='Galactic Empire')
-
-        # Setting up category data
-        cls.category = Category.objects.create(name='Connector')
-
-        # Setting up supplier
-        cls.supplier = Supplier.objects.create(
-            name='narkina 5',
-            contact='084894564563',
-            rekening_number='846668686404001',
-            rekening_name='Kino Loy',
-            rekening_bank='Bank Empire'
-        )
-
-        # Setting up salesman data
-        cls.salesman = Salesman.objects.create(
-            name='Kino Loy',
-            contact='084523015663',
-            supplier_id=cls.supplier
-        )
-
-        # Setting up sparepart data and getting their object
-        for i in range(3):
-            Sparepart.objects.create(
-                name=f'Lens Spine D-{i}',
-                partnumber=f'0Y3AD-FY{i}',
-                quantity=50,
-                motor_type='Deathstar',
-                sparepart_type='OEM',
-                price=4700000,
-                workshop_price=4620000,
-                install_price=5500000,
-                brand_id=cls.brand,
-                category_id=cls.category,
-                storage_code='SITH-5782'
-            )
-
-        cls.spareparts = Sparepart.objects.all()
-
-        # Setting up restock data and getting their object
-        cls.restock = Restock.objects.create(
-                no_faktur=f'URH45/28394/2022-N{i}D',
-                due_date=date(2023, 4, 13),
-                is_paid_off=False,
-                user_id=cls.user,
-                salesman_id=cls.salesman
-            )
-
-        # Getting newly added sales it's sales_id then set it to kwargs in reverse url
-        cls.restock_report_detail_url = reverse('restock_report_detail', kwargs={'restock_id': cls.restock.restock_id})
-
-        # Setting up time data for test comparison
-        cls.created_at = cls.restock.created_at + timedelta(hours=7)
-        cls.updated_at = cls.restock.updated_at + timedelta(hours=7)
-
-        # Setting up restock detail data and getting their id
-        cls.restock_detail_1 = Restock_detail.objects.create(
-            quantity=200,
-            individual_price=5000000,
-            restock_id=cls.restock,
-            sparepart_id=cls.spareparts[2]
-        )
-        cls.restock_detail_2 = Restock_detail.objects.create(
-            quantity=500,
-            individual_price=400000,
-            restock_id=cls.restock,
-            sparepart_id=cls.spareparts[0]
-        )
-        cls.restock_detail_3 = Restock_detail.objects.create(
-            quantity=300,
-            individual_price=650000,
-            restock_id=cls.restock,
-            sparepart_id=cls.spareparts[1]
-        )
-
-        return super().setUpTestData()
-
-    def test_owner_successfully_access_restock_report_detail(self):
-        """
-        Ensure owner can get restock report detail
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.get(self.restock_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['restock_id'], self.restock.restock_id)
-        self.assertEqual(response.data['admin'], self.restock.user_id.profile.name)
-        self.assertEqual(response.data['created_at'], self.created_at.strftime('%d-%m-%Y %H:%M:%S'))
-        self.assertEqual(response.data['updated_at'], self.updated_at.strftime('%d-%m-%Y %H:%M:%S'))
-        self.assertEqual(response.data['no_faktur'], self.restock.no_faktur)
-        self.assertEqual(response.data['total_restock_cost'], 1395000000)
-        self.assertEqual(response.data['is_paid_off'], self.restock.is_paid_off)
-        self.assertEqual(response.data['deposit'], str(self.restock.deposit))
-        self.assertEqual(response.data['due_date'], self.restock.due_date.strftime('%d-%m-%Y'))
-        self.assertEqual(response.data['supplier'], self.restock.salesman_id.supplier_id.name)
-        self.assertEqual(response.data['supplier_contact'], self.restock.salesman_id.supplier_id.contact)
-        self.assertEqual(response.data['salesman'], self.restock.salesman_id.name)
-        self.assertEqual(response.data['salesman_contact'], self.restock.salesman_id.contact)
-
-        self.assertEqual(response.data['content'][0]['restock_detail_id'],
-                         self.restock_detail_1.restock_detail_id)
-        self.assertEqual(response.data['content'][0]['sparepart'], self.spareparts[2].name)
-        self.assertEqual(response.data['content'][0]['individual_price'],
-                         str(self.restock_detail_1.individual_price))
-        self.assertEqual(response.data['content'][0]['quantity'], self.restock_detail_1.quantity)
-        self.assertEqual(response.data['content'][0]['total_price'], 1000000000)
-
-        self.assertEqual(response.data['content'][1]['restock_detail_id'],
-                         self.restock_detail_2.restock_detail_id)
-        self.assertEqual(response.data['content'][1]['sparepart'], self.spareparts[0].name)
-        self.assertEqual(response.data['content'][1]['individual_price'],
-                         str(self.restock_detail_2.individual_price))
-        self.assertEqual(response.data['content'][1]['quantity'], self.restock_detail_2.quantity)
-        self.assertEqual(response.data['content'][1]['total_price'], 200000000)
-
-        self.assertEqual(response.data['content'][2]['restock_detail_id'],
-                         self.restock_detail_3.restock_detail_id)
-        self.assertEqual(response.data['content'][2]['sparepart'], self.spareparts[1].name)
-        self.assertEqual(response.data['content'][2]['individual_price'],
-                         str(self.restock_detail_3.individual_price))
-        self.assertEqual(response.data['content'][2]['quantity'], self.restock_detail_3.quantity)
-        self.assertEqual(response.data['content'][2]['total_price'], 195000000)
-
-        # self.assertEqual(response.data, {
-        #         'restock_id': self.restock.restock_id,
-        #         'admin': 'Richard Rider',
-        #         'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
-        #         'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
-        #         'no_faktur': self.restock.no_faktur,
-        #         'total_restock_cost': 1395000000,
-        #         'is_paid_off': False,
-        #         'deposit': str(self.restock.deposit),
-        #         'due_date': self.restock.due_date.strftime('%d-%m-%Y'),
-        #         'supplier': self.supplier.name,
-        #         'supplier_contact': self.supplier.contact,
-        #         'salesman': self.restock.salesman_id.name,
-        #         'salesman_contact': self.restock.salesman_id.contact,
-        #         'content': [
-        #             {
-        #                 'restock_detail_id': self.restock_detail_1.restock_detail_id,
-        #                 'sparepart': self.spareparts[2].name,
-        #                 'individual_price':'5000000',
-        #                 'quantity': 200,
-        #                 'total_price': 1000000000
-        #             },
-        #             {
-        #                 'restock_detail_id': self.restock_detail_2.restock_detail_id,
-        #                 'sparepart': self.spareparts[0].name,
-        #                 'individual_price':'400000',
-        #                 'quantity': 500,
-        #                 'total_price': 200000000
-        #             },
-        #             {
-        #                 'restock_detail_id': self.restock_detail_3.restock_detail_id,
-        #                 'sparepart': self.spareparts[1].name,
-        #                 'individual_price':'650000',
-        #                 'quantity': 300,
-        #                 'total_price': 195000000
-        #             }
-        #         ]
-        #     }
-        # )
-
-    def test_nonlogin_user_failed_to_access_restock_report_detail(self) -> None:
-        """
-        Ensure non-login user cannot access restock report detail
-        """
-        self.client.force_authenticate(user=None, token=None)
-        response = self.client.get(self.restock_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_nonowner_user_failed_to_access_restock_report_detail(self) -> None:
-        """
-        Ensure non-owner user cannot access restock report detail
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.restock_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_owner_failed_to_access_non_exist_restock_report_detail(self) -> None:
-        """
-        Ensure owner user cannot access non exist restock report detail
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.get(reverse('restock_report_detail', kwargs={'restock_id': 930514}))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['message'], 'Data pengadaan tidak ditemukan')
 
 
 class LogTestCase(APITestCase):

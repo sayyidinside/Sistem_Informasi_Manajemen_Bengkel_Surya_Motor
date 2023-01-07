@@ -16,7 +16,7 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.utility import (get_sales_report, perform_log,
+from si_mbe.utility import (get_restock_report, get_sales_report, perform_log,
                             restock_adjust_sparepart_quantity,
                             sales_adjust_sparepart_quantity,
                             service_adjust_sparepart_quantity)
@@ -604,11 +604,29 @@ class SalesReport(generics.GenericAPIView):
         return Response(self.data)
 
 
-class RestockReportList(generics.ListAPIView):
-    queryset = Restock.objects.all().order_by('restock_id')
+class RestockReport(generics.ListAPIView):
+    queryset = Restock.objects.select_related('salesman_id', 'user_id').prefetch_related('restock_detail_set')
     serializer_class = serializers.RestockReportSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
+
+    def get(self, request, *args, **kwargs):
+        # Getting url params of year and month if doesn't exist use today value
+        self.year = int(request.query_params.get('year', date.today().year))
+        self.month = int(request.query_params.get('month', date.today().month))
+
+        # Getting restock data
+        restock_queryset = self.filter_queryset(self.get_queryset())
+        restock = self.get_serializer(restock_queryset, many=True)
+        restock_list = sorted(restock.data, key=lambda k: k['created_at'], reverse=True)
+
+        # Getting restock report data
+        self.data = get_restock_report(
+            data_list=restock_list,
+            year=self.year,
+            month=self.month
+        )
+
+        return Response(self.data)
 
 
 class RestockReportDetail(generics.RetrieveAPIView):

@@ -609,65 +609,17 @@ class SalesReportSerializers(serializers.ModelSerializer):
         return total_price
 
 
-class SalesReportDetailSerializers(serializers.ModelSerializer):
-    admin = serializers.ReadOnlyField(source='user_id.profile.name')
-    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
-    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
-    customer = serializers.ReadOnlyField(source='customer_id.name')
-    contact = serializers.ReadOnlyField(source='customer_id.contact')
-    content = SalesDetailSerializers(many=True, source='sales_detail_set')
-    total_price_sales = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Sales
-        fields = [
-            'sales_id',
-            'admin',
-            'created_at',
-            'updated_at',
-            'customer',
-            'contact',
-            'total_price_sales',
-            'is_paid_off',
-            'deposit',
-            'content',
-        ]
-
-    def get_total_price_sales(self, obj):
-        sales_serializer = SalesDetailSerializers(obj.sales_detail_set, many=True)
-        total_price = 0
-        for sales in sales_serializer.data:
-            total_price += sales['sub_total']
-        return total_price
-
-
 class RestockReportSerializers(serializers.ModelSerializer):
-    admin = serializers.ReadOnlyField(source='user_id.profile.name')
-    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
-    updated_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
-    due_date = serializers.DateField(format="%d-%m-%Y")
-    supplier = serializers.ReadOnlyField(source='salesman_id.supplier_id.name')
-    supplier_contact = serializers.ReadOnlyField(source='salesman_id.supplier_id.contact')
-    salesman = serializers.ReadOnlyField(source='salesman_id.name')
-    salesman_contact = serializers.ReadOnlyField(source='salesman_id.contact')
+    created_at = serializers.DateTimeField(format='%d-%m-%Y')
     total_restock_cost = serializers.SerializerMethodField()
 
     class Meta:
         model = Restock
         fields = [
             'restock_id',
-            'admin',
             'created_at',
-            'updated_at',
-            'no_faktur',
             'total_restock_cost',
-            'is_paid_off',
             'deposit',
-            'due_date',
-            'supplier',
-            'supplier_contact',
-            'salesman',
-            'salesman_contact',
         ]
 
     def get_total_restock_cost(self, obj):

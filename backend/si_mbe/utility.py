@@ -252,3 +252,51 @@ def get_sales_report(
                 'sales_transaction_month': sales_transaction_month,
                 'sales_revenue_month': sales_revenue_month
             }
+
+
+def get_restock_report(
+                    data_list: list,
+                    year: int = date.today().year,
+                    month: int = date.today().month,
+                ) -> dict:
+    '''
+    Function to get restock report information per day as dict (date, restock_transaction, restock_cost),
+    total sales a month, total revenue a month.
+
+    Then return a dict as result in format of {restock_report, restock_transaction_month, restock_cost_month}
+    '''
+    # Getting number of day form current month
+    number_of_day = monthrange(year=year, month=month)[1]
+
+    # Getting restock report information per day in particular a month
+    restock_report = []
+
+    # Getting restock revenue, transaction, and count for a month
+    restock_transaction_month = 0
+    restock_cost_month = 0
+
+    data_list = data_list
+
+    # Make restock report information in particular month
+    for i, object in enumerate(range(number_of_day), 1):
+        # Getting restock revenue, transaction, and count for a day
+        restock_transaction = 0
+        restock_cost = 0
+
+        for restock in data_list:
+            if restock['created_at'] == date(year, month, i).strftime('%d-%m-%Y'):
+                restock_transaction_month += restock['total_restock_cost']
+                restock_cost_month += int(restock['deposit'])
+                restock_transaction += restock['total_restock_cost']
+                restock_cost += int(restock['deposit'])
+        restock_report.append({
+            'date': date(year, month, i),
+            'restock_transaction': restock_transaction,
+            'restock_cost': restock_cost,
+        })
+
+    return {
+                'restock_report': restock_report,
+                'restock_transaction_month': restock_transaction_month,
+                'restock_cost_month': restock_cost_month
+            }

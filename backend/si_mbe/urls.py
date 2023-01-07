@@ -54,8 +54,7 @@ urlpatterns = [
      # Owner endpoint access
      path('owner/', views.OwnerDashboard.as_view(), name='owner_dashboard'),
      path('owner/report/sales/', views.SalesReport.as_view(), name='sales_report'),
-     path('owner/report/restock/', views.RestockReportList.as_view(), name='restock_report_list'),
-     path('owner/report/restock/<int:restock_id>/', views.RestockReportDetail.as_view(), name='restock_report_detail'),
+     path('owner/report/restock/', views.RestockReport.as_view(), name='restock_report'),
      path('owner/report/service/', views.ServiceReportList.as_view(), name='service_report_list'),
      path('owner/report/service/<int:service_id>/', views.ServiceReportDetail.as_view(), name='service_report_detail'),
      path('owner/profile/<int:user_id>/', views.ProfileDetail.as_view(), name='profile_detail'),
