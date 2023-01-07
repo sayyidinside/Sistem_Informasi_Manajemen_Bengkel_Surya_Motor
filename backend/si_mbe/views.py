@@ -19,7 +19,7 @@ from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
 from si_mbe.utility import (get_restock_report, get_sales_report, perform_log,
                             restock_adjust_sparepart_quantity,
                             sales_adjust_sparepart_quantity,
-                            service_adjust_sparepart_quantity)
+                            service_adjust_sparepart_quantity, get_service_report)
 
 
 class Home(generics.GenericAPIView):
@@ -604,7 +604,7 @@ class SalesReport(generics.GenericAPIView):
         return Response(self.data)
 
 
-class RestockReport(generics.ListAPIView):
+class RestockReport(generics.GenericAPIView):
     queryset = Restock.objects.select_related('salesman_id', 'user_id').prefetch_related('restock_detail_set')
     serializer_class = serializers.RestockReportSerializers
     permission_classes = [IsLogin, IsOwnerRole]
@@ -854,25 +854,29 @@ class AdminDelete(generics.DestroyAPIView):
         return Response(data=message, status=status.HTTP_204_NO_CONTENT)
 
 
-class ServiceReportList(generics.ListAPIView):
-    queryset = Service.objects.all().order_by('service_id')
+class ServiceReport(generics.GenericAPIView):
+    queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
     serializer_class = serializers.ServiceReportSerializers
-    pagination_class = CustomPagination
     permission_classes = [IsLogin, IsOwnerRole]
 
+    def get(self, request, *args, **kwargs):
+        # Getting url params of year and month if doesn't exist use today value
+        self.year = int(request.query_params.get('year', date.today().year))
+        self.month = int(request.query_params.get('month', date.today().month))
 
-class ServiceReportDetail(generics.RetrieveAPIView):
-    queryset = Service.objects.all()
-    serializer_class = serializers.ServiceReportDetailSerializers
-    permission_classes = [IsLogin, IsOwnerRole]
+        # Getting service data
+        service_queryset = self.filter_queryset(self.get_queryset())
+        service = self.get_serializer(service_queryset, many=True)
+        service_list = sorted(service.data, key=lambda k: k['created_at'], reverse=True)
 
-    lookup_field = 'service_id'
-    lookup_url_kwarg = 'service_id'
+        # Getting service report data
+        self.data = get_service_report(
+            data_list=service_list,
+            year=self.year,
+            month=self.month
+        )
 
-    def handle_exception(self, exc):
-        if isinstance(exc, Http404):
-            exc = exceptions.ServiceNotFound()
-        return super().handle_exception(exc)
+        return Response(self.data)
 
 
 class ServiceList(generics.ListAPIView):

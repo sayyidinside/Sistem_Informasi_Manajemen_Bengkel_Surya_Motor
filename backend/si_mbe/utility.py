@@ -261,7 +261,7 @@ def get_restock_report(
                 ) -> dict:
     '''
     Function to get restock report information per day as dict (date, restock_transaction, restock_cost),
-    total sales a month, total revenue a month.
+    total restock a month, total revenue a month.
 
     Then return a dict as result in format of {restock_report, restock_transaction_month, restock_cost_month}
     '''
@@ -271,7 +271,7 @@ def get_restock_report(
     # Getting restock report information per day in particular a month
     restock_report = []
 
-    # Getting restock revenue, transaction, and count for a month
+    # Getting restock cost and transaction for a month
     restock_transaction_month = 0
     restock_cost_month = 0
 
@@ -279,7 +279,7 @@ def get_restock_report(
 
     # Make restock report information in particular month
     for i, object in enumerate(range(number_of_day), 1):
-        # Getting restock revenue, transaction, and count for a day
+        # Getting restock cost and transaction for a day
         restock_transaction = 0
         restock_cost = 0
 
@@ -299,4 +299,52 @@ def get_restock_report(
                 'restock_report': restock_report,
                 'restock_transaction_month': restock_transaction_month,
                 'restock_cost_month': restock_cost_month
+            }
+
+
+def get_service_report(
+                    data_list: list,
+                    year: int = date.today().year,
+                    month: int = date.today().month,
+                ) -> dict:
+    '''
+    Function to get service report information per day as dict (date, service_transaction, service_revenue),
+    total service a month, total revenue a month.
+
+    Then return a dict as result in format of {service_report, service_transaction_month, service_revenue_month}
+    '''
+    # Getting number of day form current month
+    number_of_day = monthrange(year=year, month=month)[1]
+
+    # Getting service report information per day in particular a month
+    service_report = []
+
+    # Getting service revenue and transaction for a month
+    service_transaction_month = 0
+    service_revenue_month = 0
+
+    data_list = data_list
+
+    # Make service report information in particular month
+    for i, object in enumerate(range(number_of_day), 1):
+        # Getting service revenue and transaction for a day
+        service_transaction = 0
+        service_revenue = 0
+
+        for service in data_list:
+            if service['created_at'] == date(year, month, i).strftime('%d-%m-%Y'):
+                service_transaction_month += service['total_service_price']
+                service_revenue_month += int(service['deposit'])
+                service_transaction += service['total_service_price']
+                service_revenue += int(service['deposit'])
+        service_report.append({
+            'date': date(year, month, i),
+            'service_transaction': service_transaction,
+            'service_revenue': service_revenue,
+        })
+
+    return {
+                'service_report': service_report,
+                'service_transaction_month': service_transaction_month,
+                'service_revenue_month': service_revenue_month
             }

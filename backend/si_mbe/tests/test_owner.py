@@ -785,7 +785,7 @@ class AdminDeleteTestCase(SetTestCase):
 
 
 class ServiceReportTestCase(SetTestCase):
-    service_report_url = reverse('service_report_list')
+    service_report_url = reverse('service_report')
 
     @classmethod
     def setUpTestData(cls) -> None:
@@ -802,6 +802,19 @@ class ServiceReportTestCase(SetTestCase):
             contact='081086016510',
             address='Nicrodanas'
         )
+
+        # Setting up sparepart data and getting their object
+        cls.sparepart = Sparepart.objects.create(
+                name='Lightsong The Brave',
+                partnumber='0Y3AD-FY',
+                quantity=50,
+                motor_type='Fantasy',
+                sparepart_type='Ori',
+                price=540000,
+                workshop_price=530000,
+                install_price=550000,
+                storage_code='HJF-502',
+            )
 
         # Setting up mechanic data
         cls.mechanic = Mechanic.objects.create(
@@ -820,22 +833,39 @@ class ServiceReportTestCase(SetTestCase):
             police_number='B 1293 A',
             motor_type='Beneli',
             deposit=500000,
-            discount=20000,
+            discount=53500,
+            user_id=cls.admin,
+            mechanic_id=cls.mechanic,
+            customer_id=cls.customer
+        )
+        cls.service_2 = Service.objects.create(
+            police_number='B 1293 A',
+            motor_type='Beneli',
+            deposit=6700000,
+            discount=200000,
             user_id=cls.admin,
             mechanic_id=cls.mechanic,
             customer_id=cls.customer
         )
 
-        # Setting up time data for test comparison
-        cls.created_at = cls.service.created_at + timedelta(hours=7)
-        cls.updated_at = cls.service.updated_at + timedelta(hours=7)
-
         # Setting up service_action and service_sparepart
         Service_action.objects.create(
             name='Angkat Motor',
-            cost='120000',
+            cost='325000',
             service_id=cls.service
         )
+        Service_sparepart.objects.create(
+            service_id=cls.service,
+            sparepart_id=cls.sparepart,
+            quantity=3
+        )
+        Service_action.objects.create(
+            name='Tukar Tambah',
+            cost='12000000',
+            service_id=cls.service_2
+        )
+
+        cls.date = int(date.today().day) - 1
 
         return super().setUpTestData()
 
@@ -846,23 +876,20 @@ class ServiceReportTestCase(SetTestCase):
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.service_report_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data['count_item'], 1)
-        self.assertEqual(response.data['results'], [
-            {
-                'service_id': self.service.service_id,
-                'admin': self.service.user_id.profile.name,
-                'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
-                'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
-                'police_number': self.service.police_number,
-                'mechanic': self.service.mechanic_id.name,
-                'customer': self.service.customer_id.name,
-                'customer_contact': self.service.customer_id.contact,
-                'total_price_of_service': 100000,
-                'is_paid_off': self.service.is_paid_off,
-                'deposit': str(self.service.deposit),
-                'discount': str(self.service.discount)
-            }
-        ])
+
+        # Validate service information per day table data
+        self.assertEqual(response.data['service_report'][self.date]['date'], date.today() + timedelta(hours=7))
+        self.assertEqual(response.data['service_report'][self.date]['service_transaction'], 13721500)
+        self.assertEqual(response.data['service_report'][self.date]['service_revenue'], 7200000)
+
+        self.assertEqual(response.data['service_report'][self.date - 2]['date'],
+                         date.today() - timedelta(days=2) + timedelta(hours=7))
+        self.assertEqual(response.data['service_report'][self.date - 2]['service_transaction'], 0)
+        self.assertEqual(response.data['service_report'][self.date - 2]['service_revenue'], 0)
+
+        # Validate total month informations
+        self.assertEqual(response.data['service_transaction_month'], 13721500)
+        self.assertEqual(response.data['service_revenue_month'], 7200000)
 
     def test_nonlogin_user_failed_to_access_service_report_list(self) -> None:
         """
@@ -881,178 +908,6 @@ class ServiceReportTestCase(SetTestCase):
         response = self.client.get(self.service_report_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
-
-
-class ServiceReportDetailTestCase(SetTestCase):
-    @classmethod
-    def setUpTestData(cls) -> None:
-        # Setting up additional admin data
-        cls.admin = User.objects.create_user(
-            username='jester',
-            password='littlesaphire',
-            email='jester@hotmail.com'
-        )
-        Profile.objects.create(
-            user_id=cls.admin,
-            role='A',
-            name='Jester Lavorre',
-            contact='081086016510',
-            address='Nicrodanas'
-        )
-
-        # Setting up mechanic data
-        cls.mechanic = Mechanic.objects.create(
-            name='Percy Deloro The Third',
-            contact='086206164404',
-            address='Whitestone'
-        )
-
-        # Setting up customer data
-        cls.customer = Customer.objects.create(
-            name='Scanlant Shorthalt',
-            contact='082541684051',
-        )
-
-        cls.service = Service.objects.create(
-            police_number='B 1293 A',
-            motor_type='Beneli',
-            deposit=500000,
-            discount=20000,
-            user_id=cls.admin,
-            mechanic_id=cls.mechanic,
-            customer_id=cls.customer
-        )
-
-        cls.service_report_detail_url = reverse(
-            'service_report_detail',
-            kwargs={'service_id': cls.service.service_id}
-        )
-
-        # Setting up service actions
-        cls.action_1 = Service_action.objects.create(
-            name='Pompa Ban',
-            cost='10000',
-            service_id=cls.service
-        )
-        cls.action_2 = Service_action.objects.create(
-            name='Bongkar Mesin',
-            cost='400000',
-            service_id=cls.service
-        )
-        cls.action_3 = Service_action.objects.create(
-            name='Angkat Lampu',
-            cost='300000',
-            service_id=cls.service
-        )
-
-        # Setting up brand data
-        cls.brand = Brand.objects.create(name='Lavish Chateau')
-
-        # Setting up category data
-        cls.category = Category.objects.create(name='Fodd')
-
-        # Setting up sparepart data
-        cls.sparepart = Sparepart.objects.create(
-            name='Chorcoal Cupcake',
-            partnumber='JFLJ23-Aj',
-            quantity=50,
-            motor_type='Humans',
-            sparepart_type='Spices',
-            price=105000,
-            workshop_price=100000,
-            install_price=110000,
-            brand_id=cls.brand,
-            category_id=cls.category,
-            storage_code='MN-9'
-        )
-
-        # Setting up service sparepart
-        cls.service_sparepart = Service_sparepart.objects.create(
-            quantity=2,
-            service_id=cls.service,
-            sparepart_id=cls.sparepart
-        )
-
-        # Setting up time data for test comparison
-        cls.created_at = cls.service.created_at + timedelta(hours=7)
-        cls.updated_at = cls.service.updated_at + timedelta(hours=7)
-
-        return super().setUpTestData()
-
-    def test_owner_successfully_access_service_report_detail(self) -> None:
-        """
-        Ensure owner can access service report detail
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.get(self.service_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, {
-            'service_id': self.service.service_id,
-            'admin': self.service.user_id.profile.name,
-            'created_at': self.created_at.strftime('%d-%m-%Y %H:%M:%S'),
-            'updated_at': self.updated_at.strftime('%d-%m-%Y %H:%M:%S'),
-            'police_number': self.service.police_number,
-            'mechanic': self.service.mechanic_id.name,
-            'customer': self.service.customer_id.name,
-            'customer_contact': self.service.customer_id.contact,
-            'total_price_of_service': 910000,
-            'is_paid_off': self.service.is_paid_off,
-            'deposit': str(self.service.deposit),
-            'discount': str(self.service.discount),
-            'service_actions': [
-                {
-                    'service_action_id': self.action_1.service_action_id,
-                    'service_name': self.action_1.name,
-                    'cost': str(self.action_1.cost)
-                },
-                {
-                    'service_action_id': self.action_2.service_action_id,
-                    'service_name': self.action_2.name,
-                    'cost': str(self.action_2.cost)
-                },
-                {
-                    'service_action_id': self.action_3.service_action_id,
-                    'service_name': self.action_3.name,
-                    'cost': str(self.action_3.cost)
-                }
-            ],
-            'service_spareparts': [
-                {
-                    'service_sparepart_id': self.service_sparepart.service_sparepart_id,
-                    'sparepart': self.service_sparepart.sparepart_id.name,
-                    'quantity': self.service_sparepart.quantity,
-                    'sub_total':
-                    int(self.service_sparepart.sparepart_id.install_price * self.service_sparepart.quantity)
-                }
-            ]
-        })
-
-    def test_nonlogin_user_failed_to_access_service_report_detail(self) -> None:
-        """
-        Ensure non-login user cannot access service report detail
-        """
-        self.client.force_authenticate(user=None, token=None)
-        response = self.client.get(self.service_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
-        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
-
-    def test_nonowner_user_failed_to_access_service_report_detail(self) -> None:
-        """
-        Ensure non-owner user cannot access service report detail
-        """
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.service_report_detail_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertEqual(response.data['message'], 'Akses ditolak')
-
-    def test_owner_failed_to_access_non_exist_service_report_detail(self) -> None:
-        """
-        Ensure owner user cannot access non exist service report detail
-        """
-        self.client.force_authenticate(user=self.owner)
-        response = self.client.get(reverse('service_report_detail', kwargs={'service_id': 930514}))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')
 
 
 class MechanicListTestCase(SetTestCase):
