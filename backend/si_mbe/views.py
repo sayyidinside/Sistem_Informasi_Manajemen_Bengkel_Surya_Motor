@@ -1,6 +1,7 @@
 from calendar import monthrange
 from datetime import date, timedelta
 
+from django_filters.rest_framework import DjangoFilterBackend
 from dj_rest_auth.views import PasswordChangeView
 from django.contrib.auth.models import User
 from django.db.models import F, Q
@@ -16,9 +17,12 @@ from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
 from si_mbe.utility import (perform_log, restock_adjust_sparepart_quantity,
                             sales_adjust_sparepart_quantity, service_adjust_sparepart_quantity)
+from si_mbe.filters import SparepartFilter
 
 
 class Home(generics.GenericAPIView):
+    serializer_class = serializers.HomeSerializers
+
     def get(self, request, *args, **kwargs):
         return Response(status=status.HTTP_200_OK)
 
@@ -28,10 +32,8 @@ class SearchSparepart(generics.ListAPIView):
     serializer_class = serializers.SearchSparepartSerializers
     pagination_class = CustomPagination
 
-    lookup_field = 'sparepart_id'
-
-    filter_backends = [filters.SearchFilter]
-    search_fields = ['name', 'partnumber', 'motor_type', 'sparepart_type', 'brand_id__name']
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = SparepartFilter
 
     def get_paginated_response(self, data):
         if len(data) == 0:

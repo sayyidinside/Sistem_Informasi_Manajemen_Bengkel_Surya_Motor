@@ -10,6 +10,13 @@ from si_mbe.validators import validate_image_size
 from django.core.validators import FileExtensionValidator
 
 
+class HomeSerializers(serializers.ModelSerializer):
+    name = serializers.CharField(required=False)
+    brand = serializers.ChoiceField(Brand.objects.all(), required=False)
+    category = serializers.ChoiceField(Category.objects.all(), required=False)
+    motor_type = serializers.CharField(required=False)
+
+
 class SearchSparepartSerializers(serializers.ModelSerializer):
     """
     serializers for searching sparepart

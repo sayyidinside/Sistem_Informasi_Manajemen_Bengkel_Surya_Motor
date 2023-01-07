@@ -34,19 +34,27 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    # Django
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Django rest
     'rest_framework',
     'rest_framework.authtoken',
+
+    # Third party package
     'allauth',
     'allauth.account',
     'dj_rest_auth',
+    'django_filters',
     'django_timed_tests',
     'corsheaders',
+
+    # Apps
     'si_mbe',
 ]
 
@@ -164,7 +172,10 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'django.contrib.auth.backends.ModelBackend',
         'allauth.account.auth_backends.AuthenticationBackend',
-    ]
+    ],
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
     # TEST_RUNNER = "django_timed_tests.TimedTestRunner"
 }
 

@@ -124,25 +124,48 @@ class SparepartSearchTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up brand data
-        cls.brand = Brand.objects.create(name='Kymco')
+        cls.brand_1 = Brand.objects.create(name='Taldore')
+        cls.brand_2 = Brand.objects.create(name='wildmount')
 
         # Setting up category data
-        cls.category = Category.objects.create(name='Power')
+        cls.category_1 = Category.objects.create(name='Power Armor')
+        cls.category_2 = Category.objects.create(name='Pip-Boy')
 
         # Setting up sparepart data
         cls.sparepart = Sparepart.objects.create(
-                            name='aki 1000CC',
-                            partnumber='AB17623-ha2092d',
+                            name='X-01 Power Armor',
+                            partnumber='X-01 HFI9-23',
                             quantity=50,
-                            motor_type='Yamaha Nmax',
-                            sparepart_type='KW',
+                            motor_type='Enclave',
+                            sparepart_type='Protect',
                             price=5400000,
                             workshop_price=5300000,
                             install_price=5500000,
-                            brand_id=cls.brand,
-                            category_id=cls.category,
+                            brand_id=cls.brand_1,
+                            category_id=cls.category_1,
                             storage_code='WD-12'
                         )
+        cls.sparepart_2 = Sparepart.objects.create(
+                            name='Vault 101 Pip-Boy',
+                            partnumber='PB-101-23942',
+                            quantity=50,
+                            motor_type='Vault Dweller',
+                            sparepart_type='Vault-Tech',
+                            price=5400000,
+                            workshop_price=5300000,
+                            install_price=5500000,
+                            brand_id=cls.brand_2,
+                            category_id=cls.category_2,
+                            storage_code='WD-12'
+                        )
+
+        # Setting up input data
+        cls.data = {
+            'sparepart': 'X-01 Power Armor',
+            'brand': cls.brand_1,
+            'category': cls.category_1,
+            'motor_type': 'Enclave',
+        }
 
         return super().setUpTestData()
 
@@ -150,33 +173,49 @@ class SparepartSearchTestCase(APITestCase):
         """
         Ensure user who searching sparepart with correct keyword get correct result
         """
-        response = self.client.get(reverse('search_sparepart') + f'?q={self.sparepart.name}')
+        response = self.client.get(reverse('search_sparepart') + f'?name={self.data["sparepart"]}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 1)
         self.assertEqual(response.data['message'], 'Pencarian sparepart berhasil')
-        self.assertEqual(response.data['results'], [
-            {
-                'sparepart_id': self.sparepart.sparepart_id,
-                'image': None,
-                'name': self.sparepart.name,
-                'partnumber': self.sparepart.partnumber,
-                'quantity': self.sparepart.quantity,
-                'category': self.sparepart.category_id.name,
-                'motor_type': self.sparepart.motor_type,
-                'sparepart_type': self.sparepart.sparepart_type,
-                'brand': self.sparepart.brand_id.name,
-                'price': str(self.sparepart.price),
-                'workshop_price': str(self.sparepart.workshop_price),
-                'install_price': str(self.sparepart.install_price),
-                'storage_code': self.sparepart.storage_code
-            }
-        ])
+        self.assertEqual(response.data['results'][0]['sparepart_id'], self.sparepart.sparepart_id)
+        self.assertEqual(response.data['results'][0]['image'], None)
+        self.assertEqual(response.data['results'][0]['name'], self.sparepart.name)
+        self.assertEqual(response.data['results'][0]['brand'], self.sparepart.brand_id.name)
+        self.assertEqual(response.data['results'][0]['category'], self.sparepart.category_id.name)
+        self.assertEqual(response.data['results'][0]['motor_type'], self.sparepart.motor_type)
+        self.assertEqual(response.data['results'][0]['storage_code'], self.sparepart.storage_code)
+        self.assertEqual(response.data['results'][0]['price'], str(self.sparepart.price))
+        self.assertEqual(response.data['results'][0]['workshop_price'], str(self.sparepart.workshop_price))
+        self.assertEqual(response.data['results'][0]['install_price'], str(self.sparepart.install_price))
+        self.assertEqual(response.data['results'][0]['quantity'], self.sparepart.quantity)
 
-    def test_successfully_searching_sparepart_without_result(self) -> None:
+    def test_successfully_searching_sparepart_with_result_using_few_keywords(self) -> None:
         """
-        Ensure user who searching sparepart that doesn't exist get empty result
+        Ensure user who searching sparepart with correct few keywords get correct result
         """
-        response = self.client.get(reverse('search_sparepart') + '?q=random shit')
+        response = self.client.get(
+            reverse('search_sparepart') + f'?name={self.data["sparepart"]}&motor_type={self.data["motor_type"]}'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['count_item'], 1)
+        self.assertEqual(response.data['message'], 'Pencarian sparepart berhasil')
+        self.assertEqual(response.data['results'][0]['sparepart_id'], self.sparepart.sparepart_id)
+        self.assertEqual(response.data['results'][0]['image'], None)
+        self.assertEqual(response.data['results'][0]['name'], self.sparepart.name)
+        self.assertEqual(response.data['results'][0]['brand'], self.sparepart.brand_id.name)
+        self.assertEqual(response.data['results'][0]['category'], self.sparepart.category_id.name)
+        self.assertEqual(response.data['results'][0]['motor_type'], self.sparepart.motor_type)
+        self.assertEqual(response.data['results'][0]['storage_code'], self.sparepart.storage_code)
+        self.assertEqual(response.data['results'][0]['price'], str(self.sparepart.price))
+        self.assertEqual(response.data['results'][0]['workshop_price'], str(self.sparepart.workshop_price))
+        self.assertEqual(response.data['results'][0]['install_price'], str(self.sparepart.install_price))
+        self.assertEqual(response.data['results'][0]['quantity'], self.sparepart.quantity)
+
+    def test_failed_to_searching_sparepart_without_result(self) -> None:
+        """
+        Ensure user cannot searching sparepart that doesn't exist get empty result
+        """
+        response = self.client.get(reverse('search_sparepart') + '?name=random shit')
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['count_item'], 0)
         self.assertEqual(response.data['message'], 'Sparepart yang dicari tidak ditemukan')

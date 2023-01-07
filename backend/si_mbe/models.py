@@ -317,7 +317,7 @@ class Sparepart(models.Model):
     quantity = models.SmallIntegerField(default=0, blank=True)
     limit = models.PositiveSmallIntegerField(default=10)
     storage_code = models.CharField(max_length=15, default='', blank=True)
-    motor_type = models.CharField(max_length=20, default='')
+    motor_type = models.TextField(default='')
     sparepart_type = models.CharField(max_length=20)
     image = models.ImageField(
         null=True,
