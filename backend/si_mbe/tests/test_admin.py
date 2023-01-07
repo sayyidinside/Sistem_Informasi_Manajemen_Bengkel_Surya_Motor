@@ -3862,6 +3862,7 @@ class CustomerListTestCase(SetTestCase):
         cls.service = Service.objects.create(
             police_number='B 1238 AS',
             motor_type='Kymco C100',
+            deposit=25000,
             discount=10000,
             customer_id=cls.customer
         )
@@ -3902,10 +3903,12 @@ class CustomerListTestCase(SetTestCase):
         self.assertEqual(response.data['results'][0]['contact'], self.customer.contact)
         self.assertEqual(response.data['results'][0]['number_of_service'], 1)
         self.assertEqual(response.data['results'][0]['total_payment'], 965000)
+        self.assertEqual(response.data['results'][0]['remaining_payment'], 940000)
         self.assertEqual(response.data['results'][1]['name'], self.customer_2.name)
         self.assertEqual(response.data['results'][1]['contact'], self.customer_2.contact)
         self.assertEqual(response.data['results'][1]['number_of_service'], 1)
         self.assertEqual(response.data['results'][1]['total_payment'], 28000)
+        self.assertEqual(response.data['results'][1]['remaining_payment'], 28000)
 
     def test_nonlogin_user_failed_to_access_customer_list(self) -> None:
         """
@@ -3933,15 +3936,11 @@ class CustomerListTestCase(SetTestCase):
         response = self.client.get(reverse('customer_list') + f'?q={self.customer.name}')
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data['count_item'], 1)
-        self.assertEqual(response.data['results'], [
-            {
-                'customer_id': self.customer.customer_id,
-                'name': self.customer.name,
-                'contact': self.customer.contact,
-                'number_of_service': 1,
-                'total_payment': 965000
-            }
-        ])
+        self.assertEqual(response.data['results'][0]['name'], self.customer.name)
+        self.assertEqual(response.data['results'][0]['contact'], self.customer.contact)
+        self.assertEqual(response.data['results'][0]['number_of_service'], 1)
+        self.assertEqual(response.data['results'][0]['total_payment'], 965000)
+        self.assertEqual(response.data['results'][0]['remaining_payment'], 940000)
 
     def test_admin_successfully_searching_customer_without_result(self) -> None:
         """

@@ -1164,10 +1164,18 @@ class CategorySerializers(serializers.ModelSerializer):
 class CustomerSerializers(serializers.ModelSerializer):
     number_of_service = serializers.SerializerMethodField()
     total_payment = serializers.SerializerMethodField()
+    remaining_payment = serializers.SerializerMethodField()
 
     class Meta:
         model = Customer
-        fields = ['customer_id', 'name', 'contact', 'number_of_service', 'total_payment']
+        fields = [
+            'customer_id',
+            'name',
+            'contact',
+            'number_of_service',
+            'total_payment',
+            'remaining_payment'
+        ]
 
     def get_number_of_service(self, obj):
         # Getting service data related to the customer
@@ -1185,9 +1193,8 @@ class CustomerSerializers(serializers.ModelSerializer):
         services = ServiceSerializers(obj.service_set, many=True)
         sales = SalesSerializers(obj.sales_set, many=True)
 
-        total_payment = 0
-
         # Calculating total_payment by looping trought services and sales data, only current year
+        total_payment = 0
         for service in services.data:
             if str(date.today().year) in service['created_at']:
                 total_payment += service['total_service_price']
@@ -1195,6 +1202,29 @@ class CustomerSerializers(serializers.ModelSerializer):
             if str(date.today().year) in sale['created_at']:
                 total_payment += sale['total_price_sales']
         return total_payment
+
+    def get_remaining_payment(self, obj):
+        # Getting total payment
+        total_payment = self.get_total_payment(obj)
+
+        # Getting services and sales data, that related to customer
+        services = ServiceReportSerializers(obj.service_set, many=True)
+        sales = SalesReportSerializers(obj.sales_set, many=True)
+
+        # Calculating deposit by looping trought services and sales data, only current year
+        deposit = 0
+        for service in services.data:
+            if str(date.today().year) in service['created_at']:
+                deposit += int(service['deposit'])
+        for sale in sales.data:
+            if str(date.today().year) in sale['created_at']:
+                deposit += int(sale['deposit'])
+
+        # Calculating remaining_payment, then return it if value is positive
+        remaining_payment = total_payment - deposit
+        if remaining_payment > 0:
+            return remaining_payment
+        return 0
 
 
 class CustomerManagementSerializers(serializers.ModelSerializer):
