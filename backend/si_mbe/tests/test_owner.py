@@ -1209,7 +1209,7 @@ class DownloadSalesReport(SetTestCase):
 
         return super().setUpTestData()
 
-    def test_owner_successfully_download_sales_report(self):
+    def test_owner_successfully_download_sales_report(self) -> None:
         """
         Ensure owner can download sales report pdf
         """
@@ -1219,7 +1219,7 @@ class DownloadSalesReport(SetTestCase):
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertEqual(response.filename, f'Laporan_Penjualan-{self.year}-{self.month}.pdf')
 
-    def test_owner_successfully_download_sales_report_with_date_input(self):
+    def test_owner_successfully_download_sales_report_with_date_input(self) -> None:
         """
         Ensure owner can download date spesific sales report pdf based on owner input of date
         """
@@ -1244,5 +1244,60 @@ class DownloadSalesReport(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.download_sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class DownloadRestockReport(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up normal url and variable for testing
+        cls.download_restock_report_url = reverse('restock_report_download')
+        cls.year = date.today().year
+        cls.month = date.today().month
+
+        # Setting up date spesific url and variable for testing
+        cls.year_input = date(2022, 2, 1).year
+        cls.month_input = date(2022, 2, 1).month
+        cls.date_spesific_download_restock_report_url = reverse('restock_report_download') +\
+            f'?year={cls.year_input}&month={cls.month_input}'
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_download_restock_report(self) -> None:
+        """
+        Ensure owner can download restock report pdf
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.download_restock_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.filename, f'Laporan_Pengadaan-{self.year}-{self.month}.pdf')
+
+    def test_owner_successfully_download_restock_report_with_date_input(self) -> None:
+        """
+        Ensure owner can download date spesific restock report pdf based on owner input of date
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.date_spesific_download_restock_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.filename, f'Laporan_Pengadaan-{self.year_input}-{self.month_input}.pdf')
+
+    def test_nonlogin_user_failed_to_download_restock_report(self) -> None:
+        """
+        Ensure non-login user cannot download restock report pdf
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.download_restock_report_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_download_restock_report(self) -> None:
+        """
+        Ensure non-owner user cannot download restock report pdf
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.download_restock_report_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')

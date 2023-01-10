@@ -630,20 +630,6 @@ class RestockReport(generics.GenericAPIView):
         return Response(self.data)
 
 
-class RestockReportDetail(generics.RetrieveAPIView):
-    queryset = Restock.objects.all()
-    serializer_class = serializers.RestockReportDetailSerializers
-    permission_classes = [IsLogin, IsOwnerRole]
-
-    lookup_field = 'restock_id'
-    lookup_url_kwarg = 'restock_id'
-
-    def handle_exception(self, exc):
-        if isinstance(exc, Http404):
-            exc = exceptions.RestockNotFound()
-        return super().handle_exception(exc)
-
-
 class CustomPasswordChangeView(PasswordChangeView):
     permission_classes = [IsLogin]
 
@@ -1513,5 +1499,33 @@ class SalesReportDownload(generics.GenericAPIView):
 
         # Using function to generete pdf
         response = generate_report_pdf(data=self.data, report_type='Penjualan', year=self.year, month=self.month)
+
+        return response
+
+
+class RestockReportDownload(generics.GenericAPIView):
+    queryset = Restock.objects.select_related('salesman_id', 'user_id').prefetch_related('restock_detail_set')
+    serializer_class = serializers.RestockReportSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    def get(self, request, *args, **kwargs):
+        # Getting url params of year and month if doesn't exist use today value
+        self.year = int(request.query_params.get('year', date.today().year))
+        self.month = int(request.query_params.get('month', date.today().month))
+
+        # Getting restock data
+        restock_queryset = self.filter_queryset(self.get_queryset())
+        restock = self.get_serializer(restock_queryset, many=True)
+        restock_list = sorted(restock.data, key=lambda k: k['created_at'], reverse=True)
+
+        # Getting restock report data
+        self.data = get_restock_report(
+            data_list=restock_list,
+            year=self.year,
+            month=self.month
+        )
+
+        # Using function to generete pdf
+        response = generate_report_pdf(data=self.data, report_type='Pengadaan', year=self.year, month=self.month)
 
         return response

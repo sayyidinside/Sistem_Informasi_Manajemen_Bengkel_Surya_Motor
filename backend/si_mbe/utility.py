@@ -391,17 +391,23 @@ def generate_report_pdf(
 
     # Checking report_type value, then assinging non table data and data based on report_type
     if report_type == 'Penjualan':
-        non_table_data['revenue_month'] = data.pop('sales_revenue_month')
         non_table_data['transaction_month'] = data.pop('sales_transaction_month')
+        non_table_data['revenue_month'] = data.pop('sales_revenue_month')
         data = data['sales_report']
+        column_2 = 'sales_transaction'
+        column_3 = 'sales_revenue'
     elif report_type == 'Pengadaan':
-        non_table_data['revenue_month'] = data.pop('retock_revenue_month')
-        non_table_data['transaction_month'] = data.pop('retock_transaction_month')
+        non_table_data['transaction_month'] = data.pop('restock_transaction_month')
+        non_table_data['cost_month'] = data.pop('restock_cost_month')
         data = data['restock_report']
+        column_2 = 'restock_transaction'
+        column_3 = 'restock_cost'
     elif report_type == 'Servis' or report_type == 'Service':
-        non_table_data['revenue_month'] = data.pop('service_revenue_month')
         non_table_data['transaction_month'] = data.pop('service_transaction_month')
+        non_table_data['revenue_month'] = data.pop('service_revenue_month')
         data = data['service_report']
+        column_2 = 'service_transaction'
+        column_3 = 'service_revenue'
     else:
         raise ValidationError('Report Type Input Is Incorrect')
 
@@ -437,7 +443,7 @@ def generate_report_pdf(
     for row in data:
         temp_list = []
         for key in keys:
-            if key == 'sales_transaction' or key == 'sales_revenue':
+            if key == column_2 or key == column_3:
                 money = format_money(row[key])
                 temp_list.append(money)
             else:
@@ -445,13 +451,21 @@ def generate_report_pdf(
         table_data.append(temp_list)
 
     # Setting up table heading and footing
-    table_data.insert(0, ['Tanggal', 'Transaksi\n(Rp)', 'Pembayaran\n(Rp)', 'Jumlah'])
-    table_data.append([
-        f'Total {report_type}',
-        format_money(non_table_data["transaction_month"]),
-        format_money(non_table_data["revenue_month"]),
-        ''
-    ])
+    if report_type == 'Penjualan':
+        table_data.insert(0, ['Tanggal', 'Transaksi\n(Rp)', 'Pembayaran\n(Rp)', 'Jumlah'])
+        table_data.append([
+            f'Total {report_type}',
+            format_money(non_table_data["transaction_month"]),
+            format_money(non_table_data["revenue_month"]),
+            ''
+        ])
+    else:
+        table_data.insert(0, ['Tanggal', 'Transaksi\n(Rp)', 'Biaya\n(Rp)'])
+        table_data.append([
+            f'Total {report_type}',
+            format_money(non_table_data["transaction_month"]),
+            format_money(non_table_data["cost_month"])
+        ])
 
     # Create the table with custome width
     table = Table(table_data, colWidths=[110, 125, 125, 80])
@@ -471,7 +485,6 @@ def generate_report_pdf(
         # Setting up style for table content
         ('FONTSIZE', (0, 1), (-1, -1), 12),
         ('ALIGN', (1, 1), (2, -1), 'RIGHT'),
-        ('ALIGN', (-1, 1), (-1, -1), 'CENTER'),
         ('LEFTPADDING', (1, 1), (2, -1), 9),
         ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
         ('BOTTOMPADDING', (0, int(len(table_data)-2)), (-1, int(len(table_data)-2)), 10),
@@ -488,8 +501,11 @@ def generate_report_pdf(
         ('BOX', (0, 0), (0, -1), 0.5, colors.black),
         ('BOX', (1, 0), (1, -1), 0.5, colors.black),
         ('BOX', (2, 0), (2, -1), 0.5, colors.black),
-        ('BOX', (3, 0), (3, -1), 0.5, colors.black),
     ])
+
+    if report_type == 'Penjualan':
+        table_style.add('ALIGN', (-1, 1), (-1, -1), 'CENTER')
+        table_style.add('BOX', (3, 0), (3, -1), 0.5, colors.black)
 
     # Set the style for the first row (the column headings)
     table.setStyle(table_style)

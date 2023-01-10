@@ -56,6 +56,7 @@ urlpatterns = [
      path('owner/report/sales/', views.SalesReport.as_view(), name='sales_report'),
      path('owner/report/sales/download/', views.SalesReportDownload.as_view(), name='sales_report_download'),
      path('owner/report/restock/', views.RestockReport.as_view(), name='restock_report'),
+     path('owner/report/restock/download/', views.RestockReportDownload.as_view(), name='restock_report_download'),
      path('owner/report/service/', views.ServiceReport.as_view(), name='service_report'),
      path('owner/profile/<int:user_id>/', views.ProfileDetail.as_view(), name='profile_detail'),
      path('owner/profile/edit/<int:user_id>/', views.ProfileUpdate.as_view(), name='profile_update'),
