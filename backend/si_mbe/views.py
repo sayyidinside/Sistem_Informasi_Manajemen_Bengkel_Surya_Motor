@@ -1512,6 +1512,6 @@ class SalesReportDownload(generics.GenericAPIView):
         )
 
         # Using function to generete pdf
-        response = generate_report_pdf(data=self.data, report_type='Penjualan')
+        response = generate_report_pdf(data=self.data, report_type='Penjualan', year=self.year, month=self.month)
 
         return response

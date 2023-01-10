@@ -1202,8 +1202,8 @@ class DownloadSalesReport(SetTestCase):
         cls.month = date.today().month
 
         # Setting up date spesific url and variable for testing
-        cls.year_input = date.today().year
-        cls.month_input = date.today().month
+        cls.year_input = date(2022, 2, 1).year
+        cls.month_input = date(2022, 2, 1).month
         cls.date_spesific_download_sales_report_url = reverse('sales_report_download') +\
             f'?year={cls.year_input}&month={cls.month_input}'
 
