@@ -16,10 +16,11 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.utility import (get_restock_report, get_sales_report, perform_log,
+from si_mbe.utility import (get_restock_report, get_sales_report,
+                            get_service_report, perform_log,
                             restock_adjust_sparepart_quantity,
                             sales_adjust_sparepart_quantity,
-                            service_adjust_sparepart_quantity, get_service_report)
+                            service_adjust_sparepart_quantity, generate_report_pdf)
 
 
 class Home(generics.GenericAPIView):
@@ -1486,3 +1487,31 @@ class SalesmanDelete(generics.DestroyAPIView):
         self.perform_destroy(instance)
         message = {'message': 'Data salesman berhasil dihapus'}
         return Response(message, status=status.HTTP_204_NO_CONTENT)
+
+
+class SalesReportDownload(generics.GenericAPIView):
+    queryset = Sales.objects.select_related('customer_id', 'user_id').prefetch_related('sales_detail_set')
+    serializer_class = serializers.SalesReportSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    def get(self, request, *args, **kwargs):
+        # Getting url params of year and month if doesn't exist use today value
+        self.year = int(request.query_params.get('year', date.today().year))
+        self.month = int(request.query_params.get('month', date.today().month))
+
+        # Getting sales data
+        sales_queryset = self.filter_queryset(self.get_queryset())
+        sales = self.get_serializer(sales_queryset, many=True)
+        sales_list = sorted(sales.data, key=lambda k: k['created_at'], reverse=True)
+
+        # Getting sales report data
+        self.data = get_sales_report(
+            data_list=sales_list,
+            year=self.year,
+            month=self.month
+        )
+
+        # Using function to generete pdf
+        response = generate_report_pdf(data=self.data, report_type='Penjualan')
+
+        return response

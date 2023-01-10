@@ -1004,9 +1004,9 @@ class MechanicAddTestCase(SetTestCase):
 
         return super().setUpTestData()
 
-    def test_admin_successfully_add_mechanic(self) -> None:
+    def test_owner_successfully_add_mechanic(self) -> None:
         """
-        Ensure admin can add new mechanic successfully
+        Ensure owner can add new mechanic successfully
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.post(self.mechanic_add_url, self.data)
@@ -1155,9 +1155,9 @@ class MechanicDeleteTestCase(SetTestCase):
 
         return super().setUp()
 
-    def test_admin_successfully_delete_mechanic(self) -> None:
+    def test_owner_successfully_delete_mechanic(self) -> None:
         """
-        Ensure admin can delete mechanic successfully
+        Ensure owner can delete mechanic successfully
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.delete(self.mechanic_delete_url)
@@ -1183,11 +1183,66 @@ class MechanicDeleteTestCase(SetTestCase):
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
-    def test_admin_failed_to_delete_nonexist_mechanic(self) -> None:
+    def test_owner_failed_to_delete_nonexist_mechanic(self) -> None:
         """
-        Ensure admin cannot to delete non-exist mechanic
+        Ensure owner cannot to delete non-exist mechanic
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.delete(reverse('mechanic_delete', kwargs={'mechanic_id': 86591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data mekanik tidak ditemukan')
+
+
+class DownloadSalesReport(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up normal url and variable for testing
+        cls.download_sales_report_url = reverse('sales_report_download')
+        cls.year = date.today().year
+        cls.month = date.today().month
+
+        # Setting up date spesific url and variable for testing
+        cls.year_input = date.today().year
+        cls.month_input = date.today().month
+        cls.date_spesific_download_sales_report_url = reverse('sales_report_download') +\
+            f'?year={cls.year_input}&month={cls.month_input}'
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_download_sales_report(self):
+        """
+        Ensure owner can download sales report pdf
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.download_sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.filename, f'Laporan_Penjualan-{self.year}-{self.month}.pdf')
+
+    def test_owner_successfully_download_sales_report_with_date_input(self):
+        """
+        Ensure owner can download date spesific sales report pdf based on owner input of date
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.date_spesific_download_sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.filename, f'Laporan_Penjualan-{self.year_input}-{self.month_input}.pdf')
+
+    def test_nonlogin_user_failed_to_download_sales_report(self) -> None:
+        """
+        Ensure non-login user cannot download sales report pdf
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.download_sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_download_sales_report(self) -> None:
+        """
+        Ensure non-owner user cannot download sales report pdf
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.download_sales_report_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')

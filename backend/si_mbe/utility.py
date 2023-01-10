@@ -1,6 +1,17 @@
-from si_mbe.models import Logs
-from datetime import date
 from calendar import monthrange
+from datetime import date
+from io import BytesIO
+import locale
+from django.http import FileResponse
+from reportlab.lib.pagesizes import A4
+from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer, TableStyle
+from reportlab.lib.styles import ParagraphStyle
+from si_mbe.models import Logs
+from reportlab.lib.units import cm
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from rest_framework.exceptions import ValidationError
 
 
 def perform_log(request: any, operation: str, table: str) -> None:
@@ -348,3 +359,150 @@ def get_service_report(
                 'service_transaction_month': service_transaction_month,
                 'service_revenue_month': service_revenue_month
             }
+
+
+def format_money(number: int) -> str:
+    # formating number to include . after three number
+    locale.setlocale(locale.LC_ALL, 'id_ID.utf8')
+    formatted_number = locale.format_string("%d", number, grouping=True)
+    money = f'{formatted_number},00'
+
+    return money
+
+
+def generate_report_pdf(
+                    data: dict,
+                    report_type: str,
+                    year: int = date.today().year,
+                    month: int = date.today().month
+                ):
+    '''
+    A function to generate pdf file using user input data.
+
+    This function takes few arguments:
+    - data (required) as main ingredients to create pdf content;
+    - report_type (required) to create filename, title, and few operation in creating pdf file;
+    - year (additional) to create filename and subtitle, when not given use current year;
+    - month (additional) to create filename and subtitle, when not given use current month.
+    '''
+    # Setting up data and non_table_data as blank dict
+    data = data
+    non_table_data = {}
+
+    # Checking report_type value, then assinging non table data and data based on report_type
+    if report_type == 'Penjualan':
+        non_table_data['revenue_month'] = data.pop('sales_revenue_month')
+        non_table_data['transaction_month'] = data.pop('sales_transaction_month')
+        data = data['sales_report']
+    elif report_type == 'Pengadaan':
+        non_table_data['revenue_month'] = data.pop('retock_revenue_month')
+        non_table_data['transaction_month'] = data.pop('retock_transaction_month')
+        data = data['restock_report']
+    elif report_type == 'Servis' or report_type == 'Service':
+        non_table_data['revenue_month'] = data.pop('service_revenue_month')
+        non_table_data['transaction_month'] = data.pop('service_transaction_month')
+        data = data['service_report']
+    else:
+        raise ValidationError('Report Type Input Is Incorrect')
+
+    buffer = BytesIO()
+
+    # Create a new PDF document with an A4 size page
+    doc = SimpleDocTemplate(buffer, pagesize=A4,
+                            leftMargin=1.0*cm, rightMargin=1.0*cm,
+                            topMargin=0.9*cm, bottomMargin=1.5*cm
+                            )
+
+    # Extract the keys from the first dictionary to use as column headings
+    keys = data[0].keys()
+
+    # Create a style for the title
+    styles = getSampleStyleSheet()
+    title_style = styles['Title']
+
+    # Crate a style for subtitle
+    sub_title_style = ParagraphStyle(
+        name='sub_title',
+        parent=getSampleStyleSheet()['Normal'],
+        fontSize=16,
+        alignment=TA_CENTER
+    )
+
+    # Create the title and sub title with their own resprective style
+    title = Paragraph(f'Laporan {report_type} Bengkel Mulya Motor', title_style)
+    sub_title = Paragraph(f'Periode = {year} - {month}', style=sub_title_style)
+
+    # Create a list of lists with the data for each cell by transforming data dict
+    table_data = []
+    for row in data:
+        temp_list = []
+        for key in keys:
+            if key == 'sales_transaction' or key == 'sales_revenue':
+                money = format_money(row[key])
+                temp_list.append(money)
+            else:
+                temp_list.append(row[key])
+        table_data.append(temp_list)
+
+    # Setting up table heading and footing
+    table_data.insert(0, ['Tanggal', 'Transaksi\n(Rp)', 'Pembayaran\n(Rp)', 'Jumlah'])
+    table_data.append([
+        f'Total {report_type}',
+        format_money(non_table_data["transaction_month"]),
+        format_money(non_table_data["revenue_month"]),
+        ''
+    ])
+
+    # Create the table with custome width
+    table = Table(table_data, colWidths=[110, 125, 125, 80])
+
+    # Create table_style
+    table_style = TableStyle([
+        # Setting up style for table heading
+        ('FONTSIZE', (0, 0), (-1, 0), 14),
+        ('LEADING', (1, 0), (2, 0), 15),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 10),
+        ('BOX', (0, 0), (-1, 0), 1, colors.black),
+
+        # Setting up style for table content
+        ('FONTSIZE', (0, 1), (-1, -1), 12),
+        ('ALIGN', (1, 1), (2, -1), 'RIGHT'),
+        ('ALIGN', (-1, 1), (-1, -1), 'CENTER'),
+        ('LEFTPADDING', (1, 1), (2, -1), 9),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, int(len(table_data)-2)), (-1, int(len(table_data)-2)), 10),
+        ('ROWBACKGROUNDS', (0, 1), (-1, int(len(table_data)-2)), [colors.lightgrey, colors.whitesmoke]),
+
+        # Setting up style for table footing
+        ('BACKGROUND', (0, -1), (-1, -1), colors.gray),
+        ('TOPPADDING', (0, -1), (-1, -1), 0),
+        ('BOTTOMPADDING', (0, -1), (-1, -1), 5),
+        ('BOX', (0, -1), (-1, -1), 1, colors.black),
+
+        # Setting up borders for table
+        ('BOX', (0, 0), (-1, -1), 2, colors.black),
+        ('BOX', (0, 0), (0, -1), 0.5, colors.black),
+        ('BOX', (1, 0), (1, -1), 0.5, colors.black),
+        ('BOX', (2, 0), (2, -1), 0.5, colors.black),
+        ('BOX', (3, 0), (3, -1), 0.5, colors.black),
+    ])
+
+    # Set the style for the first row (the column headings)
+    table.setStyle(table_style)
+
+    # Create a space between the table and the additional information
+    space = Spacer(1, 25)
+
+    # Add the table to the PDF document
+    doc.build([title, sub_title, space, table])
+
+    buffer.seek(0)
+
+    # Send builded pdf file to user
+    response = FileResponse(buffer, as_attachment=True, filename=f'Laporan_{report_type}-{year}-{month}.pdf')
+
+    return response
