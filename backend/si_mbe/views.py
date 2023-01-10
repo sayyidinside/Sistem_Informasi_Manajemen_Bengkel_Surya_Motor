@@ -1529,3 +1529,31 @@ class RestockReportDownload(generics.GenericAPIView):
         response = generate_report_pdf(data=self.data, report_type='Pengadaan', year=self.year, month=self.month)
 
         return response
+
+
+class ServiceReportDownload(generics.GenericAPIView):
+    queryset = Service.objects.prefetch_related('service_action_set', 'service_sparepart_set')
+    serializer_class = serializers.ServiceReportSerializers
+    permission_classes = [IsLogin, IsOwnerRole]
+
+    def get(self, request, *args, **kwargs):
+        # Getting url params of year and month if doesn't exist use today value
+        self.year = int(request.query_params.get('year', date.today().year))
+        self.month = int(request.query_params.get('month', date.today().month))
+
+        # Getting service data
+        service_queryset = self.filter_queryset(self.get_queryset())
+        service = self.get_serializer(service_queryset, many=True)
+        service_list = sorted(service.data, key=lambda k: k['created_at'], reverse=True)
+
+        # Getting service report data
+        self.data = get_service_report(
+            data_list=service_list,
+            year=self.year,
+            month=self.month
+        )
+
+        # Using function to generete pdf
+        response = generate_report_pdf(data=self.data, report_type='Servis', year=self.year, month=self.month)
+
+        return response

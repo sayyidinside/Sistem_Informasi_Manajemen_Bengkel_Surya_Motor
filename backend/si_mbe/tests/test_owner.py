@@ -1193,7 +1193,7 @@ class MechanicDeleteTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data mekanik tidak ditemukan')
 
 
-class DownloadSalesReport(SetTestCase):
+class DownloadSalesReportTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up normal url and variable for testing
@@ -1248,7 +1248,7 @@ class DownloadSalesReport(SetTestCase):
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
 
-class DownloadRestockReport(SetTestCase):
+class DownloadRestockReportTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
         # Setting up normal url and variable for testing
@@ -1299,5 +1299,60 @@ class DownloadRestockReport(SetTestCase):
         """
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.download_restock_report_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+
+class DownloadServiceTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up normal url and variable for testing
+        cls.download_service_report_url = reverse('service_report_download')
+        cls.year = date.today().year
+        cls.month = date.today().month
+
+        # Setting up date spesific url and variable for testing
+        cls.year_input = date(2022, 2, 1).year
+        cls.month_input = date(2022, 2, 1).month
+        cls.date_spesific_download_service_report_url = reverse('service_report_download') +\
+            f'?year={cls.year_input}&month={cls.month_input}'
+
+        return super().setUpTestData()
+
+    def test_owner_successfully_download_service_report(self) -> None:
+        """
+        Ensure owner can download service report pdf
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.download_service_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.filename, f'Laporan_Servis-{self.year}-{self.month}.pdf')
+
+    def test_owner_successfully_download_restockservice_with_date_input(self) -> None:
+        """
+        Ensure owner can download date spesific service report pdf based on owner input of date
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.date_spesific_download_service_report_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.filename, f'Laporan_Servis-{self.year_input}-{self.month_input}.pdf')
+
+    def test_nonlogin_user_failed_to_download_service_report(self) -> None:
+        """
+        Ensure non-login user cannot download service report pdf
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.download_service_report_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonowner_user_failed_to_download_service_report(self) -> None:
+        """
+        Ensure non-owner user cannot download service report pdf
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.download_service_report_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')

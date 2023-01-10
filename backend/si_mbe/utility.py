@@ -461,11 +461,18 @@ def generate_report_pdf(
         ])
     else:
         table_data.insert(0, ['Tanggal', 'Transaksi\n(Rp)', 'Biaya\n(Rp)'])
-        table_data.append([
-            f'Total {report_type}',
-            format_money(non_table_data["transaction_month"]),
-            format_money(non_table_data["cost_month"])
-        ])
+        if report_type == 'Pengadaan':
+            table_data.append([
+                f'Total {report_type}',
+                format_money(non_table_data["transaction_month"]),
+                format_money(non_table_data["cost_month"])
+            ])
+        else:
+            table_data.append([
+                f'Total {report_type}',
+                format_money(non_table_data["transaction_month"]),
+                format_money(non_table_data["revenue_month"])
+            ])
 
     # Create the table with custome width
     table = Table(table_data, colWidths=[110, 125, 125, 80])
