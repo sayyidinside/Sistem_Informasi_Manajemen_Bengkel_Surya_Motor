@@ -16,6 +16,7 @@ urlpatterns = [
           name='sparepart_data_delete'),
      path('admin/sales/', views.SalesList.as_view(), name='sales_list'),
      path('admin/sales/add/', views.SalesAdd.as_view(), name='sales_add'),
+     path('admin/sales/receipt/<int:sales_id>/', views.SalesReceipt.as_view(), name='sales_receipt'),
      path('admin/sales/edit/<int:sales_id>/', views.SalesUpdate.as_view(), name='sales_update'),
      path('admin/sales/delete/<int:sales_id>/', views.SalesDelete.as_view(), name='sales_delete'),
      path('admin/restock/', views.RestockList.as_view(), name='restock_list'),

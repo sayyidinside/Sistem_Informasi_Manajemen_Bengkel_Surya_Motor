@@ -16,11 +16,12 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Mechanic, Profile,
 from si_mbe.paginations import CustomPagination
 from si_mbe.permissions import (IsAdminRole, IsLogin, IsOwnerRole,
                                 IsRelatedUserOrAdmin)
-from si_mbe.utility import (get_restock_report, get_sales_report,
+from si_mbe.utility import (generate_receipt, generate_report_pdf,
+                            get_restock_report, get_sales_report,
                             get_service_report, perform_log,
                             restock_adjust_sparepart_quantity,
                             sales_adjust_sparepart_quantity,
-                            service_adjust_sparepart_quantity, generate_report_pdf)
+                            service_adjust_sparepart_quantity)
 
 
 class Home(generics.GenericAPIView):
@@ -1555,5 +1556,27 @@ class ServiceReportDownload(generics.GenericAPIView):
 
         # Using function to generete pdf
         response = generate_report_pdf(data=self.data, report_type='Servis', year=self.year, month=self.month)
+
+        return response
+
+
+class SalesReceipt(generics.RetrieveAPIView):
+    queryset = Sales.objects.select_related('customer_id', 'user_id').prefetch_related('sales_detail_set')
+    serializer_class = serializers.SalesRecieptSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    lookup_field = 'sales_id'
+    lookup_url_kwarg = 'sales_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = exceptions.SalesNotFound()
+        return super().handle_exception(exc)
+
+    def get(self, request, *args, **kwargs):
+        # Getting sales data
+        data = self.retrieve(request, *args, **kwargs)
+
+        response = generate_receipt(data=data.data, transaction_type='Penjualan')
 
         return response

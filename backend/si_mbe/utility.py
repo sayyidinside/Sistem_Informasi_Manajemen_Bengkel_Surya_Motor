@@ -7,7 +7,7 @@ from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Table, Paragraph, Spacer, TableStyle
 from reportlab.lib.styles import ParagraphStyle
 from si_mbe.models import Logs
-from reportlab.lib.units import cm
+from reportlab.lib.units import cm, mm
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
@@ -527,5 +527,122 @@ def generate_report_pdf(
 
     # Send builded pdf file to user
     response = FileResponse(buffer, as_attachment=True, filename=f'Laporan_{report_type}-{year}-{month}.pdf')
+
+    return response
+
+
+def generate_receipt(
+                    data: dict,
+                    transaction_type: str,
+                ):
+    '''
+    A function to generate transaction receipt to print using user input data.
+
+    This function takes few arguments:
+    - data (required) as main ingredients to create reciept content;
+    - transaction_type (required) to create filename, title, and few operation in creating reciept
+    '''
+    if transaction_type in ('Penjualan', 'Sales'):
+        keyword = ('Sales', 'sales')
+    else:
+        keyword = ('Service', 'service')
+
+    # Retrieve transation_detail list from main transaction
+    content = data.pop('content', [])
+    item_count = len(content)
+
+    # Creating table of from the content of transaction
+    content_list = [['Qty', 'Harga', 'Jumlah']]
+    for item in content:
+        temp_list = []
+        for info in item:
+            if info == 'sparepart':
+                content_list.append([item[info]])
+            elif info == 'quantity':
+                temp_list.append(item[info])
+            elif info in ('individual_price', 'sub_total'):
+                money = format_money(item[info])
+                temp_list.append(money)
+        content_list.append(temp_list)
+
+    # Adding payment information to table
+    content_list.append([None, 'Total Item', data['total_quantity_sales']])
+    content_list.append([None, 'Sub Total', format_money(data['total_price_sales'])])
+    content_list.append([None, 'Tunai', format_money(int(data['deposit']))])
+    if data['remaining_payment'] == 0:
+        content_list.append([None, 'Kembalian', format_money(data['change'])])
+    else:
+        content_list.append([None, 'Sisa', format_money(data['remaining_payment'])])
+
+    # Create the table with custome width
+    table = Table(content_list, colWidths=[14*mm, 18.75*mm, 18.75*mm])
+
+    # Create table_style
+    table_style = TableStyle([
+        # Setting up style for table heading
+        ('FONTSIZE', (0, 0), (-1, 0), 6),
+        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+        ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.black, None, (1.95, 0.45)),
+        ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.black, None, (1.95, 0.45)),
+        ('LEADING', (0, 0), (-1, 0), 7.7),
+
+        # Setting up style for table content
+        ('FONTSIZE', (0, 1), (-1, -1), 5),
+        ('LEADING', (0, 1), (-1, -2), 3.5),
+        ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
+        ('LEADING', (0, -1), (-1, -1), 7),
+
+        # Setting up style for payment info
+        ('ALIGN', (1, (item_count * 2)+1), (1, -1), 'LEFT'),
+        ('LEFTPADDING', (1, (item_count * 2)+1), (1, -1), 20),
+        ('LEADING', (0, (item_count * 2)), (-1, (item_count * 2)), 7),
+        ('LINEABOVE', (0, (item_count * 2)+1), (-1, (item_count * 2)+1), 0.5, colors.black, None, (1.95, 0.45)),
+        ('LINEBELOW', (0, -1), (-1, -1), 0.5, colors.black, None, (1.95, 0.45)),
+    ])
+
+    # Set the style for the first row (the column headings)
+    table.setStyle(table_style)
+
+    # Create receipt template
+    receipt = []
+
+    # Adding reciept data
+    receipt.append(Paragraph('Bengkel Mulya Motor',
+                   style=ParagraphStyle(name='title', fontSize=10, alignment=TA_CENTER, leading=15)))
+    receipt.append(Paragraph('Roku Taman Alamanda II Blok EB 1A No.14&16, Mustikasari - Mustika Jaya, Bekasi Timur',
+                   style=ParagraphStyle(name='address', fontSize=6, alignment=TA_CENTER, leading=7)))
+    receipt.append(Paragraph('No.Telp. 0812 1906 8313 - 0878 8090 5501',
+                   style=ParagraphStyle(name='address', fontSize=6, alignment=TA_CENTER, leading=7)))
+    receipt.append(Paragraph('WA. 0895 3561 94945',
+                   style=ParagraphStyle(name='address', fontSize=6, alignment=TA_CENTER, leading=7)))
+    receipt.append(Spacer(0, 4))
+    receipt.append(Paragraph(f'{data["customer_name"]}',
+                   style=ParagraphStyle(name='receipt_info', fontSize=6, leading=7.5)))
+    receipt.append(Paragraph(f'#{data[f"{keyword[1]}_id"]} - {data["created_at"]}',
+                   style=ParagraphStyle(name='receipt_info', fontSize=6, leading=10)))
+    receipt.append(table)
+    receipt.append(Spacer(0, 3))
+    receipt.append(Paragraph('Terima Kasih Telah Bertransaksi di Bengkel Mulya Motor',
+                   style=ParagraphStyle(name='footer', fontSize=5, alignment=TA_CENTER, leading=0)))
+
+    buffer = BytesIO()
+
+    width, height = 57*mm, (63 + (item_count*5.1))*mm
+    doc = SimpleDocTemplate(buffer, pagesize=(width, height),
+                            leftMargin=0.06*cm, rightMargin=0.06*cm,
+                            topMargin=0.5*cm, bottomMargin=0.015*cm
+                            )
+
+    doc.build(receipt)
+
+    buffer.seek(0)
+
+    # Send builded pdf file to user
+    response = FileResponse(
+        buffer,
+        as_attachment=False,
+        filename=f'{keyword[0]}_Receipt_{data[f"{keyword[1]}_id"]}.pdf'
+    )
 
     return response

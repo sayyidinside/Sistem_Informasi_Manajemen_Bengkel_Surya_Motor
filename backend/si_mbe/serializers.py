@@ -156,7 +156,6 @@ class SalesDetailManagementSerializers(serializers.ModelSerializer):
 class SalesManagementSerializers(serializers.ModelSerializer):
     customer_name = serializers.CharField(max_length=30, write_only=True, required=False)
     customer_contact = serializers.CharField(max_length=15, write_only=True, required=False)
-    total_price_sales = serializers.SerializerMethodField()
     total_quantity_sales = serializers.SerializerMethodField()
     total_price_sales = serializers.SerializerMethodField()
     change = serializers.SerializerMethodField()
@@ -1386,3 +1385,103 @@ class RestockExpenditureSerializers(serializers.ModelSerializer):
         for restock in restock_serializers.data:
             expenditure += int(restock['individual_price']) * restock['quantity']
         return expenditure
+
+
+class SalesDetailReceiptSerializers(serializers.ModelSerializer):
+    sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
+    sub_total = serializers.SerializerMethodField()
+    individual_price = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Sales_detail
+        fields = ['sales_detail_id', 'sparepart', 'quantity', 'individual_price', 'sub_total']
+
+    def get_sub_total(self, obj):
+        # Check if workshop is true
+        if obj.sales_id.is_workshop:
+            # calculate with workshop price
+            return int(obj.quantity * obj.sparepart_id.workshop_price)
+
+        # calculate with normal price
+        return int(obj.quantity * obj.sparepart_id.price)
+
+    def get_individual_price(self, obj):
+        # Check if workshop is true
+        if obj.sales_id.is_workshop:
+            # return individual sparepart workshop price
+            return int(obj.sparepart_id.workshop_price)
+
+        # return individual sparepart normal price
+        return int(obj.sparepart_id.price)
+
+
+class SalesRecieptSerializers(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    customer_name = serializers.ReadOnlyField(source='customer_id.name')
+    customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
+    total_quantity_sales = serializers.SerializerMethodField()
+    total_price_sales = serializers.SerializerMethodField()
+    change = serializers.SerializerMethodField()
+    remaining_payment = serializers.SerializerMethodField()
+    content = SalesDetailReceiptSerializers(many=True, source='sales_detail_set')
+
+    class Meta:
+        model = Sales
+        fields = [
+            'sales_id',
+            'created_at',
+            'customer_name',
+            'customer_contact',
+            'deposit',
+            'total_quantity_sales',
+            'total_price_sales',
+            'change',
+            'remaining_payment',
+            'is_paid_off',
+            'content'
+        ]
+
+    def get_total_quantity_sales(self, obj):
+        # Getting all sales_detail data related to the sales
+        sales_serializer = SalesDetailReceiptSerializers(obj.sales_detail_set, many=True)
+
+        # calculating total quantity by looping throught sales_detail list
+        quantity = 0
+        for sales in sales_serializer.data:
+            quantity += sales['quantity']
+        return quantity
+
+    def get_total_price_sales(self, obj):
+        # Getting all sales_detail data related to the sales
+        sales_serializer = SalesDetailReceiptSerializers(obj.sales_detail_set, many=True)
+
+        # calculating total price by looping throught sales_detail list
+        total_price = 0
+        for sales in sales_serializer.data:
+            total_price += sales['sub_total']
+        return total_price
+
+    def get_change(self, obj):
+        # Getting total_price using class method
+        total_price = self.get_total_price_sales(obj)
+
+        change = int(obj.deposit) - total_price
+
+        # Check if change is greater then 0, if yes return that amount
+        # else return 0, because change can't be display as negative
+        if change > 0:
+            return change
+        return 0
+
+    def get_remaining_payment(self, obj):
+        # Getting total_price using class method
+        total_price = self.get_total_price_sales(obj)
+
+        # Calculating remaining_payment subtracting total_price with deposit
+        total = total_price - int(obj.deposit)
+
+        # Check if remaining payment is greater then 0, if yes return that amount
+        # else return 0, because remaining payment can't be display as negative
+        if total > 0:
+            return total
+        return 0
