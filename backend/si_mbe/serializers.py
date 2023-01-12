@@ -1415,12 +1415,12 @@ class SalesDetailReceiptSerializers(serializers.ModelSerializer):
         return int(obj.sparepart_id.price)
 
 
-class SalesRecieptSerializers(serializers.ModelSerializer):
+class SalesReceiptSerializers(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     customer_name = serializers.ReadOnlyField(source='customer_id.name')
     customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
-    total_quantity_sales = serializers.SerializerMethodField()
-    total_price_sales = serializers.SerializerMethodField()
+    total_quantity = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
     change = serializers.SerializerMethodField()
     remaining_payment = serializers.SerializerMethodField()
     content = SalesDetailReceiptSerializers(many=True, source='sales_detail_set')
@@ -1433,15 +1433,15 @@ class SalesRecieptSerializers(serializers.ModelSerializer):
             'customer_name',
             'customer_contact',
             'deposit',
-            'total_quantity_sales',
-            'total_price_sales',
+            'total_quantity',
+            'total_price',
             'change',
             'remaining_payment',
             'is_paid_off',
             'content'
         ]
 
-    def get_total_quantity_sales(self, obj):
+    def get_total_quantity(self, obj):
         # Getting all sales_detail data related to the sales
         sales_serializer = SalesDetailReceiptSerializers(obj.sales_detail_set, many=True)
 
@@ -1451,7 +1451,7 @@ class SalesRecieptSerializers(serializers.ModelSerializer):
             quantity += sales['quantity']
         return quantity
 
-    def get_total_price_sales(self, obj):
+    def get_total_price(self, obj):
         # Getting all sales_detail data related to the sales
         sales_serializer = SalesDetailReceiptSerializers(obj.sales_detail_set, many=True)
 
@@ -1463,7 +1463,7 @@ class SalesRecieptSerializers(serializers.ModelSerializer):
 
     def get_change(self, obj):
         # Getting total_price using class method
-        total_price = self.get_total_price_sales(obj)
+        total_price = self.get_total_price(obj)
 
         change = int(obj.deposit) - total_price
 
@@ -1475,7 +1475,7 @@ class SalesRecieptSerializers(serializers.ModelSerializer):
 
     def get_remaining_payment(self, obj):
         # Getting total_price using class method
-        total_price = self.get_total_price_sales(obj)
+        total_price = self.get_total_price(obj)
 
         # Calculating remaining_payment subtracting total_price with deposit
         total = total_price - int(obj.deposit)
@@ -1484,4 +1484,105 @@ class SalesRecieptSerializers(serializers.ModelSerializer):
         # else return 0, because remaining payment can't be display as negative
         if total > 0:
             return total
+        return 0
+
+
+class ServiceSparepartReceiptSerializers(serializers.ModelSerializer):
+    sparepart = serializers.ReadOnlyField(source='sparepart_id.name')
+    individual_price = serializers.ReadOnlyField(source='sparepart_id.install_price')
+    sub_total = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Service_sparepart
+        fields = ['service_sparepart_id', 'sparepart', 'quantity', 'individual_price', 'sub_total']
+
+    def get_sub_total(self, obj):
+        return int(obj.quantity * obj.sparepart_id.install_price)
+
+
+class ServiceActionReceiptSerializers(serializers.ModelSerializer):
+    class Meta:
+        model = Service_action
+        fields = ['service_action_id', 'name', 'cost']
+
+
+class ServiceReceiptSerializers(serializers.ModelSerializer):
+    created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
+    customer_name = serializers.ReadOnlyField(source='customer_id.name')
+    total_quantity = serializers.SerializerMethodField()
+    total_price = serializers.SerializerMethodField()
+    final_total_price = serializers.SerializerMethodField()
+    change = serializers.SerializerMethodField()
+    remaining_payment = serializers.SerializerMethodField()
+    service_spareparts = ServiceSparepartReceiptSerializers(many=True, source='service_sparepart_set')
+    service_actions = ServiceActionReceiptSerializers(many=True, source='service_action_set')
+
+    class Meta:
+        model = Service
+        fields = [
+            'service_id',
+            'created_at',
+            'customer_name',
+            'total_quantity',
+            'total_price',
+            'discount',
+            'final_total_price',
+            'deposit',
+            'change',
+            'remaining_payment',
+            'service_actions',
+            'service_spareparts'
+        ]
+
+    def get_total_quantity(self, obj):
+        # Getting all service_sparepart data related to the service
+        service_spareparts = ServiceSparepartManagementSerializers(obj.service_sparepart_set, many=True)
+
+        # calculating total quantity by looping throught service_sparepart list
+        sparepart_amounts = 0
+        for sparepart in service_spareparts.data:
+            sparepart_amounts += sparepart['quantity']
+        return sparepart_amounts
+
+    def get_total_price(self, obj):
+        # Getting all service_sparepart and service_action data related to the servic
+        sparepart_serializer = ServiceSparepartSerializers(obj.service_sparepart_set, many=True)
+        action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
+
+        # calculating total price by looping throught service_sparepart and
+        # service_action list
+        total_price = 0
+        for sparepart in sparepart_serializer.data:
+            total_price += sparepart['sub_total']
+        for action in action_serializer.data:
+            total_price += int(action['cost'])
+        return total_price
+
+    def get_final_total_price(self, obj):
+        # Getting total service price using class method
+        total_price = self.get_total_price(obj)
+        return total_price - int(obj.discount)
+
+    def get_change(self, obj):
+        # Getting final total service price using class method
+        total = self.get_final_total_price(obj)
+
+        change = int(obj.deposit) - total
+
+        # Check if change is greater then 0, if yes return that amount
+        # else return 0, because change can't be display as negative
+        if change > 0:
+            return change
+        return 0
+
+    def get_remaining_payment(self, obj):
+        # Getting total service price using class method
+        total = self.get_final_total_price(obj)
+
+        remaining_payment = total - int(obj.deposit)
+
+        # Check if remaining payment is greater then 0, if yes return that amount
+        # else return 0, because remaining payment can't be display as negative
+        if remaining_payment > 0:
+            return remaining_payment
         return 0

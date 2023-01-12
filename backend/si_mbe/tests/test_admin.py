@@ -4490,16 +4490,9 @@ class SalesmanDeleteTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data salesman tidak ditemukan')
 
 
-class SalesReceiptTestCase(APITestCase):
+class SalesReceiptTestCase(SetTestCase):
     @classmethod
     def setUpTestData(cls) -> None:
-        # Setting up admin user and owner user
-        cls.user = User.objects.create_user(username='richardrider', password='NovaPrimeAnnahilations')
-        Profile.objects.create(user_id=cls.user, role='A', name='Richard Rider')
-
-        cls.owner = User.objects.create_user(username='One Above All', password='TrueComicBookWriter')
-        Profile.objects.create(user_id=cls.owner, role='P')
-
         # Setting up customer data
         cls.customer = Customer.objects.create(
             name='Hoid',
@@ -4508,7 +4501,6 @@ class SalesReceiptTestCase(APITestCase):
 
         # Setting up sales data
         cls.sales = Sales.objects.create(
-            user_id=cls.user,
             customer_id=cls.customer,
             deposit=520000
         )
@@ -4546,7 +4538,7 @@ class SalesReceiptTestCase(APITestCase):
             quantity=7
         )
 
-        cls.sales_reciept_url = reverse('sales_receipt', kwargs={'sales_id': cls.sales.sales_id})
+        cls.sales_receipt_url = reverse('sales_receipt', kwargs={'sales_id': cls.sales.sales_id})
         return super().setUpTestData()
 
     def test_admin_successfully_access_sales_receipt(self) -> None:
@@ -4554,7 +4546,7 @@ class SalesReceiptTestCase(APITestCase):
         Ensure admin can access particular sales receipt
         '''
         self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.sales_reciept_url)
+        response = self.client.get(self.sales_receipt_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response['Content-Type'], 'application/pdf')
         self.assertEqual(response.filename, f'Sales_Receipt_{self.sales.sales_id}.pdf')
@@ -4564,7 +4556,7 @@ class SalesReceiptTestCase(APITestCase):
         Ensure non-login user cannot access sales receipt
         """
         self.client.force_authenticate(user=None, token=None)
-        response = self.client.get(self.sales_reciept_url)
+        response = self.client.get(self.sales_receipt_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
         self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
 
@@ -4573,7 +4565,7 @@ class SalesReceiptTestCase(APITestCase):
         Ensure non-admin user cannot access sales receipt
         """
         self.client.force_authenticate(user=self.owner)
-        response = self.client.get(self.sales_reciept_url)
+        response = self.client.get(self.sales_receipt_url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
         self.assertEqual(response.data['message'], 'Akses ditolak')
 
@@ -4585,3 +4577,109 @@ class SalesReceiptTestCase(APITestCase):
         response = self.client.get(reverse('sales_receipt', kwargs={'sales_id': 869591}))
         self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
         self.assertEqual(response.data['message'], 'Data penjualan tidak ditemukan')
+
+
+class ServiceReceiptTestCase(SetTestCase):
+    @classmethod
+    def setUpTestData(cls) -> None:
+        # Setting up customer data
+        cls.customer = Customer.objects.create(
+            name='Hoid',
+            contact='085456105311'
+        )
+
+        # Setting up mechanic data
+        cls.mechanic = Mechanic.objects.create(
+            name='Fjord',
+            contact='088164684068',
+            address='Port Damali'
+        )
+
+        # Setting up sparepart data and getting their object
+        for i in range(3):
+            Sparepart.objects.create(
+                name=f'Cosmere B-{i}',
+                partnumber=f'0Y3AD-FY{i}',
+                quantity=50,
+                motor_type='Fantasy',
+                sparepart_type='Ori',
+                price=int(f'{i}40000'),
+                workshop_price=int(f'{i}30000'),
+                install_price=int(f'{i}50000'),
+                storage_code='HJF-502',
+            )
+
+        cls.spareparts = Sparepart.objects.all()
+
+        cls.service = Service.objects.create(
+            customer_id=cls.customer,
+            mechanic_id=cls.mechanic,
+            discount=14000
+        )
+
+        Service_action.objects.create(
+            service_id=cls.service,
+            name='Ganti Pengendara',
+            cost='65000'
+        )
+        Service_action.objects.create(
+            service_id=cls.service,
+            name='Tambal Tank',
+            cost='135000'
+        )
+        Service_sparepart.objects.create(
+            service_id=cls.service,
+            sparepart_id=cls.spareparts[0],
+            quantity=2
+        )
+        Service_sparepart.objects.create(
+            service_id=cls.service,
+            sparepart_id=cls.spareparts[1],
+            quantity=3
+        )
+        Service_sparepart.objects.create(
+            service_id=cls.service,
+            sparepart_id=cls.spareparts[2],
+            quantity=6
+        )
+
+        cls.service_receipt_url = reverse('service_receipt', kwargs={'service_id': cls.service.service_id})
+
+        return super().setUpTestData()
+
+    def test_admin_successfully_access_sales_receipt(self) -> None:
+        '''
+        Ensure admin can access particular sales receipt
+        '''
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.service_receipt_url)
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response['Content-Type'], 'application/pdf')
+        self.assertEqual(response.filename, f'Service_Receipt_{self.service.service_id}.pdf')
+
+    def test_nonlogin_user_failed_to_access_service_receipt(self) -> None:
+        """
+        Ensure non-login user cannot access service receipt
+        """
+        self.client.force_authenticate(user=None, token=None)
+        response = self.client.get(self.service_receipt_url)
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertEqual(response.data['message'], 'Silahkan login terlebih dahulu untuk mengakses fitur ini')
+
+    def test_nonadmin_user_failed_to_access_service_receipt(self) -> None:
+        """
+        Ensure non-admin user cannot access service receipt
+        """
+        self.client.force_authenticate(user=self.owner)
+        response = self.client.get(self.service_receipt_url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(response.data['message'], 'Akses ditolak')
+
+    def test_admin_failed_to_access_nonexist_service_receipt(self) -> None:
+        """
+        Ensure admin cannot to access non-exist service receipt
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(reverse('service_receipt', kwargs={'service_id': 869591}))
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.data['message'], 'Data servis tidak ditemukan')

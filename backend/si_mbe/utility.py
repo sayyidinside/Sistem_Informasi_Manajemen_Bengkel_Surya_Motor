@@ -544,30 +544,74 @@ def generate_receipt(
     '''
     if transaction_type in ('Penjualan', 'Sales'):
         keyword = ('Sales', 'sales')
+
+        # Retrieve transation_detail list from main transaction
+        content = data.pop('content', [])
+
+        # Retrieve items count to make dynamic paper lenght
+        item_count = len(content) * 2
+        height = (58 + (item_count*4))*mm
+
+        # Creating table from the content of transaction for sales
+        content_list = [['Qty', 'Harga', 'Jumlah']]
+        for item in content:
+            temp_list = []
+            for info in item:
+                if info == 'sparepart':
+                    content_list.append([item[info]])
+                elif info == 'quantity':
+                    temp_list.append(item[info])
+                elif info in ('individual_price', 'sub_total'):
+                    money = format_money(item[info])
+                    temp_list.append(money)
+            content_list.append(temp_list)
     else:
         keyword = ('Service', 'service')
 
-    # Retrieve transation_detail list from main transaction
-    content = data.pop('content', [])
-    item_count = len(content)
+        # Retrieve transation_detail list from main transaction
+        content_sparepart = data.pop('service_spareparts', [])
+        content_action = data.pop('service_actions', [])
 
-    # Creating table of from the content of transaction
-    content_list = [['Qty', 'Harga', 'Jumlah']]
-    for item in content:
-        temp_list = []
-        for info in item:
-            if info == 'sparepart':
-                content_list.append([item[info]])
-            elif info == 'quantity':
-                temp_list.append(item[info])
-            elif info in ('individual_price', 'sub_total'):
-                money = format_money(item[info])
-                temp_list.append(money)
-        content_list.append(temp_list)
+        # content_sparepart.clear()
+        # content_action.clear()
+
+        action_count = len(content_action)
+        sparepart_count = (len(content_sparepart) * 2)
+
+        # Retrieve items count to make dynamic paper lenght
+        item_count = action_count + sparepart_count
+        height = (66 + (item_count*4))*mm
+
+        # Creating table from the content of transaction for sales
+        content_list = [['Qty', 'Harga', 'Jumlah']]
+        for sparepart in content_sparepart:
+            temp_list = []
+            for info in sparepart:
+                if info == 'sparepart':
+                    content_list.append([sparepart[info]])
+                elif info == 'quantity':
+                    temp_list.append(sparepart[info])
+                elif info in ('individual_price', 'sub_total'):
+                    money = format_money(int(sparepart[info]))
+                    temp_list.append(money)
+            content_list.append(temp_list)
+        for action in content_action:
+            temp_list = []
+            for info in action:
+                if info == 'name':
+                    temp_list.append(action[info])
+                    temp_list.append(None)
+                if info == 'cost':
+                    temp_list.append(format_money(int(action[info])))
+            content_list.append(temp_list)
 
     # Adding payment information to table
-    content_list.append([None, 'Total Item', data['total_quantity_sales']])
-    content_list.append([None, 'Sub Total', format_money(data['total_price_sales'])])
+    content_list.append([None, 'Total Item', data['total_quantity']])
+    content_list.append([None, 'Sub Total', format_money(data['total_price'])])
+    if transaction_type not in ('Penjualan', 'Sales'):
+        content_list.append([None, 'Discount', format_money(int(data['discount']))])
+        content_list.append([None, 'Total', format_money(data['final_total_price'])])
+
     content_list.append([None, 'Tunai', format_money(int(data['deposit']))])
     if data['remaining_payment'] == 0:
         content_list.append([None, 'Kembalian', format_money(data['change'])])
@@ -575,13 +619,13 @@ def generate_receipt(
         content_list.append([None, 'Sisa', format_money(data['remaining_payment'])])
 
     # Create the table with custome width
-    table = Table(content_list, colWidths=[14*mm, 18.75*mm, 18.75*mm])
+    table = Table(content_list, colWidths=[14*mm, 18.75*mm, 18.75*mm], rowHeights=4*mm)
 
     # Create table_style
     table_style = TableStyle([
         # Setting up style for table heading
         ('FONTSIZE', (0, 0), (-1, 0), 6),
-        ('VALIGN', (0, 0), (-1, 0), 'MIDDLE'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.black, None, (1.95, 0.45)),
         ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.black, None, (1.95, 0.45)),
@@ -591,15 +635,21 @@ def generate_receipt(
         ('FONTSIZE', (0, 1), (-1, -1), 5),
         ('LEADING', (0, 1), (-1, -2), 3.5),
         ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
-        ('LEADING', (0, -1), (-1, -1), 7),
+        ('LEADING', (0, -1), (-1, -1), 6.5),
 
         # Setting up style for payment info
-        ('ALIGN', (1, (item_count * 2)+1), (1, -1), 'LEFT'),
-        ('LEFTPADDING', (1, (item_count * 2)+1), (1, -1), 20),
-        ('LEADING', (0, (item_count * 2)), (-1, (item_count * 2)), 7),
-        ('LINEABOVE', (0, (item_count * 2)+1), (-1, (item_count * 2)+1), 0.5, colors.black, None, (1.95, 0.45)),
+        ('ALIGN', (1, item_count+1), (1, -1), 'LEFT'),
+        ('LEFTPADDING', (1, item_count+1), (1, -1), 20),
+        ('LEADING', (0, item_count), (-1, item_count), 6.5),
+        ('LINEABOVE', (0, item_count+1), (-1, item_count+1), 0.5, colors.black, None, (1.95, 0.45)),
         ('LINEBELOW', (0, -1), (-1, -1), 0.5, colors.black, None, (1.95, 0.45)),
     ])
+
+    # check in it's service transaction adding few style to table
+    if transaction_type not in ('Penjualan', 'Sales'):
+        table_style.add('LINEABOVE', (0, sparepart_count+1), (-1, sparepart_count+1),
+                        0.5, colors.black, None, (1.95, 0.45))
+        table_style.add('LEADING', (0, sparepart_count), (-1, sparepart_count), 6.5)
 
     # Set the style for the first row (the column headings)
     table.setStyle(table_style)
@@ -628,8 +678,7 @@ def generate_receipt(
 
     buffer = BytesIO()
 
-    width, height = 57*mm, (63 + (item_count*5.1))*mm
-    doc = SimpleDocTemplate(buffer, pagesize=(width, height),
+    doc = SimpleDocTemplate(buffer, pagesize=(57*mm, height),
                             leftMargin=0.06*cm, rightMargin=0.06*cm,
                             topMargin=0.5*cm, bottomMargin=0.015*cm
                             )

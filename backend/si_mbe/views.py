@@ -1561,8 +1561,8 @@ class ServiceReportDownload(generics.GenericAPIView):
 
 
 class SalesReceipt(generics.RetrieveAPIView):
-    queryset = Sales.objects.select_related('customer_id', 'user_id').prefetch_related('sales_detail_set')
-    serializer_class = serializers.SalesRecieptSerializers
+    queryset = Sales.objects.select_related('customer_id').prefetch_related('sales_detail_set')
+    serializer_class = serializers.SalesReceiptSerializers
     permission_classes = [IsLogin, IsAdminRole]
 
     lookup_field = 'sales_id'
@@ -1578,5 +1578,28 @@ class SalesReceipt(generics.RetrieveAPIView):
         data = self.retrieve(request, *args, **kwargs)
 
         response = generate_receipt(data=data.data, transaction_type='Penjualan')
+
+        return response
+
+
+class ServiceReceipt(generics.RetrieveAPIView):
+    queryset = Service.objects.select_related('customer_id').prefetch_related(
+                'service_action_set', 'service_sparepart_set')
+    serializer_class = serializers.ServiceReceiptSerializers
+    permission_classes = [IsLogin, IsAdminRole]
+
+    lookup_field = 'service_id'
+    lookup_url_kwarg = 'service_id'
+
+    def handle_exception(self, exc):
+        if isinstance(exc, Http404):
+            exc = exceptions.ServiceNotFound()
+        return super().handle_exception(exc)
+
+    def get(self, request, *args, **kwargs):
+        # Getting sales data
+        data = self.retrieve(request, *args, **kwargs)
+
+        response = generate_receipt(data=data.data, transaction_type='Servis')
 
         return response
