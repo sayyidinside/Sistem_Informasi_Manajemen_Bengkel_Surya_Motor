@@ -1510,6 +1510,8 @@ class ServiceReceiptSerializers(serializers.ModelSerializer):
     created_at = serializers.DateTimeField(format='%d-%m-%Y %H:%M:%S')
     customer_name = serializers.ReadOnlyField(source='customer_id.name')
     total_quantity = serializers.SerializerMethodField()
+    sub_total_action = serializers.SerializerMethodField()
+    sub_total_part = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
     final_total_price = serializers.SerializerMethodField()
     change = serializers.SerializerMethodField()
@@ -1524,6 +1526,8 @@ class ServiceReceiptSerializers(serializers.ModelSerializer):
             'created_at',
             'customer_name',
             'total_quantity',
+            'sub_total_part',
+            'sub_total_action',
             'total_price',
             'discount',
             'final_total_price',
@@ -1544,18 +1548,33 @@ class ServiceReceiptSerializers(serializers.ModelSerializer):
             sparepart_amounts += sparepart['quantity']
         return sparepart_amounts
 
-    def get_total_price(self, obj):
-        # Getting all service_sparepart and service_action data related to the servic
+    def get_sub_total_part(self, obj):
+        # Getting all service_sparepart and service_action data related to the service
         sparepart_serializer = ServiceSparepartSerializers(obj.service_sparepart_set, many=True)
+
+        # calculating total price by looping throught service_sparepart list
+        sub_total = 0
+        for sparepart in sparepart_serializer.data:
+            sub_total += sparepart['sub_total']
+        return sub_total
+
+    def get_sub_total_action(self, obj):
+        # Getting service_action data related to the service
         action_serializer = ServiceActionSerializers(obj.service_action_set, many=True)
 
-        # calculating total price by looping throught service_sparepart and
-        # service_action list
-        total_price = 0
-        for sparepart in sparepart_serializer.data:
-            total_price += sparepart['sub_total']
+        # calculating total price by looping throught service_action list
+        sub_total = 0
         for action in action_serializer.data:
-            total_price += int(action['cost'])
+            sub_total += int(action['cost'])
+        return sub_total
+
+    def get_total_price(self, obj):
+        # Getting all service_sparepart and service_action sub_total using class method
+        sub_total_sparepart = self.get_sub_total_part(obj)
+        sub_total_action = self.get_sub_total_action(obj)
+
+        total_price = sub_total_sparepart + sub_total_action
+
         return total_price
 
     def get_final_total_price(self, obj):

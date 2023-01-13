@@ -580,7 +580,7 @@ def generate_receipt(
 
         # Retrieve items count to make dynamic paper lenght
         item_count = action_count + sparepart_count
-        height = (66 + (item_count*4))*mm
+        height = (71 + (item_count*4))*mm
 
         # Creating table from the content of transaction for sales
         content_list = [['Qty', 'Harga', 'Jumlah']]
@@ -606,9 +606,13 @@ def generate_receipt(
             content_list.append(temp_list)
 
     # Adding payment information to table
-    content_list.append([None, 'Total Item', data['total_quantity']])
-    content_list.append([None, 'Sub Total', format_money(data['total_price'])])
-    if transaction_type not in ('Penjualan', 'Sales'):
+    if transaction_type in ('Penjualan', 'Sales'):
+        content_list.append([None, 'Total Item', data['total_quantity']])
+        content_list.append([None, 'Sub Total', format_money(data['total_price'])])
+    else:
+        content_list.append([data['total_quantity'], 'Sub Total Part', format_money(data['sub_total_part'])])
+        content_list.append([None, 'Sub Total Jasa', format_money(data['sub_total_action'])])
+        content_list.append([None, 'Sub Total', format_money(data['total_price'])])
         content_list.append([None, 'Discount', format_money(int(data['discount']))])
         content_list.append([None, 'Total', format_money(data['final_total_price'])])
 
@@ -624,7 +628,7 @@ def generate_receipt(
     # Create table_style
     table_style = TableStyle([
         # Setting up style for table heading
-        ('FONTSIZE', (0, 0), (-1, 0), 6),
+        ('FONTSIZE', (0, 0), (-1, -1), 6),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.black, None, (1.95, 0.45)),
@@ -632,15 +636,14 @@ def generate_receipt(
         ('LEADING', (0, 0), (-1, 0), 7.7),
 
         # Setting up style for table content
-        ('FONTSIZE', (0, 1), (-1, -1), 5),
-        ('LEADING', (0, 1), (-1, -2), 3.5),
+        ('LEADING', (0, 1), (-1, -2), 4),
         ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
         ('LEADING', (0, -1), (-1, -1), 6.5),
+        ('BOTTOMPADDING', (0, 1), (-1, item_count), 6),
 
         # Setting up style for payment info
         ('ALIGN', (1, item_count+1), (1, -1), 'LEFT'),
-        ('LEFTPADDING', (1, item_count+1), (1, -1), 20),
-        ('LEADING', (0, item_count), (-1, item_count), 6.5),
+        ('LEFTPADDING', (1, item_count+1), (1, -1), 10),
         ('LINEABOVE', (0, item_count+1), (-1, item_count+1), 0.5, colors.black, None, (1.95, 0.45)),
         ('LINEBELOW', (0, -1), (-1, -1), 0.5, colors.black, None, (1.95, 0.45)),
     ])
@@ -649,7 +652,7 @@ def generate_receipt(
     if transaction_type not in ('Penjualan', 'Sales'):
         table_style.add('LINEABOVE', (0, sparepart_count+1), (-1, sparepart_count+1),
                         0.5, colors.black, None, (1.95, 0.45))
-        table_style.add('LEADING', (0, sparepart_count), (-1, sparepart_count), 6.5)
+        # table_style.add('LEADING', (0, sparepart_count), (-1, sparepart_count), 6.5)
 
     # Set the style for the first row (the column headings)
     table.setStyle(table_style)
