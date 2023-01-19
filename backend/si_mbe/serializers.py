@@ -869,7 +869,7 @@ class ServiceActionManagementSerializers(serializers.ModelSerializer):
 
 class ServiceSparepartManagementSerializers(serializers.ModelSerializer):
     service_sparepart_id = serializers.IntegerField(required=False)
-    price = serializers.ReadOnlyField(source='sparepart_id.price')
+    price = serializers.ReadOnlyField(source='sparepart_id.install_price')
     sub_total = serializers.SerializerMethodField()
 
     class Meta:
