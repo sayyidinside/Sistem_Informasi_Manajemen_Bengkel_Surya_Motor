@@ -32,7 +32,7 @@ class Home(generics.GenericAPIView):
 
 
 class SearchSparepart(generics.ListAPIView):
-    queryset = Sparepart.objects.all().order_by('name')
+    queryset = Sparepart.objects.select_related('brand_id', 'category_id').order_by('name')
     serializer_class = serializers.SearchSparepartSerializers
     pagination_class = CustomPagination
 
