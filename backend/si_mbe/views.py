@@ -40,6 +40,7 @@ class SearchSparepart(generics.ListAPIView):
     filterset_class = SparepartFilter
 
     def get_paginated_response(self, data):
+        # Check if searching yeild a result then give appropriate message and status
         if len(data) == 0:
             self.paginator.message = 'Sparepart yang dicari tidak ditemukan'
             self.paginator.status = status.HTTP_404_NOT_FOUND
