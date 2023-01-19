@@ -619,9 +619,9 @@ class AdminAddTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Password dan Konfirmasi Password Berbeda')
         self.assertEqual(len(User.objects.filter(profile__role='A')), 1)
 
-    def test_owner_failed_to_add_admin_with_incomplete_empty(self) -> None:
+    def test_owner_failed_to_add_admin_with_empty_data(self) -> None:
         """
-        Ensure owner cannot add admin with incomplete empty
+        Ensure owner cannot add admin with empty data
         """
         self.client.force_authenticate(user=self.owner)
         response = self.client.post(self.admin_add_url, {})
@@ -732,16 +732,22 @@ class AdminUpdateTestCase(SetTestCase):
 
 
 class AdminDeleteTestCase(SetTestCase):
-    def setUp(self) -> None:
+    @classmethod
+    def setUpTestData(cls) -> None:
         # Setting up additional admin data
-        self.admin = User.objects.create_user(
+        cls.admin = User.objects.create_user(
             username='lucien',
             password='theeyeofnine',
             email='nanagon@hotmail.com'
         )
-        Profile.objects.create(user_id=self.admin, role='A', name='Lucien', contact='081086016510')
+        Profile.objects.create(user_id=cls.admin, role='A', name='Lucien', contact='081086016510')
 
-        self.admin_delete_url = reverse('admin_delete', kwargs={'pk': self.admin.pk})
+        cls.admin_delete_url = reverse('admin_delete', kwargs={'pk': cls.admin.pk})
+        return super().setUpTestData()
+
+    def setUp(self) -> None:
+        self.admin.is_active = True
+        self.admin.save()
 
         return super().setUp()
 
@@ -976,7 +982,7 @@ class MechanicListTestCase(SetTestCase):
             }
         ])
 
-    def test_owner_successfully_searching_mechanic_without_result(self) -> None:
+    def test_owner_failed_to_searching_mechanic_without_result(self) -> None:
         """
         Ensure owner search mechanic that doesn't exist get empty result
         """

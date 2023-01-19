@@ -1562,7 +1562,7 @@ class RestockListTestCase(SetTestCase):
         self.assertEqual(response.data['results'][0]['total_restock_cost'], 9100000)
         self.assertEqual(response.data['results'][0]['is_paid_off'], self.restocks[0].is_paid_off)
 
-    def test_admin_successfully_searching_restock_without_result(self) -> None:
+    def test_admin_failed_to_searching_restock_without_result(self) -> None:
         """
         Ensure admin search restock that doesn't exist get empty result
         """
@@ -1638,6 +1638,25 @@ class RestockAddTestCase(SetTestCase):
             ]
         }
 
+        cls.data_paid = {
+            'no_faktur': 'URH45/28394/2022-N1D',
+            'due_date': date(2023, 4, 13),
+            'salesman_id': cls.salesman.salesman_id,
+            'deposit': 915000000,
+            'content': [
+                {
+                    'sparepart_id': cls.spareparts[0].sparepart_id,
+                    'individual_price':4700000,
+                    'quantity': 150,
+                },
+                {
+                    'sparepart_id': cls.spareparts[1].sparepart_id,
+                    'individual_price':3500000,
+                    'quantity': 60,
+                }
+            ]
+        }
+
         return super().setUpTestData()
 
     def test_admin_successfully_add_restock(self) -> None:
@@ -1671,6 +1690,44 @@ class RestockAddTestCase(SetTestCase):
         self.assertEqual(response.data['content'][1]['individual_price'],
                          str(self.data['content'][1]['individual_price']))
         self.assertEqual(response.data['content'][1]['quantity'], self.data['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 210000000)
+
+        # ensure sparepart quantity will be added (+) by detail's quantity
+        # after restock successfully added
+        self.assertEqual(self.spareparts[0].quantity, 200)
+        self.assertEqual(self.spareparts[1].quantity, 110)
+
+    def test_admin_successfully_add_restock_as_paid_off(self) -> None:
+        """
+        Ensure admin can add new restock data with it's content_as paid off
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.post(self.restock_add_url, self.data_paid, format='json')
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data['message'], 'Data pengadaan berhasil ditambah')
+
+        # Validating surface level information of restock
+        self.assertEqual(response.data['no_faktur'], self.data_paid['no_faktur'])
+        self.assertEqual(response.data['due_date'], self.data_paid['due_date'].strftime('%d-%m-%Y'))
+        self.assertEqual(response.data['salesman_id'], self.salesman.salesman_id)
+        self.assertEqual(response.data['supplier'], self.salesman.supplier_id.name)
+        self.assertEqual(response.data['total_sparepart_quantity'], 210)
+        self.assertEqual(response.data['total_restock_cost'], 915000000)
+        self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
+        self.assertEqual(response.data['remaining_payment'], 0)
+        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of restock in content field
+        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
+        self.assertEqual(response.data['content'][0]['individual_price'],
+                         str(self.data_paid['content'][0]['individual_price']))
+        self.assertEqual(response.data['content'][0]['quantity'], self.data_paid['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 705000000)
+        self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
+        self.assertEqual(response.data['content'][1]['individual_price'],
+                         str(self.data_paid['content'][1]['individual_price']))
+        self.assertEqual(response.data['content'][1]['quantity'], self.data_paid['content'][1]['quantity'])
         self.assertEqual(response.data['content'][1]['sub_total'], 210000000)
 
         # ensure sparepart quantity will be added (+) by detail's quantity
@@ -1792,6 +1849,27 @@ class RestockUpdateTestCase(SetTestCase):
             'no_faktur': '78SDFBH/2022-YE/FA89',
             'due_date': date(2023, 4, 13),
             'salesman_id': self.salesman.salesman_id,
+            'deposit': 802700000,
+            'content': [
+                {
+                    'restock_detail_id': self.restock_detail_1.restock_detail_id,
+                    'sparepart_id': self.spareparts[0].sparepart_id,
+                    'individual_price':4550000,
+                    'quantity': 170,
+                },
+                {
+                    'restock_detail_id': self.restock_detail_2.restock_detail_id,
+                    'sparepart_id': self.spareparts[1].sparepart_id,
+                    'individual_price':450000,
+                    'quantity': 65,
+                }
+            ]
+        }
+
+        self.data_paid = {
+            'no_faktur': '78SDFBH/2022-YE/FA89',
+            'due_date': date(2023, 4, 13),
+            'salesman_id': self.salesman.salesman_id,
             'deposit': 802750000,
             'content': [
                 {
@@ -1828,8 +1906,8 @@ class RestockUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['total_sparepart_quantity'], 235)
         self.assertEqual(response.data['total_restock_cost'], 802750000)
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
-        self.assertEqual(response.data['remaining_payment'], 0)
-        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(response.data['remaining_payment'], 50000)
+        self.assertEqual(response.data['is_paid_off'], False)
         self.assertEqual(len(response.data['content']), 2)
 
         # Validating detail information per sparepart of restock in content field
@@ -1844,6 +1922,46 @@ class RestockUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['content'][1]['individual_price'],
                          str(self.data['content'][1]['individual_price']))
         self.assertEqual(response.data['content'][1]['quantity'], self.data['content'][1]['quantity'])
+        self.assertEqual(response.data['content'][1]['sub_total'], 29250000)
+
+        # ensure sparepart quantity will be added (+) by detail's quantity
+        # after restock successfully updated
+        self.assertEqual(self.spareparts[0].quantity, 70)
+        self.assertEqual(self.spareparts[1].quantity, 115)
+
+    def test_admin_successfully_update_restock_as_paid_off(self) -> None:
+        """
+        Ensure admin can update new restock data with it's content_as paid off
+        """
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(self.restock_update_url, self.data_paid, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['message'], 'Data pengadaan berhasil dirubah')
+
+        # Validating surface level information of restock
+        self.assertEqual(response.data['no_faktur'], self.data_paid['no_faktur'])
+        self.assertEqual(response.data['due_date'], self.data_paid['due_date'].strftime('%d-%m-%Y'))
+        self.assertEqual(response.data['salesman_id'], self.salesman.salesman_id)
+        self.assertEqual(response.data['supplier'], self.salesman.supplier_id.name)
+        self.assertEqual(response.data['total_sparepart_quantity'], 235)
+        self.assertEqual(response.data['total_restock_cost'], 802750000)
+        self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
+        self.assertEqual(response.data['remaining_payment'], 0)
+        self.assertEqual(response.data['is_paid_off'], True)
+        self.assertEqual(len(response.data['content']), 2)
+
+        # Validating detail information per sparepart of restock in content field
+        self.assertEqual(response.data['content'][0]['restock_detail_id'], self.restock_detail_1.restock_detail_id)
+        self.assertEqual(response.data['content'][0]['sparepart_id'], self.spareparts[0].sparepart_id)
+        self.assertEqual(response.data['content'][0]['individual_price'],
+                         str(self.data_paid['content'][0]['individual_price']))
+        self.assertEqual(response.data['content'][0]['quantity'], self.data_paid['content'][0]['quantity'])
+        self.assertEqual(response.data['content'][0]['sub_total'], 773500000)
+        self.assertEqual(response.data['content'][1]['restock_detail_id'], self.restock_detail_2.restock_detail_id)
+        self.assertEqual(response.data['content'][1]['sparepart_id'], self.spareparts[1].sparepart_id)
+        self.assertEqual(response.data['content'][1]['individual_price'],
+                         str(self.data_paid['content'][1]['individual_price']))
+        self.assertEqual(response.data['content'][1]['quantity'], self.data_paid['content'][1]['quantity'])
         self.assertEqual(response.data['content'][1]['sub_total'], 29250000)
 
         # ensure sparepart quantity will be added (+) by detail's quantity
@@ -2087,7 +2205,7 @@ class SupplierListTestCase(SetTestCase):
             }
         ])
 
-    def test_admin_successfully_searching_supplier_without_result(self) -> None:
+    def test_admin_failed_to_searching_supplier_without_result(self) -> None:
         """
         Ensure admin search supplier that doesn't exist get empty result
         """
@@ -3460,7 +3578,7 @@ class BrandListTestCase(SetTestCase):
             }
         ])
 
-    def test_admin_successfully_searching_brand_without_result(self) -> None:
+    def test_admin_failed_to_searching_brand_without_result(self) -> None:
         """
         Ensure admin search brand that doesn't exist get empty result
         """
@@ -3942,7 +4060,7 @@ class CustomerListTestCase(SetTestCase):
         self.assertEqual(response.data['results'][0]['total_payment'], 965000)
         self.assertEqual(response.data['results'][0]['remaining_payment'], 940000)
 
-    def test_admin_successfully_searching_customer_without_result(self) -> None:
+    def test_admin_failed_to_searching_customer_without_result(self) -> None:
         """
         Ensure admin search customer that doesn't exist get empty result
         """
@@ -4237,7 +4355,7 @@ class SalesmanListTestCase(SetTestCase):
             }
         ])
 
-    def test_admin_successfully_searching_salesman_without_result(self) -> None:
+    def test_admin_failed_to_searching_salesman_without_result(self) -> None:
         """
         Ensure admin search salesman that doesn't exist get empty result
         """
