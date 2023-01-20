@@ -687,12 +687,10 @@ class OwnerDashboard(generics.GenericAPIView):
         # Getting url params of year and month if doesn't exist use today value
         self.year = int(request.query_params.get('year', date.today().year))
         self.month = int(request.query_params.get('month', date.today().month))
+        self.day = int(request.query_params.get('day', date.today().day))
 
         # Getting number of day form current month
         self.number_of_day = monthrange(year=self.year, month=self.month)[1]
-
-        # Getting total revenue per day in particular a month
-        self.revenue_in_month = {}
 
         # Getting sparepart revenue for today
         self.sales_revenue_today = 0
@@ -717,21 +715,16 @@ class OwnerDashboard(generics.GenericAPIView):
         service = self.get_serializer(service_queryset, many=True)
         service_list = sorted(service.data, key=lambda k: k['created_at'], reverse=True)
 
-        # Make dict of revenue per day in particular month as exp {day: revenue_total}
-        for i, object in enumerate(range(self.number_of_day), 1):
-            self.revenue_in_month[i] = 0
-            for sales in sales_list:
-                if sales['created_at'] == date(self.year, self.month, i).strftime('%d-%m-%Y'):
-                    self.revenue_in_month[i] += sales['revenue']
-                    if date(self.year, self.month, i).strftime('%d-%m-%Y') == date.today().strftime('%d-%m-%Y'):
-                        self.sales_revenue_today += sales['revenue']
-                        self.total_revenue_today += sales['revenue']
-            for service in service_list:
-                if service['created_at'] == date(self.year, self.month, i).strftime('%d-%m-%Y'):
-                    self.revenue_in_month[i] += service['revenue']
-                    if date(self.year, self.month, i).strftime('%d-%m-%Y') == date.today().strftime('%d-%m-%Y'):
-                        self.service_revenue_today += service['revenue']
-                        self.total_revenue_today += service['revenue']
+        # Getting total sales revenue and service revenue of today
+        for sales in sales_list:
+            if sales['created_at'] == date(self.year, self.month, self.day).strftime('%d-%m-%Y'):
+                self.sales_revenue_today += sales['revenue']
+        for service in service_list:
+            if service['created_at'] == date(self.year, self.month, self.day).strftime('%d-%m-%Y'):
+                self.service_revenue_today += service['revenue']
+
+        # Getting total revenue today by adding sales and service
+        self.total_revenue_today = self.service_revenue_today + self.sales_revenue_today
 
         # Getting number of sales from today
         self.count_sales = Sales.objects.filter(created_at__date=date.today()).count()
@@ -756,7 +749,6 @@ class OwnerDashboard(generics.GenericAPIView):
         return Response(
             {
                 'message': 'Berhasil Mengkases Pemilik Dashboard',
-                'revenue_in_month': self.revenue_in_month,
                 'sales_revenue_today': self.sales_revenue_today,
                 'service_revenue_today': self.service_revenue_today,
                 'total_revenue_today': self.total_revenue_today,

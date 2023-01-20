@@ -1,4 +1,3 @@
-from calendar import monthrange
 from datetime import date, timedelta
 
 from django.contrib.auth.models import User
@@ -476,10 +475,6 @@ class OwnerDashboardTestCase(SetTestCase):
         self.client.force_authenticate(user=self.owner)
         response = self.client.get(self.owner_dashboard_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(
-            len(response.data['revenue_in_month']),
-            monthrange(year=date.today().year, month=date.today().month)[1]
-        )
         self.assertEqual(response.data['total_revenue_today'], 617500)
         self.assertEqual(response.data['sales_revenue_today'], 372000)
         self.assertEqual(response.data['service_revenue_today'], 245500)
