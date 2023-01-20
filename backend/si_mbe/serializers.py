@@ -5,9 +5,7 @@ from si_mbe.models import (Brand, Category, Customer, Logs, Profile, Restock,
                            Restock_detail, Sales, Sales_detail, Service,
                            Service_action, Service_sparepart, Sparepart,
                            Supplier, Mechanic, Salesman)
-from si_mbe.exceptions import CustomerValidationError, CustomerConflictError
-from si_mbe.validators import validate_image_size
-from django.core.validators import FileExtensionValidator
+from si_mbe.validators import CustomerValidationError, CustomerConflictError
 
 
 class HomeSerializers(serializers.ModelSerializer):
@@ -23,13 +21,11 @@ class SearchSparepartSerializers(serializers.ModelSerializer):
     """
     brand = serializers.ReadOnlyField(source='brand_id.name')
     category = serializers.ReadOnlyField(source='category_id.name')
-    image = serializers.ImageField(required=False, allow_empty_file=True, use_url=True)
 
     class Meta:
         model = Sparepart
         fields = [
             'sparepart_id',
-            'image',
             'name',
             'partnumber',
             'quantity',
@@ -61,14 +57,6 @@ class SparepartListSerializers(serializers.ModelSerializer):
 
 
 class SparepartSerializers(serializers.ModelSerializer):
-    image = serializers.ImageField(
-        required=False,
-        allow_empty_file=True,
-        use_url=True,
-        validators=[validate_image_size,
-                    FileExtensionValidator(['jpg', 'jpeg', 'png'])]
-    )
-
     class Meta:
         model = Sparepart
         fields = [
@@ -84,7 +72,6 @@ class SparepartSerializers(serializers.ModelSerializer):
             'price',
             'workshop_price',
             'install_price',
-            'image',
         ]
 
 

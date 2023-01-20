@@ -1,10 +1,6 @@
 from django.contrib.auth.models import User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from uuid import uuid4
-from si_mbe.validators import validate_image_size
-
-# Create your models here.
 
 
 # Profile tabel is extended of user tabel to give each user their perpective informations
@@ -303,11 +299,6 @@ class Category(models.Model):
 
 # sparepart table to store information about sparepart
 class Sparepart(models.Model):
-    def sparepart_image_filename(instance, filename) -> str:
-        extension = filename.split('.')[-1]
-        filename = str(uuid4())
-        return f'images/spareparts/{filename}.{extension}'
-
     sparepart_id = models.AutoField(
         primary_key=True,
         unique=True
@@ -319,12 +310,6 @@ class Sparepart(models.Model):
     storage_code = models.CharField(max_length=15, default='', blank=True)
     motor_type = models.TextField(default='')
     sparepart_type = models.CharField(max_length=20)
-    image = models.ImageField(
-        null=True,
-        blank=True,
-        upload_to=sparepart_image_filename,
-        validators=[validate_image_size]
-    )
     price = models.DecimalField(max_digits=15, decimal_places=0)
     workshop_price = models.DecimalField(max_digits=15, decimal_places=0, blank=True, default=0)
     install_price = models.DecimalField(max_digits=15, decimal_places=0, blank=True, default=0)

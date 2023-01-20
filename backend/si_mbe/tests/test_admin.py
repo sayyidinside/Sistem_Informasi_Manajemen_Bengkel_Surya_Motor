@@ -4,10 +4,11 @@ from django.contrib.auth.models import User
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
-from si_mbe.models import (Brand, Category, Customer, Profile, Restock,
-                           Restock_detail, Sales, Sales_detail, Salesman,
-                           Service, Service_action, Service_sparepart,
-                           Sparepart, Supplier, Mechanic)
+from si_mbe.models import (Brand, Category, Customer, Mechanic, Profile,
+                           Restock, Restock_detail, Sales, Sales_detail,
+                           Salesman, Service, Service_action,
+                           Service_sparepart, Sparepart, Supplier)
+from si_mbe.validators import CustomerConflictError, CustomerValidationError
 
 
 # Create your tests here.
@@ -324,7 +325,6 @@ class SparepartDataAddTestCase(SetTestCase):
             'brand_id': cls.brand.brand_id,
             'storage_code': 'DA-405',
             'category_id': cls.category.category_id,
-            'image': ''
         }
 
         return super().setUpTestData()
@@ -348,7 +348,6 @@ class SparepartDataAddTestCase(SetTestCase):
         self.assertEqual(int(response.data['install_price']), self.data_sparepart['install_price'])
         self.assertEqual(response.data['storage_code'], self.data_sparepart['storage_code'])
         self.assertEqual(response.data['category_id'], self.data_sparepart['category_id'])
-        self.assertEqual(response.data['image'], None)
 
     def test_nonlogin_user_failed_to_add_new_sparepart_data(self) -> None:
         """
@@ -410,7 +409,6 @@ class SparepartDataUpdateTestCase(SetTestCase):
             'workshop_price': 5400000,
             'install_price': 5500000,
             'storage_code': 'HF-510i',
-            'image': ''
         }
 
         return super().setUpTestData()
@@ -456,7 +454,6 @@ class SparepartDataUpdateTestCase(SetTestCase):
         self.assertEqual(int(response.data['install_price']), self.data['install_price'])
         self.assertEqual(response.data['storage_code'], self.data['storage_code'])
         self.assertEqual(response.data['category_id'], self.data['category_id'])
-        self.assertEqual(response.data['image'], None)
 
     def test_nonlogin_user_failed_to_update_sparepart_data(self) -> None:
         """
@@ -1001,9 +998,10 @@ class SalesAddTestCase(SetTestCase):
         Ensure admin cannot add data sales with incomplete new customer data / input
         """
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.sales_add_url, self.data_incomplete_new_user, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['customer_contact'][0],
+        with self.assertRaises(CustomerValidationError) as context:
+            response = self.client.post(self.sales_add_url, self.data_incomplete_new_user, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(context.exception.messages[0],
                          'Baris ini harus diisi jika mengisi baris customer_name')
 
     def test_admin_failed_to_add_sales_with_conflicting_customer_data(self) -> None:
@@ -1011,9 +1009,10 @@ class SalesAddTestCase(SetTestCase):
         Ensure admin cannot add data sales with conflicting customer data / input
         """
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.sales_add_url, self.data_confliting_user, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['customer'],
+        with self.assertRaises(CustomerConflictError) as context:
+            response = self.client.post(self.sales_add_url, self.data_confliting_user, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(context.exception.messages[0],
                          'Anda tidak dapat mengisi baris kedua tipe pelanggan secara bersamaan\n'
                          'Pelanggan lama = customer_id\n'
                          'Pelanggan baru = customer_name dan customer_contact')
@@ -3023,9 +3022,10 @@ class ServiceAddTestCase(SetTestCase):
         Ensure admin cannot add data service with incomplete new customer data / input
         """
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.service_add_url, self.data_with_incomplete_new_cust, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['customer_contact'][0],
+        with self.assertRaises(CustomerValidationError) as context:
+            response = self.client.post(self.service_add_url, self.data_with_incomplete_new_cust, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(context.exception.messages[0],
                          'Baris ini harus diisi jika mengisi baris customer_name')
 
     def test_admin_failed_to_add_service_with_conflicting_customer_data(self) -> None:
@@ -3033,9 +3033,10 @@ class ServiceAddTestCase(SetTestCase):
         Ensure admin cannot add data service with conflicting customer data / input
         """
         self.client.force_authenticate(user=self.user)
-        response = self.client.post(self.service_add_url, self.data_with_conflicting_customer, format='json')
-        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data['customer'],
+        with self.assertRaises(CustomerConflictError) as context:
+            response = self.client.post(self.service_add_url, self.data_with_conflicting_customer, format='json')
+            self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(context.exception.messages[0],
                          'Anda tidak dapat mengisi baris kedua tipe pelanggan secara bersamaan\n'
                          'Pelanggan lama = customer_id\n'
                          'Pelanggan baru = customer_name dan customer_contact')

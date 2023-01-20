@@ -4,7 +4,6 @@ from django.conf import settings
 from django.db import migrations, models
 import django.db.models.deletion
 import django.utils.timezone
-import si_mbe.models
 
 
 class Migration(migrations.Migration):
@@ -184,7 +183,7 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='sparepart',
             name='image',
-            field=models.ImageField(blank=True, null=True, upload_to=si_mbe.models.Sparepart.sparepart_image_filename),
+            field=models.ImageField(blank=True, null=True),
         ),
         migrations.AddField(
             model_name='sparepart',
