@@ -103,6 +103,7 @@ class Sales(Base_transaction):
         unique=True
     )
     deposit = models.DecimalField(max_digits=15, decimal_places=0, default=0)
+    discount = models.DecimalField(max_digits=15, decimal_places=0, default=0)
 
     user_id = models.ForeignKey(
         User,

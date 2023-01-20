@@ -612,7 +612,8 @@ class SalesListTestCase(SetTestCase):
         # Setting up sales data and getting their id
         for i in range(2):
             Sales.objects.create(
-                customer_id=cls.customer
+                customer_id=cls.customer,
+                discount=50000
             )
 
         cls.sales = Sales.objects.all()
@@ -651,6 +652,7 @@ class SalesListTestCase(SetTestCase):
         self.assertEqual(response.data['results'][0]['created_at'],
                          (self.sales[0].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
         self.assertEqual(response.data['results'][0]['customer'], self.sales[0].customer_id.name)
+        self.assertEqual(response.data['results'][0]['discount'], str(self.sales[0].discount))
         self.assertEqual(response.data['results'][0]['total_price_sales'], 10800000)
         self.assertEqual(response.data['results'][0]['is_paid_off'], self.sales[0].is_paid_off)
         self.assertEqual(response.data['results'][0]['deposit'], str(self.sales[0].deposit))
@@ -721,6 +723,7 @@ class SalesListTestCase(SetTestCase):
         self.assertEqual(response.data['results'][0]['created_at'],
                          (self.sales[0].created_at + timedelta(hours=7)).strftime('%d-%m-%Y %H:%M:%S'))
         self.assertEqual(response.data['results'][0]['customer'], self.sales[0].customer_id.name)
+        self.assertEqual(response.data['results'][0]['discount'], str(self.sales[0].discount))
         self.assertEqual(response.data['results'][0]['total_price_sales'], 10800000)
         self.assertEqual(response.data['results'][0]['is_paid_off'], self.sales[0].is_paid_off)
         self.assertEqual(response.data['results'][0]['deposit'], str(self.sales[0].deposit))
@@ -786,6 +789,7 @@ class SalesAddTestCase(SetTestCase):
         cls.data = {
             'customer_id': cls.customer.customer_id,
             'deposit': 20000000,
+            'discount': 10000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[1].sparepart_id,
@@ -801,6 +805,7 @@ class SalesAddTestCase(SetTestCase):
         cls.data_paid = {
             'customer_id': cls.customer.customer_id,
             'deposit': 164300000,
+            'discount': 10000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[1].sparepart_id,
@@ -819,6 +824,7 @@ class SalesAddTestCase(SetTestCase):
             'customer_address': 'Seven Cities',
             'is_workshop': True,
             'deposit': 20000000,
+            'discount': 10000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[1].sparepart_id,
@@ -835,6 +841,7 @@ class SalesAddTestCase(SetTestCase):
             'customer_name': 'Felisin',
             'is_workshop': True,
             'deposit': 20000000,
+            'discount': 10000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[1].sparepart_id,
@@ -854,6 +861,7 @@ class SalesAddTestCase(SetTestCase):
             'is_workshop': True,
             'address': 'Seven Cities',
             'deposit': 20000000,
+            'discount': 10000,
             'content': [
                 {
                     'sparepart_id': cls.spareparts[1].sparepart_id,
@@ -885,9 +893,10 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 31)
-        self.assertEqual(response.data['total_price_sales'], 164300000)
+        self.assertEqual(int(response.data['discount']), self.data['discount'])
+        self.assertEqual(response.data['total_price_sales'], 164290000)
         self.assertEqual(response.data['change'], 0)
-        self.assertEqual(response.data['remaining_payment'], 144300000)
+        self.assertEqual(response.data['remaining_payment'], 144290000)
         self.assertEqual(response.data['is_paid_off'], False)
         self.assertEqual(len(response.data['content']), 2)
 
@@ -922,8 +931,9 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
         self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 31)
-        self.assertEqual(response.data['total_price_sales'], 164300000)
-        self.assertEqual(response.data['change'], 0)
+        self.assertEqual(int(response.data['discount']), self.data_paid['discount'])
+        self.assertEqual(response.data['total_price_sales'], 164290000)
+        self.assertEqual(response.data['change'], 10000)
         self.assertEqual(response.data['remaining_payment'], 0)
         self.assertEqual(Sales.objects.all()[0].is_paid_off, True)
         self.assertEqual(response.data['is_paid_off'], True)
@@ -969,9 +979,10 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(self.cust_new.is_workshop, self.data_with_new_user['is_workshop'])
         self.assertEqual(int(response.data['deposit']), self.data_with_new_user['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 31)
-        self.assertEqual(response.data['total_price_sales'], 164300000)
+        self.assertEqual(int(response.data['discount']), self.data_with_new_user['discount'])
+        self.assertEqual(response.data['total_price_sales'], 164290000)
         self.assertEqual(response.data['change'], 0)
-        self.assertEqual(response.data['remaining_payment'], 144300000)
+        self.assertEqual(response.data['remaining_payment'], 144290000)
         self.assertEqual(response.data['is_paid_off'], False)
         self.assertEqual(len(response.data['content']), 2)
 
@@ -1094,7 +1105,8 @@ class SalesUpdateTestCase(SetTestCase):
     def setUp(self) -> None:
         # Setting up sales data and getting their id
         self.sales = Sales.objects.create(
-            customer_id=self.customer
+            customer_id=self.customer,
+            discount=1000
         )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -1115,6 +1127,7 @@ class SalesUpdateTestCase(SetTestCase):
         # Creating data that gonna be use as input
         self.data = {
             'customer_id': self.customer.customer_id,
+            'discount': 10000,
             'deposit': 2000000,
             'content': [
                 {
@@ -1133,6 +1146,7 @@ class SalesUpdateTestCase(SetTestCase):
         self.data_paid = {
             'customer_id': self.customer.customer_id,
             'deposit': 5000000,
+            'discount': 10000,
             'content': [
                 {
                     'sales_detail_id': self.sales_detail_1.sales_detail_id,
@@ -1174,9 +1188,10 @@ class SalesUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 35)
-        self.assertEqual(response.data['total_price_sales'], 3500000)
+        self.assertEqual(int(response.data['discount']), self.data['discount'])
+        self.assertEqual(response.data['total_price_sales'], 3490000)
         self.assertEqual(response.data['change'], 0)
-        self.assertEqual(response.data['remaining_payment'], 1500000)
+        self.assertEqual(response.data['remaining_payment'], 1490000)
         self.assertEqual(Sales.objects.all()[0].is_paid_off, False)
         self.assertEqual(response.data['is_paid_off'], False)
         self.assertEqual(len(response.data['content']), 2)
@@ -1212,8 +1227,9 @@ class SalesUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
         self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 35)
-        self.assertEqual(response.data['total_price_sales'], 3500000)
-        self.assertEqual(response.data['change'], 1500000)
+        self.assertEqual(int(response.data['discount']), self.data_paid['discount'])
+        self.assertEqual(response.data['total_price_sales'], 3490000)
+        self.assertEqual(response.data['change'], 1510000)
         self.assertEqual(response.data['remaining_payment'], 0)
         self.assertEqual(Sales.objects.all()[0].is_paid_off, True)
         self.assertEqual(response.data['is_paid_off'], True)
@@ -4750,7 +4766,9 @@ class ServiceReceiptTestCase(SetTestCase):
         cls.service = Service.objects.create(
             customer_id=cls.customer,
             mechanic_id=cls.mechanic,
-            discount=14000
+            discount=14000,
+            police_number='B 9231 FA',
+            motor_type='Yamaha RX'
         )
 
         Service_action.objects.create(

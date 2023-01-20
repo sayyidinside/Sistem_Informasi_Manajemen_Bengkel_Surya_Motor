@@ -105,6 +105,7 @@ class SalesSerializers(serializers.ModelSerializer):
             'sales_id',
             'created_at',
             'customer',
+            'discount',
             'total_price_sales',
             'is_paid_off',
             'deposit',
@@ -161,6 +162,7 @@ class SalesManagementSerializers(serializers.ModelSerializer):
             'customer_contact',
             'customer_address',
             'is_workshop',
+            'discount',
             'deposit',
             'total_quantity_sales',
             'total_price_sales',
@@ -188,7 +190,7 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         total_price = 0
         for sales in sales_serializer.data:
             total_price += sales['sub_total']
-        return total_price
+        return total_price - int(obj.discount)
 
     def get_change(self, obj):
         # Getting total_price using class method
@@ -264,7 +266,7 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         details = validated_data.pop('sales_detail_set')
 
         # Calculate total_sales_price
-        total_sales_price = 0
+        total_sales_price = 0 - validated_data['discount']
         for detail in details:
             if is_workshop or customer_id.is_workshop:
                 total_sales_price += int(detail['sparepart_id'].workshop_price) * detail['quantity']
@@ -308,9 +310,10 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         instance.customer_id = validated_data.get('customer_id', instance.customer_id)
         instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
         instance.deposit = validated_data.get('deposit', instance.deposit)
+        instance.discount = validated_data.get('discount', instance.discount)
 
         # Calculate total_sales_price
-        total_sales_price = 0
+        total_sales_price = 0 - validated_data['discount']
         for detail in validated_details:
             if validated_data['customer_id'].is_workshop:
                 total_sales_price += int(detail['sparepart_id'].workshop_price) * detail['quantity']
@@ -600,7 +603,7 @@ class SalesReportSerializers(serializers.ModelSerializer):
         total_price = 0
         for sales in sales_serializer.data:
             total_price += sales['sub_total']
-        return total_price
+        return total_price - int(obj.discount)
 
 
 class RestockReportSerializers(serializers.ModelSerializer):
@@ -1418,6 +1421,7 @@ class SalesReceiptSerializers(serializers.ModelSerializer):
     customer_contact = serializers.ReadOnlyField(source='customer_id.contact')
     total_quantity = serializers.SerializerMethodField()
     total_price = serializers.SerializerMethodField()
+    final_total_price = serializers.SerializerMethodField()
     change = serializers.SerializerMethodField()
     remaining_payment = serializers.SerializerMethodField()
     content = SalesDetailReceiptSerializers(many=True, source='sales_detail_set')
@@ -1430,8 +1434,10 @@ class SalesReceiptSerializers(serializers.ModelSerializer):
             'customer_name',
             'customer_contact',
             'deposit',
+            'discount',
             'total_quantity',
             'total_price',
+            'final_total_price',
             'change',
             'remaining_payment',
             'is_paid_off',
@@ -1457,6 +1463,11 @@ class SalesReceiptSerializers(serializers.ModelSerializer):
         for sales in sales_serializer.data:
             total_price += sales['sub_total']
         return total_price
+
+    def get_final_total_price(self, obj):
+        # Getting total sales price using class method
+        total_price = self.get_total_price(obj)
+        return total_price - int(obj.discount)
 
     def get_change(self, obj):
         # Getting total_price using class method
@@ -1522,6 +1533,8 @@ class ServiceReceiptSerializers(serializers.ModelSerializer):
             'service_id',
             'created_at',
             'customer_name',
+            'motor_type',
+            'police_number',
             'total_quantity',
             'sub_total_part',
             'sub_total_action',

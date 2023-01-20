@@ -542,6 +542,7 @@ def generate_receipt(
     - data (required) as main ingredients to create reciept content;
     - transaction_type (required) to create filename, title, and few operation in creating reciept
     '''
+    # print(data)
     if transaction_type in ('Penjualan', 'Sales'):
         keyword = ('Sales', 'sales')
 
@@ -550,7 +551,7 @@ def generate_receipt(
 
         # Retrieve items count to make dynamic paper lenght
         item_count = len(content) * 2
-        height = (58 + (item_count*4))*mm
+        height = (67 + (item_count*4))*mm
 
         # Creating table from the content of transaction for sales
         content_list = [['Qty', 'Harga', 'Jumlah']]
@@ -572,15 +573,12 @@ def generate_receipt(
         content_sparepart = data.pop('service_spareparts', [])
         content_action = data.pop('service_actions', [])
 
-        # content_sparepart.clear()
-        # content_action.clear()
-
         action_count = len(content_action)
         sparepart_count = (len(content_sparepart) * 2)
 
         # Retrieve items count to make dynamic paper lenght
         item_count = action_count + sparepart_count
-        height = (71 + (item_count*4))*mm
+        height = (77 + (item_count*4))*mm
 
         # Creating table from the content of transaction for sales
         content_list = [['Qty', 'Harga', 'Jumlah']]
@@ -605,10 +603,19 @@ def generate_receipt(
                     temp_list.append(format_money(int(action[info])))
             content_list.append(temp_list)
 
+    # Creating table for customer information
+    customer_list = []
+    customer_list.append(['Pelanggan', f': {data["customer_name"]}'])
+    if transaction_type not in ('Penjualan', 'Sales'):
+        customer_list.append(['Jenis Motor', f': {data["motor_type"]}'])
+        customer_list.append(['No Polisi', f': {data["police_number"]}'])
+
     # Adding payment information to table
     if transaction_type in ('Penjualan', 'Sales'):
         content_list.append([None, 'Total Item', data['total_quantity']])
         content_list.append([None, 'Sub Total', format_money(data['total_price'])])
+        content_list.append([None, 'Discount', format_money(int(data['discount']))])
+        content_list.append([None, 'Total', format_money(data['final_total_price'])])
     else:
         content_list.append([data['total_quantity'], 'Sub Total Part', format_money(data['sub_total_part'])])
         content_list.append([None, 'Sub Total Jasa', format_money(data['sub_total_action'])])
@@ -622,20 +629,29 @@ def generate_receipt(
     else:
         content_list.append([None, 'Sisa', format_money(data['remaining_payment'])])
 
-    # Create the table with custome width
-    table = Table(content_list, colWidths=[14*mm, 18.75*mm, 18.75*mm], rowHeights=4*mm)
+    # Create the table for customer information with custome width
+    customer_table = Table(customer_list, colWidths=[11.5*mm, 11*mm], rowHeights=3*mm, hAlign='LEFT')
 
-    # Create table_style
-    table_style = TableStyle([
-        # Setting up style for table heading
+    # Create the table for service contents with custome width
+    content_table = Table(content_list, colWidths=[14*mm, 18.75*mm, 18.75*mm], rowHeights=4*mm)
+
+    # Create style for customer information table
+    customer_table_style = TableStyle([
         ('FONTSIZE', (0, 0), (-1, -1), 6),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ])
+
+    # Create style for content table
+    content_table_style = TableStyle([
+        # Setting up style for table heading
         ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
         ('LINEABOVE', (0, 0), (-1, 0), 0.5, colors.black, None, (1.95, 0.45)),
         ('LINEBELOW', (0, 0), (-1, 0), 0.5, colors.black, None, (1.95, 0.45)),
         ('LEADING', (0, 0), (-1, 0), 7.7),
 
         # Setting up style for table content
+        ('FONTSIZE', (0, 0), (-1, -1), 6),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('LEADING', (0, 1), (-1, -2), 4),
         ('ALIGN', (1, 1), (-1, -1), 'RIGHT'),
         ('LEADING', (0, -1), (-1, -1), 6.5),
@@ -650,12 +666,14 @@ def generate_receipt(
 
     # check in it's service transaction adding few style to table
     if transaction_type not in ('Penjualan', 'Sales'):
-        table_style.add('LINEABOVE', (0, sparepart_count+1), (-1, sparepart_count+1),
-                        0.5, colors.black, None, (1.95, 0.45))
-        # table_style.add('LEADING', (0, sparepart_count), (-1, sparepart_count), 6.5)
+        content_table_style.add('LINEABOVE', (0, sparepart_count+1), (-1, sparepart_count+1),
+                                0.5, colors.black, None, (1.95, 0.45))
 
-    # Set the style for the first row (the column headings)
-    table.setStyle(table_style)
+    # Set the stle for customer table
+    customer_table.setStyle(customer_table_style)
+
+    # Set the style for the content table
+    content_table.setStyle(content_table_style)
 
     # Create receipt template
     receipt = []
@@ -669,12 +687,11 @@ def generate_receipt(
                    style=ParagraphStyle(name='address', fontSize=6, alignment=TA_CENTER, leading=7)))
     receipt.append(Paragraph('WA. 0895 3561 94945',
                    style=ParagraphStyle(name='address', fontSize=6, alignment=TA_CENTER, leading=7)))
-    receipt.append(Spacer(0, 4))
-    receipt.append(Paragraph(f'{data["customer_name"]}',
-                   style=ParagraphStyle(name='receipt_info', fontSize=6, leading=7.5)))
+    receipt.append(Spacer(0, 5))
+    receipt.append(customer_table)
     receipt.append(Paragraph(f'#{data[f"{keyword[1]}_id"]} - {data["created_at"]}',
-                   style=ParagraphStyle(name='receipt_info', fontSize=6, leading=10)))
-    receipt.append(table)
+                   style=ParagraphStyle(name='receipt_info', fontSize=6, leading=10, leftIndent=6)))
+    receipt.append(content_table)
     receipt.append(Spacer(0, 3))
     receipt.append(Paragraph('Terima Kasih Telah Bertransaksi di Bengkel Mulya Motor',
                    style=ParagraphStyle(name='footer', fontSize=5, alignment=TA_CENTER, leading=0)))

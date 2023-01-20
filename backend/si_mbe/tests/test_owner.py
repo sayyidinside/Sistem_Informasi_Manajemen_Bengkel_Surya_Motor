@@ -62,11 +62,13 @@ class SalesReportTestCase(APITestCase):
         cls.sales_1 = Sales.objects.create(
                 customer_id=cls.customer_1,
                 user_id=cls.user,
-                deposit=751000
+                deposit=751000,
+                discount=20000
             )
         cls.sales_2 = Sales.objects.create(
                 customer_id=cls.customer_2,
                 user_id=cls.user,
+                discount=10000
             )
 
         Sales_detail.objects.create(
@@ -110,7 +112,7 @@ class SalesReportTestCase(APITestCase):
 
         # Validate sales information per day table data
         self.assertEqual(response.data['sales_report'][self.date]['date'], date.today() + timedelta(hours=7))
-        self.assertEqual(response.data['sales_report'][self.date]['sales_transaction'], 44660000)
+        self.assertEqual(response.data['sales_report'][self.date]['sales_transaction'], 44630000)
         self.assertEqual(response.data['sales_report'][self.date]['sales_revenue'], 751000)
         self.assertEqual(response.data['sales_report'][self.date]['sales_count'], 2)
 
@@ -121,7 +123,7 @@ class SalesReportTestCase(APITestCase):
         self.assertEqual(response.data['sales_report'][self.date - 2]['sales_count'], 0)
 
         # Validate total month informations
-        self.assertEqual(response.data['sales_transaction_month'], 44660000)
+        self.assertEqual(response.data['sales_transaction_month'], 44630000)
         self.assertEqual(response.data['sales_revenue_month'], 751000)
 
     def test_nonlogin_user_failed_to_access_sales_report_list(self) -> None:
