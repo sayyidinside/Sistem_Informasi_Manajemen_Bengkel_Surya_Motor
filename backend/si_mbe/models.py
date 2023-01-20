@@ -75,6 +75,8 @@ class Customer(models.Model):
     )
     name = models.CharField(max_length=30)
     contact = models.CharField(max_length=15)
+    address = models.CharField(max_length=50, default='')
+    is_workshop = models.BooleanField(default=False)
 
     def __str__(self) -> str:
         return f'{self.name}'
@@ -100,7 +102,6 @@ class Sales(Base_transaction):
         primary_key=True,
         unique=True
     )
-    is_workshop = models.BooleanField(default=False)
     deposit = models.DecimalField(max_digits=15, decimal_places=0, default=0)
 
     user_id = models.ForeignKey(

@@ -85,7 +85,7 @@ class SalesDetailSerializers(serializers.ModelSerializer):
 
     def get_sub_total(self, obj):
         # Check if workshop is true
-        if obj.sales_id.is_workshop:
+        if obj.sales_id.customer_id.is_workshop:
             # calculate with workshop price
             return int(obj.quantity * obj.sparepart_id.workshop_price)
 
@@ -132,7 +132,7 @@ class SalesDetailManagementSerializers(serializers.ModelSerializer):
 
     def get_sub_total(self, obj):
         # Check if workshop is true
-        if obj.sales_id.is_workshop:
+        if obj.sales_id.customer_id.is_workshop:
             # calculate with workshop price
             return int(obj.quantity * obj.sparepart_id.workshop_price)
 
@@ -143,6 +143,8 @@ class SalesDetailManagementSerializers(serializers.ModelSerializer):
 class SalesManagementSerializers(serializers.ModelSerializer):
     customer_name = serializers.CharField(max_length=30, write_only=True, required=False)
     customer_contact = serializers.CharField(max_length=15, write_only=True, required=False)
+    customer_address = serializers.CharField(max_length=50, write_only=True, required=False)
+    is_workshop = serializers.BooleanField(write_only=True, required=False)
     total_quantity_sales = serializers.SerializerMethodField()
     total_price_sales = serializers.SerializerMethodField()
     change = serializers.SerializerMethodField()
@@ -157,6 +159,7 @@ class SalesManagementSerializers(serializers.ModelSerializer):
             'customer_id',
             'customer_name',
             'customer_contact',
+            'customer_address',
             'is_workshop',
             'deposit',
             'total_quantity_sales',
@@ -227,6 +230,8 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         customer_id = validated_data.get('customer_id', None)
         customer_name = validated_data.pop('customer_name', None)
         customer_contact = validated_data.pop('customer_contact', None)
+        customer_address = validated_data.pop('customer_address', None)
+        is_workshop = validated_data.pop('is_workshop', None)
 
         # check if user send new customer name must include contact and vise versa
         if (customer_name is not None) ^ (customer_contact is not None):
@@ -246,6 +251,8 @@ class SalesManagementSerializers(serializers.ModelSerializer):
             customer_detail = {}
             customer_detail['name'] = customer_name
             customer_detail['contact'] = customer_contact
+            customer_detail['address'] = customer_address
+            customer_detail['is_workshop'] = is_workshop
 
             # Create new customer in database
             customer = Customer.objects.create(**customer_detail)
@@ -259,7 +266,7 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         # Calculate total_sales_price
         total_sales_price = 0
         for detail in details:
-            if validated_data['is_workshop']:
+            if is_workshop or customer_id.is_workshop:
                 total_sales_price += int(detail['sparepart_id'].workshop_price) * detail['quantity']
             else:
                 total_sales_price += int(detail['sparepart_id'].price) * detail['quantity']
@@ -292,6 +299,8 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         try:
             validated_data.pop('customer_name')
             validated_data.pop('customer_contact')
+            validated_data.pop('customer_address')
+            validated_data.pop('is_workshop')
         except Exception:
             pass
 
@@ -299,12 +308,11 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         instance.customer_id = validated_data.get('customer_id', instance.customer_id)
         instance.is_paid_off = validated_data.get('is_paid_off', instance.is_paid_off)
         instance.deposit = validated_data.get('deposit', instance.deposit)
-        instance.is_workshop = validated_data.get('is_workshop', instance.deposit)
 
         # Calculate total_sales_price
         total_sales_price = 0
         for detail in validated_details:
-            if validated_data['is_workshop']:
+            if validated_data['customer_id'].is_workshop:
                 total_sales_price += int(detail['sparepart_id'].workshop_price) * detail['quantity']
             else:
                 total_sales_price += int(detail['sparepart_id'].price) * detail['quantity']
@@ -1158,6 +1166,8 @@ class CustomerSerializers(serializers.ModelSerializer):
             'customer_id',
             'name',
             'contact',
+            'address',
+            'is_workshop',
             'number_of_service',
             'total_payment',
             'remaining_payment'
@@ -1216,7 +1226,7 @@ class CustomerSerializers(serializers.ModelSerializer):
 class CustomerManagementSerializers(serializers.ModelSerializer):
     class Meta:
         model = Customer
-        fields = ['customer_id', 'name', 'contact']
+        fields = ['customer_id', 'name', 'contact', 'address', 'is_workshop']
 
 
 class MechanicSerializers(serializers.ModelSerializer):
@@ -1385,7 +1395,7 @@ class SalesDetailReceiptSerializers(serializers.ModelSerializer):
 
     def get_sub_total(self, obj):
         # Check if workshop is true
-        if obj.sales_id.is_workshop:
+        if obj.sales_id.customer_id.is_workshop:
             # calculate with workshop price
             return int(obj.quantity * obj.sparepart_id.workshop_price)
 
@@ -1394,7 +1404,7 @@ class SalesDetailReceiptSerializers(serializers.ModelSerializer):
 
     def get_individual_price(self, obj):
         # Check if workshop is true
-        if obj.sales_id.is_workshop:
+        if obj.sales_id.customer_id.is_workshop:
             # return individual sparepart workshop price
             return int(obj.sparepart_id.workshop_price)
 

@@ -215,7 +215,7 @@ class SalesAdd(generics.CreateAPIView):
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 4:
+        if len(request.data) < 3:
             return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
@@ -256,7 +256,7 @@ class SalesUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 4:
+        if len(request.data) < 3:
             return Response({'message': 'Data penjualan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         for content in request.data['content']:
@@ -1211,7 +1211,7 @@ class CustomerList(generics.ListAPIView):
     pagination_class.page_size = 100
 
     filter_backends = [filters.SearchFilter]
-    search_fields = ['name', 'contact']
+    search_fields = ['name', 'contact', 'address', 'is_workshop']
 
     def get_paginated_response(self, data):
         if len(data) == 0:
@@ -1226,7 +1226,7 @@ class CustomerAdd(generics.CreateAPIView):
     permission_classes = [IsLogin, IsAdminRole]
 
     def create(self, request, *args, **kwargs):
-        if len(request.data) < 2:
+        if len(request.data) < 4:
             return Response({'message': 'Data pelanggan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         serializer = self.get_serializer(data=request.data)
@@ -1252,7 +1252,7 @@ class CustomerUpdate(generics.RetrieveUpdateAPIView):
         return super().handle_exception(exc)
 
     def update(self, request, *args, **kwargs):
-        if len(request.data) < 2:
+        if len(request.data) < 4:
             return Response({'message': 'Data pelanggan tidak sesuai / tidak lengkap'},
                             status=status.HTTP_400_BAD_REQUEST)
         partial = kwargs.pop('partial', False)

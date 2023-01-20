@@ -54,7 +54,8 @@ class SalesReportTestCase(APITestCase):
         )
         cls.customer_2 = Customer.objects.create(
             name='Vasheer',
-            contact='085456102341'
+            contact='085456102341',
+            is_workshop=True
         )
 
         # Setting up sales data and getting their object
@@ -66,7 +67,6 @@ class SalesReportTestCase(APITestCase):
         cls.sales_2 = Sales.objects.create(
                 customer_id=cls.customer_2,
                 user_id=cls.user,
-                is_workshop=True
             )
 
         Sales_detail.objects.create(

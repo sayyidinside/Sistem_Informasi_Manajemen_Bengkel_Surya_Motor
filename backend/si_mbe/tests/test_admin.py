@@ -777,13 +777,14 @@ class SalesAddTestCase(SetTestCase):
         # Setting up customer data
         cls.customer = Customer.objects.create(
             name='Fjord',
-            contact='084531584533'
+            contact='084531584533',
+            address='Port Damali',
+            is_workshop=True
         )
 
         # Creating data that gonna be use as input
         cls.data = {
             'customer_id': cls.customer.customer_id,
-            'is_workshop': True,
             'deposit': 20000000,
             'content': [
                 {
@@ -799,7 +800,6 @@ class SalesAddTestCase(SetTestCase):
 
         cls.data_paid = {
             'customer_id': cls.customer.customer_id,
-            'is_workshop': True,
             'deposit': 164300000,
             'content': [
                 {
@@ -816,6 +816,7 @@ class SalesAddTestCase(SetTestCase):
         cls.data_with_new_user = {
             'customer_name': 'Felisin',
             'customer_contact': '086468560046',
+            'customer_address': 'Seven Cities',
             'is_workshop': True,
             'deposit': 20000000,
             'content': [
@@ -851,6 +852,7 @@ class SalesAddTestCase(SetTestCase):
             'customer_name': 'Felisin',
             'customer_contact': '086468560046',
             'is_workshop': True,
+            'address': 'Seven Cities',
             'deposit': 20000000,
             'content': [
                 {
@@ -866,7 +868,6 @@ class SalesAddTestCase(SetTestCase):
 
         cls.incomplete_data = {
             'customer_id': cls.customer.customer_id,
-            'is_workshop': True,
         }
 
         return super().setUpTestData()
@@ -882,7 +883,6 @@ class SalesAddTestCase(SetTestCase):
 
         # Validating surface level information of sales
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
-        self.assertEqual(response.data['is_workshop'], self.data['is_workshop'])
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 31)
         self.assertEqual(response.data['total_price_sales'], 164300000)
@@ -920,7 +920,6 @@ class SalesAddTestCase(SetTestCase):
 
         # Validating surface level information of sales
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
-        self.assertEqual(response.data['is_workshop'], self.data_paid['is_workshop'])
         self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 31)
         self.assertEqual(response.data['total_price_sales'], 164300000)
@@ -966,7 +965,8 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(response.data['customer_id'], self.cust_new.customer_id)
         self.assertEqual(self.cust_new.name, self.data_with_new_user['customer_name'])
         self.assertEqual(self.cust_new.contact, self.data_with_new_user['customer_contact'])
-        self.assertEqual(response.data['is_workshop'], self.data_with_new_user['is_workshop'])
+        self.assertEqual(self.cust_new.address, self.data_with_new_user['customer_address'])
+        self.assertEqual(self.cust_new.is_workshop, self.data_with_new_user['is_workshop'])
         self.assertEqual(int(response.data['deposit']), self.data_with_new_user['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 31)
         self.assertEqual(response.data['total_price_sales'], 164300000)
@@ -1084,7 +1084,9 @@ class SalesUpdateTestCase(SetTestCase):
         # Setting up customer data
         cls.customer = Customer.objects.create(
             name='Clem Andor',
-            contact='085425502660'
+            contact='085425502660',
+            address='Ferrix',
+            is_workshop=True
         )
 
         return super().setUpTestData()
@@ -1092,8 +1094,7 @@ class SalesUpdateTestCase(SetTestCase):
     def setUp(self) -> None:
         # Setting up sales data and getting their id
         self.sales = Sales.objects.create(
-            customer_id=self.customer,
-            is_workshop=False
+            customer_id=self.customer
         )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -1114,7 +1115,6 @@ class SalesUpdateTestCase(SetTestCase):
         # Creating data that gonna be use as input
         self.data = {
             'customer_id': self.customer.customer_id,
-            'is_workshop': True,
             'deposit': 2000000,
             'content': [
                 {
@@ -1132,7 +1132,6 @@ class SalesUpdateTestCase(SetTestCase):
 
         self.data_paid = {
             'customer_id': self.customer.customer_id,
-            'is_workshop': True,
             'deposit': 5000000,
             'content': [
                 {
@@ -1173,7 +1172,6 @@ class SalesUpdateTestCase(SetTestCase):
 
         # Validate surface level sales information
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
-        self.assertEqual(response.data['is_workshop'], True)
         self.assertEqual(int(response.data['deposit']), self.data['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 35)
         self.assertEqual(response.data['total_price_sales'], 3500000)
@@ -1212,7 +1210,6 @@ class SalesUpdateTestCase(SetTestCase):
 
         # Validating surface level information of sales
         self.assertEqual(response.data['customer_id'], self.customer.customer_id)
-        self.assertEqual(response.data['is_workshop'], self.data_paid['is_workshop'])
         self.assertEqual(int(response.data['deposit']), self.data_paid['deposit'])
         self.assertEqual(response.data['total_quantity_sales'], 35)
         self.assertEqual(response.data['total_price_sales'], 3500000)
@@ -1317,7 +1314,8 @@ class SalesDeleteTestCase(SetTestCase):
         # Setting up customer data
         cls.customer = Customer.objects.create(
             name='Zurat Gracdion',
-            contact='085425045263'
+            contact='085425045263',
+            address='Temple Of North Star'
         )
 
         return super().setUpTestData()
@@ -1327,7 +1325,6 @@ class SalesDeleteTestCase(SetTestCase):
         self.sales = Sales.objects.create(
             customer_id=self.customer,
             deposit=400000,
-            is_workshop=False,
         )
 
         # Getting newly added sales it's sales_id then set it to kwargs in reverse url
@@ -3958,10 +3955,12 @@ class CustomerListTestCase(SetTestCase):
         cls.customer = Customer.objects.create(
             name='Preston Garvey',
             contact='085701530830',
+            address='Commonwealth'
         )
         cls.customer_2 = Customer.objects.create(
             name='Robert MacCready',
             contact='085163511040',
+            address='Capital Wasteland'
         )
 
         # Setting up sparepart data
@@ -4020,11 +4019,15 @@ class CustomerListTestCase(SetTestCase):
         self.assertEqual(response.data['count_item'], 2)
         self.assertEqual(response.data['results'][0]['name'], self.customer.name)
         self.assertEqual(response.data['results'][0]['contact'], self.customer.contact)
+        self.assertEqual(response.data['results'][0]['address'], self.customer.address)
+        self.assertEqual(response.data['results'][0]['is_workshop'], self.customer.is_workshop)
         self.assertEqual(response.data['results'][0]['number_of_service'], 1)
         self.assertEqual(response.data['results'][0]['total_payment'], 965000)
         self.assertEqual(response.data['results'][0]['remaining_payment'], 940000)
         self.assertEqual(response.data['results'][1]['name'], self.customer_2.name)
         self.assertEqual(response.data['results'][1]['contact'], self.customer_2.contact)
+        self.assertEqual(response.data['results'][1]['address'], self.customer_2.address)
+        self.assertEqual(response.data['results'][1]['is_workshop'], self.customer_2.is_workshop)
         self.assertEqual(response.data['results'][1]['number_of_service'], 1)
         self.assertEqual(response.data['results'][1]['total_payment'], 28000)
         self.assertEqual(response.data['results'][1]['remaining_payment'], 28000)
@@ -4081,6 +4084,8 @@ class CustomerAddTestCase(SetTestCase):
         cls.data = {
             'name': 'Piper Wright',
             'contact':  '085701530830',
+            'address': 'Daimond City',
+            'is_workshop': False
         }
         cls.incomplete_data = {
             'contact':  '085687028044',
@@ -4098,6 +4103,8 @@ class CustomerAddTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data pelanggan berhasil ditambah')
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['address'], self.data['address'])
+        self.assertEqual(response.data['is_workshop'], self.data['is_workshop'])
 
     def test_nonlogin_user_failed_to_add_new_customer(self) -> None:
         """
@@ -4143,6 +4150,8 @@ class CustomerUpdateTestCase(SetTestCase):
         cls.customer = Customer.objects.create(
            name='The Father',
            contact='083515301351',
+           address='Institute',
+           is_workshop=True
         )
 
         # Getting customer update url with customer_id
@@ -4155,6 +4164,8 @@ class CustomerUpdateTestCase(SetTestCase):
         cls.data = {
             'name': 'Shaun',
             'contact':  '085701530830',
+            'address': 'Sanctuary Hills',
+            'is_workshop': False,
         }
         cls.incomplete_data = {
             'contact':  '085687028044',
@@ -4172,6 +4183,8 @@ class CustomerUpdateTestCase(SetTestCase):
         self.assertEqual(response.data['message'], 'Data pelanggan berhasil dirubah')
         self.assertEqual(response.data['name'], self.data['name'])
         self.assertEqual(response.data['contact'], self.data['contact'])
+        self.assertEqual(response.data['address'], self.data['address'])
+        self.assertEqual(response.data['is_workshop'], self.data['is_workshop'])
 
     def test_nonlogin_user_failed_to_update_customer(self) -> None:
         """
@@ -4225,11 +4238,15 @@ class CustomerDeleteTestCase(SetTestCase):
         # Setting up customer data
         self.customer = Customer.objects.create(
             name='The Father',
-            contact='083515301351'
+            contact='083515301351',
+            address='Institute',
+            is_workshop=True
         )
         Customer.objects.create(
             name='The Minuteman',
-            contact='68486048601'
+            contact='68486048601',
+            address='Commonwealth',
+            is_workshop=True
         )
 
         self.customer_delete_url = reverse(
