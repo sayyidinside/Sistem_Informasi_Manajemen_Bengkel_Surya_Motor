@@ -858,6 +858,7 @@ class SalesAddTestCase(SetTestCase):
             'customer_id': cls.customer.customer_id,
             'customer_name': 'Felisin',
             'customer_contact': '086468560046',
+            'customer_address': 'Malazan',
             'is_workshop': True,
             'address': 'Seven Cities',
             'deposit': 20000000,
@@ -1013,7 +1014,7 @@ class SalesAddTestCase(SetTestCase):
             response = self.client.post(self.sales_add_url, self.data_incomplete_new_user, format='json')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(context.exception.messages[0],
-                         'Baris ini harus diisi jika mengisi baris customer_name')
+                         'Baris ini harus diisi jika mengisi data pelanggan baru')
 
     def test_admin_failed_to_add_sales_with_conflicting_customer_data(self) -> None:
         """
@@ -1026,7 +1027,7 @@ class SalesAddTestCase(SetTestCase):
         self.assertEqual(context.exception.messages[0],
                          'Anda tidak dapat mengisi baris kedua tipe pelanggan secara bersamaan\n'
                          'Pelanggan lama = customer_id\n'
-                         'Pelanggan baru = customer_name dan customer_contact')
+                         'Pelanggan baru = customer_name, customer_contact, customer_addres, and is_workshop')
 
     def test_nonlogin_user_failed_to_add_sales(self) -> None:
         """
@@ -2806,6 +2807,8 @@ class ServiceAddTestCase(SetTestCase):
             'mechanic_id': cls.mechanic.mechanic_id,
             'customer_name': 'Asplar',
             'customer_contact': '084664046465',
+            'customer_address': 'Malazan',
+            'is_workshop': False,
             'police_number': 'B 8546 D',
             'motor_type': 'Yamaha',
             'deposit': 30000,
@@ -3039,7 +3042,7 @@ class ServiceAddTestCase(SetTestCase):
             response = self.client.post(self.service_add_url, self.data_with_incomplete_new_cust, format='json')
             self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertEqual(context.exception.messages[0],
-                         'Baris ini harus diisi jika mengisi baris customer_name')
+                         'Baris ini harus diisi jika mengisi data pelanggan baru')
 
     def test_admin_failed_to_add_service_with_conflicting_customer_data(self) -> None:
         """
@@ -3052,7 +3055,7 @@ class ServiceAddTestCase(SetTestCase):
         self.assertEqual(context.exception.messages[0],
                          'Anda tidak dapat mengisi baris kedua tipe pelanggan secara bersamaan\n'
                          'Pelanggan lama = customer_id\n'
-                         'Pelanggan baru = customer_name dan customer_contact')
+                         'Pelanggan baru = customer_name, customer_contact, customer_addres, and is_workshop')
 
     def test_nonlogin_user_failed_to_add_service(self) -> None:
         """

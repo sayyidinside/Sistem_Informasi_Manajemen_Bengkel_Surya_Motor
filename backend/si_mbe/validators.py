@@ -2,12 +2,17 @@ from django.core.exceptions import ValidationError
 
 
 class CustomerValidationError(ValidationError):
-    def __init__(self, customer_name=None, customer_contact=None, serializer=None):
+    def __init__(self, name=None, contact=None, address=None,
+                 status=None, serializer=None):
         detail = {}
-        if customer_name is None:
-            detail['customer_name'] = ['Baris ini harus diisi jika mengisi baris customer_contact']
-        if customer_contact is None:
-            detail['customer_contact'] = ['Baris ini harus diisi jika mengisi baris customer_name']
+        if name is None:
+            detail['customer_name'] = ['Baris ini harus diisi jika mengisi data pelanggan baru']
+        if contact is None:
+            detail['customer_contact'] = ['Baris ini harus diisi jika mengisi data pelanggan baru']
+        if address is None:
+            detail['customer_address'] = ['Baris ini harus diisi jika mengisi data pelanggan baru']
+        if status is None:
+            detail['is_workshop'] = ['Baris ini harus diisi jika mengisi data pelanggan baru']
         # Call the parent class constructor
         super().__init__(detail)
         self.serializer = serializer
@@ -18,7 +23,7 @@ class CustomerConflictError(ValidationError):
         detail = {
             'customer': 'Anda tidak dapat mengisi baris kedua tipe pelanggan secara bersamaan\n'
             'Pelanggan lama = customer_id\n'
-            'Pelanggan baru = customer_name dan customer_contact'}
+            'Pelanggan baru = customer_name, customer_contact, customer_addres, and is_workshop'}
         # Call the parent class constructor
         super().__init__(detail)
         self.serializer = serializer

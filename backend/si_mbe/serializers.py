@@ -133,12 +133,13 @@ class SalesDetailManagementSerializers(serializers.ModelSerializer):
 
     def get_sub_total(self, obj):
         # Check if workshop is true
-        if obj.sales_id.customer_id.is_workshop:
-            # calculate with workshop price
-            return int(obj.quantity * obj.sparepart_id.workshop_price)
-
-        # calculate with normal price
-        return int(obj.quantity * obj.sparepart_id.price)
+        try:
+            if obj.sales_id.customer_id.is_workshop:
+                # calculate with workshop price
+                return int(obj.quantity * obj.sparepart_id.workshop_price)
+        except Exception:
+            # calculate with normal price
+            return int(obj.quantity * obj.sparepart_id.price)
 
 
 class SalesManagementSerializers(serializers.ModelSerializer):
@@ -235,20 +236,25 @@ class SalesManagementSerializers(serializers.ModelSerializer):
         customer_address = validated_data.pop('customer_address', None)
         is_workshop = validated_data.pop('is_workshop', None)
 
-        # check if user send new customer name must include contact and vise versa
-        if (customer_name is not None) ^ (customer_contact is not None):
+        # check if user send new customer data must input all required field
+        if (customer_id is None) and any([customer_name is None, customer_contact is None,
+                                          customer_address is None, is_workshop is None]):
             raise CustomerValidationError(
-                customer_name=customer_name,
-                customer_contact=customer_contact,
+                name=customer_name,
+                contact=customer_contact,
+                address=customer_address,
+                status=is_workshop,
                 serializer=self
             )
         # check if user fills both old customer field and new customer fields
-        elif all((customer_id is not None, customer_contact is not None, customer_name is not None)):
+        elif (customer_id is not None) and any([customer_name is not None, customer_contact is not None,
+                                                customer_address is not None, is_workshop is not None]):
             raise CustomerConflictError(serializer=self)
 
         # If user send new customer data and customer_id has't register in database,
         # create new customer data in database
-        if all((customer_id is None, customer_contact is not None, customer_name is not None)):
+        if all((customer_id is None, customer_contact is not None, customer_name is not None,
+                customer_address is not None, is_workshop is not None)):
             # Create dict of the new customer name and contact
             customer_detail = {}
             customer_detail['name'] = customer_name
@@ -882,6 +888,8 @@ class ServiceSparepartManagementSerializers(serializers.ModelSerializer):
 class ServiceManagementSerializers(serializers.ModelSerializer):
     customer_name = serializers.CharField(max_length=30, write_only=True, required=False)
     customer_contact = serializers.CharField(max_length=15, write_only=True, required=False)
+    customer_address = serializers.CharField(max_length=50, write_only=True, required=False)
+    is_workshop = serializers.BooleanField(write_only=True, required=False)
     spareparts_amount = serializers.SerializerMethodField()
     sub_total_actions = serializers.SerializerMethodField()
     sub_total_spareparts = serializers.SerializerMethodField()
@@ -900,6 +908,8 @@ class ServiceManagementSerializers(serializers.ModelSerializer):
             'customer_id',
             'customer_name',
             'customer_contact',
+            'customer_address',
+            'is_workshop',
             'police_number',
             'motor_type',
             'deposit',
@@ -989,25 +999,34 @@ class ServiceManagementSerializers(serializers.ModelSerializer):
         customer_id = validated_data.get('customer_id', None)
         customer_name = validated_data.pop('customer_name', None)
         customer_contact = validated_data.pop('customer_contact', None)
+        customer_address = validated_data.pop('customer_address', None)
+        is_workshop = validated_data.pop('is_workshop', None)
 
-        # check if user send new customer name must include contact and vise versa
-        if (customer_name is not None) ^ (customer_contact is not None):
+        # check if user send new customer customer data must include all required fields
+        if (customer_id is None) and any([customer_name is None, customer_contact is None,
+                                          customer_address is None, is_workshop is None]):
             raise CustomerValidationError(
-                customer_name=customer_name,
-                customer_contact=customer_contact,
+                name=customer_name,
+                contact=customer_contact,
+                address=customer_address,
+                status=is_workshop,
                 serializer=self
             )
         # check if user fills both old customer field and new customer fields
-        elif all((customer_id is not None, customer_contact is not None, customer_name is not None)):
+        elif (customer_id is not None) and any([customer_name is not None, customer_contact is not None,
+                                                customer_address is not None, is_workshop is not None]):
             raise CustomerConflictError(serializer=self)
 
         # If user send new customer data and customer_id has't register in database,
         # create new customer data in database
-        if all((customer_id is None, customer_contact is not None, customer_name is not None)):
+        if all((customer_id is None, customer_contact is not None, customer_name is not None,
+                customer_address is not None, is_workshop is not None)):
             # Create dict of the new customer name and contact
             customer_detail = {}
             customer_detail['name'] = customer_name
             customer_detail['contact'] = customer_contact
+            customer_detail['address'] = customer_address
+            customer_detail['is_workshop'] = is_workshop
 
             # Create new customer in database
             customer = Customer.objects.create(**customer_detail)
@@ -1058,6 +1077,8 @@ class ServiceManagementSerializers(serializers.ModelSerializer):
         try:
             validated_data.pop('customer_name')
             validated_data.pop('customer_contact')
+            validated_data.pop('customer_address')
+            validated_data.pop('is_workshop')
         except Exception:
             pass
 

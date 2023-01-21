@@ -79,7 +79,7 @@ class Customer(models.Model):
     is_workshop = models.BooleanField(default=False)
 
     def __str__(self) -> str:
-        return f'{self.name}'
+        return f'{self.name} - {self.contact} | Bengkel={self.is_workshop}'
 
     class Meta:
         db_table = 'customer'
@@ -263,7 +263,7 @@ class Salesman(models.Model):
     )
 
     def __str__(self) -> str:
-        return f'{self.name} | {self.contact}'
+        return f'{self.name} | {self.supplier_id.name}'
 
     class Meta:
         db_table = 'salesman'
