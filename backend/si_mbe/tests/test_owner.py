@@ -116,11 +116,12 @@ class SalesReportTestCase(APITestCase):
         self.assertEqual(response.data['sales_report'][self.date]['sales_revenue'], 751000)
         self.assertEqual(response.data['sales_report'][self.date]['sales_count'], 2)
 
-        self.assertEqual(response.data['sales_report'][self.date - 2]['date'],
-                         date.today() - timedelta(days=2) + timedelta(hours=7))
-        self.assertEqual(response.data['sales_report'][self.date - 2]['sales_transaction'], 0)
-        self.assertEqual(response.data['sales_report'][self.date - 2]['sales_revenue'], 0)
-        self.assertEqual(response.data['sales_report'][self.date - 2]['sales_count'], 0)
+        if self.date not in [0, 1]:
+            self.assertEqual(response.data['sales_report'][self.date - 2]['date'],
+                             date.today() - timedelta(days=2) + timedelta(hours=7))
+            self.assertEqual(response.data['sales_report'][self.date - 2]['sales_transaction'], 0)
+            self.assertEqual(response.data['sales_report'][self.date - 2]['sales_revenue'], 0)
+            self.assertEqual(response.data['sales_report'][self.date - 2]['sales_count'], 0)
 
         # Validate total month informations
         self.assertEqual(response.data['sales_transaction_month'], 44630000)
@@ -259,10 +260,11 @@ class RestockReportTestCase(APITestCase):
         self.assertEqual(response.data['restock_report'][self.date]['restock_transaction'], 17885000)
         self.assertEqual(response.data['restock_report'][self.date]['restock_cost'], 12700000)
 
-        self.assertEqual(response.data['restock_report'][self.date - 2]['date'],
-                         date.today() - timedelta(days=2) + timedelta(hours=7))
-        self.assertEqual(response.data['restock_report'][self.date - 2]['restock_transaction'], 0)
-        self.assertEqual(response.data['restock_report'][self.date - 2]['restock_cost'], 0)
+        if self.date not in [0, 1]:
+            self.assertEqual(response.data['restock_report'][self.date - 2]['date'],
+                             date.today() - timedelta(days=2) + timedelta(hours=7))
+            self.assertEqual(response.data['restock_report'][self.date - 2]['restock_transaction'], 0)
+            self.assertEqual(response.data['restock_report'][self.date - 2]['restock_cost'], 0)
 
         # Validate total month informations
         self.assertEqual(response.data['restock_transaction_month'], 17885000)
@@ -885,10 +887,11 @@ class ServiceReportTestCase(SetTestCase):
         self.assertEqual(response.data['service_report'][self.date]['service_transaction'], 13721500)
         self.assertEqual(response.data['service_report'][self.date]['service_revenue'], 7200000)
 
-        self.assertEqual(response.data['service_report'][self.date - 2]['date'],
-                         date.today() - timedelta(days=2) + timedelta(hours=7))
-        self.assertEqual(response.data['service_report'][self.date - 2]['service_transaction'], 0)
-        self.assertEqual(response.data['service_report'][self.date - 2]['service_revenue'], 0)
+        if self.date not in [0, 1]:
+            self.assertEqual(response.data['service_report'][self.date - 2]['date'],
+                             date.today() - timedelta(days=2) + timedelta(hours=7))
+            self.assertEqual(response.data['service_report'][self.date - 2]['service_transaction'], 0)
+            self.assertEqual(response.data['service_report'][self.date - 2]['service_revenue'], 0)
 
         # Validate total month informations
         self.assertEqual(response.data['service_transaction_month'], 13721500)
